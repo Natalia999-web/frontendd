@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { soloLetras } from '../utils/inputFilters';
-import { User, Mail, Lock, Eye, EyeOff, Check, Leaf, ChevronRight } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Check, Leaf, ChevronRight, FileText } from 'lucide-react';
 import './Auth.css';
+
+const TIPOS_DOC = ['CC', 'TI', 'CE', 'Pasaporte', 'NIT', 'PPT'];
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,6 +19,8 @@ const Register = () => {
   const [form, setForm] = useState({
     Nombre:               '',
     Apellidos:            '',
+    Tipo_documento:       'CC',
+    Numero_documento:     '',
     Correo:               '',
     Contrasena:           '',
     Confirmar_contrasena: '',
@@ -25,15 +29,17 @@ const Register = () => {
   const set = (k) => (e) => {
     let val = e.target.value;
     if (k === 'Nombre' || k === 'Apellidos') val = soloLetras(val);
+    if (k === 'Numero_documento') val = val.replace(/\D/g, '');
     setForm(p => ({ ...p, [k]: val }));
     setErrors(p => { const n = { ...p }; delete n[k]; return n; });
   };
 
   const validate = () => {
     const e = {};
-    if (!form.Nombre.trim())    e.Nombre    = 'El nombre es obligatorio';
-    if (!form.Apellidos.trim()) e.Apellidos = 'Los apellidos son obligatorios';
-    if (!form.Correo.trim())    e.Correo    = 'El correo es obligatorio';
+    if (!form.Nombre.trim())           e.Nombre           = 'El nombre es obligatorio';
+    if (!form.Apellidos.trim())        e.Apellidos        = 'Los apellidos son obligatorios';
+    if (!form.Numero_documento.trim()) e.Numero_documento = 'El número de documento es obligatorio';
+    if (!form.Correo.trim())           e.Correo           = 'El correo es obligatorio';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Correo)) e.Correo = 'Formato de correo inválido';
     if (!form.Contrasena)       e.Contrasena = 'La contraseña es obligatoria';
     else if (form.Contrasena.length < 8) e.Contrasena = 'Mínimo 8 caracteres';
@@ -52,6 +58,8 @@ const Register = () => {
         body: JSON.stringify({
           Nombre:               form.Nombre,
           Apellidos:            form.Apellidos,
+          Tipo_documento:       form.Tipo_documento,
+          Numero_documento:     form.Numero_documento,
           Correo:               form.Correo,
           Contrasena:           form.Contrasena,
           Confirmar_contrasena: form.Confirmar_contrasena,
@@ -167,6 +175,33 @@ const Register = () => {
                 </div>
                 {errors.Apellidos && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Apellidos}</p>}
               </div>
+            </div>
+
+            {/* Tipo y número de documento */}
+            <div className="auth-field">
+              <label className="auth-label"><FileText size={11} /> Tipo y número de documento</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  className="auth-input"
+                  style={{ width: 130, flexShrink: 0, cursor: 'pointer', paddingLeft: 10 }}
+                  value={form.Tipo_documento}
+                  onChange={set('Tipo_documento')}
+                >
+                  {TIPOS_DOC.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <div className="auth-input-wrap" style={{ flex: 1 }}>
+                  <span className="auth-input-icon"><FileText size={15} /></span>
+                  <input
+                    type="text"
+                    placeholder="Número de documento"
+                    className="auth-input"
+                    value={form.Numero_documento}
+                    onChange={set('Numero_documento')}
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
+              {errors.Numero_documento && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Numero_documento}</p>}
             </div>
 
             {/* Correo */}
