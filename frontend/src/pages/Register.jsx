@@ -157,7 +157,7 @@ const Register = () => {
             {/* Nombre + Apellidos */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="auth-field">
-                <label className="auth-label"><User size={11} /> Nombre(s)</label>
+                <label className="auth-label"><User size={11} /> Nombre(s) <span className="required">*</span></label>
                 <div className="auth-input-wrap">
                   <span className="auth-input-icon"><User size={15} /></span>
                   <input type="text" placeholder="Carlos" className="auth-input"
@@ -167,7 +167,7 @@ const Register = () => {
               </div>
 
               <div className="auth-field">
-                <label className="auth-label"><User size={11} /> Apellidos</label>
+                <label className="auth-label"><User size={11} /> Apellidos <span className="required">*</span></label>
                 <div className="auth-input-wrap">
                   <span className="auth-input-icon"><User size={15} /></span>
                   <input type="text" placeholder="Pérez García" className="auth-input"
@@ -179,7 +179,7 @@ const Register = () => {
 
             {/* Tipo y número de documento */}
             <div className="auth-field">
-              <label className="auth-label"><FileText size={11} /> Tipo y número de documento</label>
+              <label className="auth-label"><FileText size={11} /> Tipo y número de documento <span className="required">*</span></label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <select
                   className="auth-input"
@@ -206,7 +206,7 @@ const Register = () => {
 
             {/* Correo */}
             <div className="auth-field">
-              <label className="auth-label"><Mail size={11} /> Correo electrónico</label>
+              <label className="auth-label"><Mail size={11} /> Correo electrónico <span className="required">*</span></label>
               <div className="auth-input-wrap">
                 <span className="auth-input-icon"><Mail size={15} /></span>
                 <input type="email" placeholder="tu@correo.com" className="auth-input"
@@ -217,7 +217,7 @@ const Register = () => {
 
             {/* Contraseña */}
             <div className="auth-field">
-              <label className="auth-label"><Lock size={11} /> Contraseña</label>
+              <label className="auth-label"><Lock size={11} /> Contraseña <span className="required">*</span></label>
               <div className="auth-input-wrap">
                 <span className="auth-input-icon"><Lock size={15} /></span>
                 <input type={showPass ? 'text' : 'password'} placeholder="Mínimo 8 caracteres"
@@ -231,7 +231,7 @@ const Register = () => {
 
             {/* Confirmar contraseña */}
             <div className="auth-field">
-              <label className="auth-label"><Lock size={11} /> Confirmar contraseña</label>
+              <label className="auth-label"><Lock size={11} /> Confirmar contraseña <span className="required">*</span></label>
               <div className="auth-input-wrap">
                 <span className="auth-input-icon"><Lock size={15} /></span>
                 <input type={showConf ? 'text' : 'password'} placeholder="Repite tu contraseña"

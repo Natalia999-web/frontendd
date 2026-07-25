@@ -251,6 +251,7 @@
   align-items: center;
   gap: 5px;
 }
+.auth-label .required { color: #e53935; }
 
 .auth-label-row {
   display: flex;
