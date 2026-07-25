@@ -267,7 +267,3 @@
 .wizard-step-line { flex: 1; height: 1.5px; background: #e0e0e0; margin: 0 8px; transition: background 0.2s; }
 .wizard-step-line.done { background: #2e7d32; }
 
-/* ── doc-combo para clientes ── */
-.doc-combo          { display: flex; gap: 8px; }
-.doc-combo .doc-sel { width: 115px; flex-shrink: 0; }
-.doc-combo .doc-input { flex: 1; }
