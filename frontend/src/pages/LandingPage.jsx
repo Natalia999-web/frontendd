@@ -94,10 +94,10 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
             {/* Flechas */}
             {imgs.length > 1 && (
               <>
-                <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20]">
+                <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20]">
+                <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
                   <ChevronRight className="w-5 h-5" />
                 </button>
                 {/* Dots */}
