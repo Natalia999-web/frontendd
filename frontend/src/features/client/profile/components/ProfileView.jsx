@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import {
-  User, Mail, Phone, MapPin, CreditCard,
-  Building2, Map, ShieldCheck, Edit2
+  Mail, Phone, MapPin, CreditCard,
+  Building2, Map, ShieldCheck, Edit2, LogOut
 } from 'lucide-react';
+import { clearSession } from '../../../../utils/api';
 
 const InfoBlock = ({ icon: Icon, label, value, span = 1 }) => (
   <div style={{
@@ -38,6 +40,13 @@ const InfoBlock = ({ icon: Icon, label, value, span = 1 }) => (
 );
 
 const ProfileView = ({ user, totalPedidos, onEdit }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearSession();
+    navigate('/login');
+  };
+
   return (
     <div>
       {/* Avatar + nombre */}
@@ -135,6 +144,30 @@ const ProfileView = ({ user, totalPedidos, onEdit }) => {
         <InfoBlock icon={MapPin}   label="Dirección"    value={user.direccion}    span={2} />
         <InfoBlock icon={Building2} label="Municipio"   value={user.municipio} />
         <InfoBlock icon={Map}       label="Departamento" value={user.departamento} />
+      </div>
+
+      {/* Cerrar sesión */}
+      <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--gray-100)' }}>
+        <button
+          onClick={handleLogout}
+          style={{
+            width: '100%', padding: '11px 0',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            borderRadius: 'var(--radius-md)',
+            border: '1.5px solid #fca5a5',
+            background: '#fff',
+            color: '#dc2626',
+            fontSize: 14, fontWeight: 700,
+            fontFamily: 'var(--font-body)',
+            cursor: 'pointer',
+            transition: 'background .15s, border-color .15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#fff1f2'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+        >
+          <LogOut size={15} />
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );
