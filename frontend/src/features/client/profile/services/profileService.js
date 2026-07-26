@@ -13,6 +13,7 @@ export const updateUser = async (updatedData) => {
   const data = await apiFetch('/auth/perfil', {
     method: 'PUT',
     body: JSON.stringify(updatedData),
+    timeout: 90000,
   });
 
   // Actualizar el usuario en localStorage con los nuevos datos

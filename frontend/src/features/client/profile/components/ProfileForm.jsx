@@ -135,8 +135,8 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.telefono.trim()) e.telefono = 'El teléfono es obligatorio';
-    else if (form.telefono.replace(/\D/g, '').length !== 10) e.telefono = 'El teléfono debe tener 10 dígitos';
+    if (form.telefono.trim() && form.telefono.replace(/\D/g, '').length !== 10)
+      e.telefono = 'El teléfono debe tener 10 dígitos';
 
     if (form.direccion?.trim() && !esUbicacionValida(form.direccion))
       e.direccion = 'La dirección debe tener letras y números (mín. 5 caracteres)';
