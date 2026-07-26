@@ -125,7 +125,7 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
   const handlePhoto = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) { alert('Imagen muy pesada. Máximo 1MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Imagen muy pesada. Máximo 5MB.'); return; }
     const reader = new FileReader();
     reader.onloadend = () => setForm(p => ({ ...p, fotoPerfil: reader.result }));
     reader.readAsDataURL(file);
