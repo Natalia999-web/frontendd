@@ -160,6 +160,11 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
       Departamento: form.departamento || null,
     };
 
+    // Incluir foto solo si el usuario seleccionó una nueva (base64)
+    if (form.fotoPerfil?.startsWith('data:image/')) {
+      payload.Foto_perfil = form.fotoPerfil;
+    }
+
     // Solo enviar cédula si no estaba establecida y el usuario la llenó
     if (!cedulaYaEstablecida && form.cedula.trim()) {
       payload.Cedula         = form.cedula.trim();
