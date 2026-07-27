@@ -32,9 +32,27 @@ const diasHasta = (fecha) => {
   return Math.round((new Date(fecha) - hoy) / (1000 * 60 * 60 * 24));
 };
 
+const UNIDADES = [
+  { id: 1, nombre: "Kilogramo", simbolo: "kg"   },
+  { id: 2, nombre: "Gramo",     simbolo: "g"    },
+  { id: 3, nombre: "Litro",     simbolo: "L"    },
+  { id: 4, nombre: "Mililitro", simbolo: "ml"   },
+  { id: 5, nombre: "Unidad",    simbolo: "uds." },
+  { id: 6, nombre: "Libra",     simbolo: "lb"   },
+];
+
+const GRUPO_UNIDAD = { 1: "masa", 2: "masa", 6: "masa", 3: "vol", 4: "vol", 5: "und" };
+
+const unidadesDelGrupo = (idUnidadBase) => {
+  const grupo = GRUPO_UNIDAD[Number(idUnidadBase)];
+  if (!grupo) return [];
+  return UNIDADES.filter(u => GRUPO_UNIDAD[u.id] === grupo);
+};
+
 const emptyDetalle = () => ({
   _key:             Date.now() + Math.random(),
   idInsumo:         "",
+  idUnidad:         "",
   cantidad:         "",
   precioUnd:        "",
   notas:            "",
@@ -155,10 +173,11 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
     getInsumos({ porPagina: 100 })
       .then(d => {
         const lista = (d.insumos || d || []).map(i => ({
-          id:     i.ID_Insumo || i.id,
-          nombre: i.Nombre    || i.nombre || "",
-          unidad: i.simbolo_unidad || i.unidad || "",
-          estado: i.Estado !== 0,
+          id:       i.ID_Insumo || i.id,
+          nombre:   i.Nombre    || i.nombre || "",
+          unidad:   i.simbolo_unidad || i.unidad || "",
+          idUnidad: i.Unidad_Medida  || i.idUnidad || null,
+          estado:   i.Estado !== 0,
         }));
         setInsumosActivos(lista.filter(i => i.estado));
       })
@@ -237,6 +256,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
     const detallesLimpios = detalles.map(d => ({
       id:               d.id,
       idInsumo:         Number(d.idInsumo),
+      idUnidad:         d.idUnidad ? Number(d.idUnidad) : null,
       cantidad:         Number(d.cantidad),
       precioUnd:        Number(d.precioUnd),
       notas:            d.notas?.trim() || "",
@@ -626,9 +646,10 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                                 value={d.idInsumo}
                                 onChange={e => {
                                   const selectedId = e.target.value;
+                                  const ins = insumosActivos.find(ins => String(ins.id) === selectedId);
                                   setDetalles(ds => ds.map(det =>
                                     det._key === d._key
-                                      ? { ...det, idInsumo: selectedId }
+                                      ? { ...det, idInsumo: selectedId, idUnidad: ins?.idUnidad ? String(ins.idUnidad) : "" }
                                       : det
                                   ));
                                 }}
@@ -653,18 +674,39 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                           </div>
 
                           <div className="field-wrap" style={{ gridColumn: "span 1" }}>
-                            <label className="field-label">
-                              Cantidad{insumoSel?.unidad ? ` (${insumoSel.unidad})` : ""}
-                            </label>
-                            <input
-                              type="number"
-                              className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
-                              placeholder="0"
-                              min="1"
-                              max="99999"
-                              value={d.cantidad}
-                              onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
-                            />
+                            <label className="field-label">Cantidad</label>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <input
+                                type="number"
+                                className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
+                                placeholder="0"
+                                min="1"
+                                max="99999"
+                                value={d.cantidad}
+                                onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
+                                style={{ flex: 1, minWidth: 0 }}
+                              />
+                              {(() => {
+                                const opciones = insumoSel ? unidadesDelGrupo(insumoSel.idUnidad) : [];
+                                if (opciones.length <= 1) {
+                                  return insumoSel?.unidad
+                                    ? <span style={{ display: "flex", alignItems: "center", padding: "0 8px", background: "#f5f5f5", border: "1.5px solid #e8e8e8", borderRadius: 7, fontSize: 11, color: "#555", fontWeight: 700, flexShrink: 0 }}>{insumoSel.unidad}</span>
+                                    : null;
+                                }
+                                return (
+                                  <select
+                                    value={d.idUnidad}
+                                    onChange={e => setDetalle(d._key, "idUnidad", e.target.value)}
+                                    style={{ flexShrink: 0, width: 68, borderRadius: 7, border: "1.5px solid #e0e0e0", background: "#fff", fontSize: 12, fontWeight: 700, color: "#333", cursor: "pointer", padding: "0 4px" }}
+                                  >
+                                    {opciones.map(u => (
+                                      <option key={u.id} value={String(u.id)}>{u.simbolo}</option>
+                                    ))}
+                                  </select>
+                                );
+                              })()}
+                            </div>
+                            {errors[`cant_${i}`] && <span className="field-error" style={{ fontSize: 10 }}>{errors[`cant_${i}`]}</span>}
                           </div>
                           <div className="field-wrap" style={{ gridColumn: "span 2" }}>
                             <label className="field-label">Precio unitario</label>

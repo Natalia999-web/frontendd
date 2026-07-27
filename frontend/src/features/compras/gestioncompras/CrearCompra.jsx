@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import { getInsumos } from "../../../services/insumosService.js";
 import "./compras.css";
@@ -11,9 +11,27 @@ const METODOS_PAGO = [
 const COP = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
+const UNIDADES = [
+  { id: 1, nombre: "Kilogramo", simbolo: "kg"   },
+  { id: 2, nombre: "Gramo",     simbolo: "g"    },
+  { id: 3, nombre: "Litro",     simbolo: "L"    },
+  { id: 4, nombre: "Mililitro", simbolo: "ml"   },
+  { id: 5, nombre: "Unidad",    simbolo: "uds." },
+  { id: 6, nombre: "Libra",     simbolo: "lb"   },
+];
+
+const GRUPO_UNIDAD = { 1: "masa", 2: "masa", 6: "masa", 3: "vol", 4: "vol", 5: "und" };
+
+const unidadesDelGrupo = (idUnidadBase) => {
+  const grupo = GRUPO_UNIDAD[Number(idUnidadBase)];
+  if (!grupo) return [];
+  return UNIDADES.filter(u => GRUPO_UNIDAD[u.id] === grupo);
+};
+
 const emptyDetalle = () => ({
   _key:             Date.now() + Math.random(),
   idInsumo:         "",
+  idUnidad:         "",
   cantidad:         "",
   precioUnd:        "",
   notas:            "",
@@ -51,6 +69,117 @@ function StepsBar({ current }) {
   );
 }
 
+function InsumoSelect({ value, insumosActivos, idsSeleccionados, onChange, error }) {
+  const [open,  setOpen]  = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef  = useRef(null);
+  const inputRef = useRef(null);
+
+  const selected = insumosActivos.find(i => String(i.id) === String(value));
+
+  const filtered = insumosActivos.filter(i =>
+    i.nombre.toLowerCase().includes(query.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handler = e => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    setOpen(o => !o);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", flex: 1 }}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        className={`field-select ${error ? "error" : ""}`}
+        style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: selected ? "#222" : "#9e9e9e", flex: 1 }}>
+          {selected
+            ? `${selected.nombre}${selected.unidad ? ` (${selected.unidad})` : ""}`
+            : "— Seleccionar insumo —"}
+        </span>
+        <span style={{ color: "#9e9e9e", flexShrink: 0 }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          background: "#fff", border: "1.5px solid #d0e8d0", borderRadius: 10,
+          boxShadow: "0 8px 28px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden",
+        }}>
+          {/* Buscador */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderBottom: "1px solid #f0f0f0", background: "#fafdf9" }}>
+            <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Buscar insumo…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "#333", fontFamily: "inherit" }}
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")}
+                style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Lista */}
+          <div style={{ maxHeight: 210, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "12px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
+                Sin resultados para "{query}"
+              </div>
+            ) : filtered.map(ins => {
+              const isSelected = String(ins.id) === String(value);
+              const isDisabled = idsSeleccionados.includes(String(ins.id)) && !isSelected;
+              return (
+                <button
+                  key={ins.id}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => { onChange(ins); setOpen(false); setQuery(""); }}
+                  style={{
+                    width: "100%", textAlign: "left", padding: "8px 12px",
+                    border: "none", background: isSelected ? "#e8f5e9" : "transparent",
+                    color: isDisabled ? "#bdbdbd" : isSelected ? "#2e7d32" : "#333",
+                    fontSize: 13, cursor: isDisabled ? "not-allowed" : "pointer",
+                    fontWeight: isSelected ? 700 : 400,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span>{ins.nombre}</span>
+                  {ins.unidad && (
+                    <span style={{ fontSize: 11, color: isDisabled ? "#d0d0d0" : "#9e9e9e", flexShrink: 0, marginLeft: 8 }}>
+                      {ins.unidad}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CrearCompra({ onClose, onSave }) {
   const [proveedores,  setProveedores]  = useState([]);
   const [insumosActivos, setInsumosActivos] = useState([]);
@@ -62,6 +191,7 @@ export default function CrearCompra({ onClose, onSave }) {
         id:        i.ID_Insumo || i.id,
         nombre:    i.Nombre    || i.nombre    || "",
         unidad:    i.simbolo_unidad || i.unidad || "",
+        idUnidad:  i.Unidad_Medida  || i.idUnidad || null,
         estado:    i.Estado !== 0,
       }));
       setInsumosActivos(lista.filter(i => i.estado));
@@ -127,8 +257,10 @@ export default function CrearCompra({ onClose, onSave }) {
 
   const validateStep1 = () => {
     const e = {};
-    if (!form.idProveedor) e.idProveedor = "Selecciona un proveedor";
-    if (!form.fecha)       e.fecha       = "Ingresa la fecha";
+    const hoy = new Date().toISOString().split("T")[0];
+    if (!form.idProveedor)  e.idProveedor = "Selecciona un proveedor";
+    if (!form.fecha)        e.fecha       = "Ingresa la fecha";
+    else if (form.fecha < hoy) e.fecha    = "La fecha no puede ser anterior a hoy";
     if (!form.metodoPago)  e.metodoPago  = "Selecciona el método de pago";
     return e;
   };
@@ -169,6 +301,7 @@ export default function CrearCompra({ onClose, onSave }) {
       await new Promise(r => setTimeout(r, 400));
       const detallesLimpios = detalles.map(d => ({
         idInsumo:         Number(d.idInsumo),
+        idUnidad:         d.idUnidad ? Number(d.idUnidad) : null,
         cantidad:         Number(d.cantidad),
         precioUnd:        Number(d.precioUnd),
         notas:            (d.notas || "").trim(),
@@ -253,6 +386,7 @@ export default function CrearCompra({ onClose, onSave }) {
                   <label className="field-label">Fecha de compra <span className="required">*</span></label>
                   <input
                     type="date"
+                    min={new Date().toISOString().split("T")[0]}
                     className={`field-input ${errors.fecha ? "error" : ""}`}
                     value={form.fecha}
                     onChange={e => set("fecha", e.target.value)}
@@ -340,27 +474,19 @@ export default function CrearCompra({ onClose, onSave }) {
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#9e9e9e", flexShrink: 0, minWidth: 20 }}>
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <div className="select-wrap" style={{ flex: 1 }}>
-                      <select
-                        className={`field-select ${errors[`ins_${i}`] ? "error" : ""}`}
-                        value={d.idInsumo}
-                        onChange={e => {
-                          const selectedId = e.target.value;
-                          setDetalles(ds => ds.map(det =>
-                            det._key === d._key ? { ...det, idInsumo: selectedId } : det
-                          ));
-                        }}
-                      >
-                        <option value="">— Seleccionar insumo —</option>
-                        {insumosActivos.map(ins => (
-                          <option key={ins.id} value={ins.id}
-                            disabled={idsSeleccionados.includes(String(ins.id)) && String(ins.id) !== String(d.idInsumo)}>
-                            {ins.nombre}{ins.unidad ? ` (${ins.unidad})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="select-arrow">▾</span>
-                    </div>
+                    <InsumoSelect
+                      value={d.idInsumo}
+                      insumosActivos={insumosActivos}
+                      idsSeleccionados={idsSeleccionados}
+                      error={errors[`ins_${i}`]}
+                      onChange={ins => {
+                        setDetalles(ds => ds.map(det =>
+                          det._key === d._key
+                            ? { ...det, idInsumo: String(ins.id), idUnidad: ins.idUnidad ? String(ins.idUnidad) : "" }
+                            : det
+                        ));
+                      }}
+                    />
                     <button className="detalle-remove-btn" type="button" onClick={() => removeDetalle(d._key)}>✕</button>
                   </div>
                   {errors[`ins_${i}`] && <span className="field-error" style={{ marginBottom: 6, display: "block" }}>{errors[`ins_${i}`]}</span>}
@@ -368,20 +494,40 @@ export default function CrearCompra({ onClose, onSave }) {
                   {/* Línea 2: cantidad | precio | vencimiento (toggle + valor) */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, paddingLeft: 28 }}>
 
-                    {/* Cantidad */}
+                    {/* Cantidad + unidad */}
                     <div>
-                      <label className="field-label" style={{ fontSize: 10 }}>
-                        Cantidad{insSelect?.unidad ? ` (${insSelect.unidad})` : ""}
-                      </label>
-                      <input
-                        type="number"
-                        className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
-                        placeholder="0"
-                        min="1"
-                        max="99999"
-                        value={d.cantidad}
-                        onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
-                      />
+                      <label className="field-label" style={{ fontSize: 10 }}>Cantidad</label>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <input
+                          type="number"
+                          className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
+                          placeholder="0"
+                          min="1"
+                          max="99999"
+                          value={d.cantidad}
+                          onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
+                          style={{ flex: 1, minWidth: 0 }}
+                        />
+                        {(() => {
+                          const opciones = insSelect ? unidadesDelGrupo(insSelect.idUnidad) : [];
+                          if (opciones.length <= 1) {
+                            return insSelect?.unidad
+                              ? <span style={{ display: "flex", alignItems: "center", padding: "0 8px", background: "#f5f5f5", border: "1.5px solid #e8e8e8", borderRadius: 7, fontSize: 11, color: "#555", fontWeight: 700, flexShrink: 0 }}>{insSelect.unidad}</span>
+                              : null;
+                          }
+                          return (
+                            <select
+                              value={d.idUnidad}
+                              onChange={e => setDetalle(d._key, "idUnidad", e.target.value)}
+                              style={{ flexShrink: 0, width: 68, borderRadius: 7, border: "1.5px solid #e0e0e0", background: "#fff", fontSize: 12, fontWeight: 700, color: "#333", cursor: "pointer", padding: "0 4px" }}
+                            >
+                              {opciones.map(u => (
+                                <option key={u.id} value={String(u.id)}>{u.simbolo}</option>
+                              ))}
+                            </select>
+                          );
+                        })()}
+                      </div>
                       {errors[`cant_${i}`] && <span className="field-error" style={{ fontSize: 10 }}>{errors[`cant_${i}`]}</span>}
                     </div>
 

@@ -47,16 +47,29 @@ const CATEGORIES = [
   },
 ];
 
+// Extrae solo emojis del texto ingresado (máx. 2)
+const filterEmoji = (str) => {
+  const matches = str.match(
+    /\p{Extended_Pictographic}[️⃣]?(‍\p{Extended_Pictographic}[️⃣]?)*/gu
+  ) || [];
+  return matches.slice(0, 2).join('');
+};
+
 export default function EmojiPicker({ value, onChange }) {
   const [open, setOpen]     = useState(false);
   const [tab, setTab]       = useState(0);
   const [custom, setCustom] = useState("");
+  const [customErr, setCustomErr] = useState("");
 
   const select = (em) => { onChange(em); setOpen(false); };
 
   const applyCustom = () => {
-    const v = custom.trim();
-    if (v) { onChange(v); setCustom(""); setOpen(false); }
+    const v = filterEmoji(custom);
+    if (!v) { setCustomErr("Ingresa solo emojis"); return; }
+    onChange(v);
+    setCustom("");
+    setCustomErr("");
+    setOpen(false);
   };
 
   return (
@@ -106,11 +119,12 @@ export default function EmojiPicker({ value, onChange }) {
               type="text"
               placeholder="Pega o escribe un emoji…"
               value={custom}
-              onChange={e => setCustom(e.target.value)}
+              onChange={e => { setCustom(filterEmoji(e.target.value)); setCustomErr(""); }}
               onKeyDown={e => e.key === "Enter" && applyCustom()}
             />
             <button className="emoji-custom-btn" onClick={applyCustom}>Usar</button>
           </div>
+          {customErr && <p style={{ fontSize: 11, color: "#e53935", margin: "4px 0 0" }}>{customErr}</p>}
         </div>
       )}
     </div>

@@ -96,6 +96,10 @@
 .sidebar-search .search-input:focus { border-color: var(--g-light); }
 
 .sidebar-search .search-icon {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
   display: flex;
   align-items: center;
   color: #95a5a6;
@@ -212,6 +216,8 @@
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .footer-info {

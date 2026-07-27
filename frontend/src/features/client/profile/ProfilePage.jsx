@@ -191,6 +191,8 @@ function ConfirmDeleteModal({ nombre, onConfirm, onCancel, loading }) {
 }
 
 function normalizarPerfil(data) {
+  let localUser = null;
+  try { localUser = JSON.parse(localStorage.getItem('usuario')); } catch {}
   return {
     id:             data.id,
     nombre:         data.Nombre         || '',
@@ -202,7 +204,7 @@ function normalizarPerfil(data) {
     direccion:      data.Direccion      || '',
     municipio:      data.Municipio      || '',
     departamento:   data.Departamento   || '',
-    fotoPerfil:     data.Foto_perfil    || '',
+    fotoPerfil:     data.Foto_perfil    || localUser?.fotoPerfil || localUser?.Foto_perfil || '',
     rol:            data.rol            || 'Cliente',
     estado:         data.Estado !== 2,
   };

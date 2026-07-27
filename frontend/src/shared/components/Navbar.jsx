@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { getUser, logout } from "../../services/authService";
 import { crearPedido, getMiCredito } from "../../services/pedidosService";
-import { Menu, X, ShoppingCart, Bell } from "lucide-react";
+import { Menu, X, ShoppingCart, Bell, LogOut } from "lucide-react";
 import "./Navbar.css";
 import { getCartCount, getCart, getTotal } from "../../features/sales/orders/services/cartService";
 import CartAside from "../../features/sales/orders/components/CartAside";
@@ -240,7 +240,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
 
             {/* Logout */}
             {user && (
-              <button className="logout-btn" title="Cerrar sesión" onClick={handleLogout}>⏏</button>
+              <button className="logout-btn" title="Cerrar sesión" onClick={handleLogout}><LogOut size={20} /></button>
             )}
           </div>
         </div>

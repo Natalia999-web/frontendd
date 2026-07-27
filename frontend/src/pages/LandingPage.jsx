@@ -14,7 +14,7 @@ import Navbar from '../shared/components/Navbar.jsx';
 import CartAside from '../features/sales/orders/components/CartAside';
 import CheckoutModal from '../features/sales/orders/components/CheckoutModal';
 import {
-  addToCart as addToCartService,
+  addToCartWithQty,
   getCart,
   getCartCount,
   clearCart
@@ -30,6 +30,8 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
 
   const imgs    = product.imagenes?.length > 0 ? product.imagenes : (product.imagen ? [product.imagen] : []);
   const agotado = product.stock === 0;
+  const stock   = product.stock ?? 0;
+  const parcial = !agotado && qty > stock && stock > 0;
 
   // Cerrar con Escape
   useEffect(() => {
@@ -47,10 +49,8 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
   const prev = () => setImgIdx(i => (i - 1 + imgs.length) % imgs.length);
   const next = () => setImgIdx(i => (i + 1) % imgs.length);
 
-  const handleAdd = () => {
-    onAddToCart(product, qty);
-    onClose();
-  };
+  // El padre controla si cierra el modal (según stock check)
+  const handleAdd = () => { onAddToCart(product, qty); };
 
   return (
     <div
@@ -167,6 +167,22 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
             <p className="text-[#9e9e9e] text-sm">Sabor auténtico y natural en cada bocado.</p>
           )}
 
+          {/* Info de stock */}
+          {agotado && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <p className="font-black text-amber-700 text-sm mb-1">⏳ Sin stock inmediato</p>
+              <p className="text-amber-600 text-xs leading-relaxed">Este producto no está disponible para entrega inmediata. Al pedirlo lo recibirás cuando haya producción disponible.</p>
+            </div>
+          )}
+          {parcial && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <p className="font-black text-amber-700 text-sm mb-1">⚠️ Stock parcial</p>
+              <p className="text-amber-600 text-xs leading-relaxed">
+                Solo hay <strong>{stock}</strong> unidades disponibles ahora. Las otras <strong>{qty - stock}</strong> se confirmarán como pedido programado al continuar.
+              </p>
+            </div>
+          )}
+
           {/* Selector de cantidad + botón */}
           <div className="mt-auto pt-2">
             <div className="flex items-center gap-3">
@@ -179,13 +195,48 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
               </div>
               <button
                 onClick={handleAdd}
-                className="flex-1 py-4 bg-[#1b5e20] text-white font-black rounded-2xl hover:bg-[#0d3300] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
+                className={`flex-1 py-4 font-black rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 ${
+                  agotado
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                    : 'bg-[#1b5e20] hover:bg-[#0d3300] text-white'
+                }`}
               >
                 <ShoppingCart className="w-4 h-4" />
-                Agregar al carrito
+                {agotado ? 'Pedir programado' : parcial ? 'Pedir (stock parcial)' : 'Agregar al carrito'}
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   CONFIRM STOCK MODAL
+═══════════════════════════════════════════ */
+function ConfirmStockModal({ product, qty, onConfirm, onCancel }) {
+  const disponible = product.stock ?? 0;
+  const programado = qty - disponible;
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onCancel}>
+      <div className="bg-white rounded-[28px] p-8 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-5 text-2xl">⚠️</div>
+        <h3 className="text-xl font-black text-center text-[#1b5e20] mb-3">Stock insuficiente</h3>
+        <p className="text-[#555] text-sm text-center leading-relaxed mb-2">
+          Pediste <strong className="text-[#1b5e20]">{qty} unidades</strong> de <strong>{product.nombre}</strong>, pero solo hay{' '}
+          <strong className="text-[#1b5e20]">{disponible}</strong> disponibles para entrega inmediata.
+        </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-700 leading-relaxed">
+          Las <strong>{programado} unidades restantes</strong> se procesarán como <strong>pedido programado</strong> y se entregarán cuando haya producción disponible. Te avisaremos cuando estén listas.
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-colors text-sm">
+            Cancelar
+          </button>
+          <button onClick={onConfirm} className="flex-1 py-3 bg-[#1b5e20] text-white rounded-2xl font-black hover:bg-[#0d3300] transition-colors text-sm">
+            Confirmar pedido
+          </button>
         </div>
       </div>
     </div>
@@ -211,6 +262,7 @@ const LandingPage = ({ hideNavbar = false }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderDone, setOrderDone] = useState(false);
+  const [confirmPending, setConfirmPending] = useState(null);
 
   // Sincronizar contador del carrito
   const syncCartInfo = useCallback(() => {
@@ -296,17 +348,51 @@ const LandingPage = ({ hideNavbar = false }) => {
   const getQty = (id) => quantities[id] || 1;
   const setQty = (id, v) => setQuantities(prev => ({ ...prev, [id]: Math.max(1, v) }));
 
+  const realizarAdd = (product, qty, pedidoProgramado = false) => {
+    addToCartWithQty(product, qty, pedidoProgramado);
+    setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+    syncCartInfo();
+  };
+
   const handleAddToCart = (product) => {
     const qty = getQty(product.id);
-    for(let i=0; i<qty; i++) {
-      addToCartService(product);
+    const stock = product.stock ?? 0;
+    if (stock === 0) {
+      realizarAdd(product, qty, true);
+      setCartOpen(true);
+      return;
     }
-    setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+    if (qty > stock) {
+      setConfirmPending({ product, qty });
+      return;
+    }
+    realizarAdd(product, qty, false);
     setCartOpen(true);
   };
 
   const handleAddFromModal = (product, qty) => {
-    for (let i = 0; i < qty; i++) addToCartService(product);
+    const stock = product.stock ?? 0;
+    if (stock === 0) {
+      realizarAdd(product, qty, true);
+      setSelectedProduct(null);
+      setCartOpen(true);
+      return;
+    }
+    if (qty > stock) {
+      setConfirmPending({ product, qty });
+      return;
+    }
+    realizarAdd(product, qty, false);
+    setSelectedProduct(null);
+    setCartOpen(true);
+  };
+
+  const handleConfirmStock = () => {
+    if (!confirmPending) return;
+    const { product, qty } = confirmPending;
+    realizarAdd(product, qty, true);
+    setConfirmPending(null);
+    setSelectedProduct(null);
     setCartOpen(true);
   };
 
@@ -426,6 +512,16 @@ const LandingPage = ({ hideNavbar = false }) => {
         onConfirm={handleConfirmOrder}
       />
 
+      {/* ── Confirm Stock Modal ── */}
+      {confirmPending && (
+        <ConfirmStockModal
+          product={confirmPending.product}
+          qty={confirmPending.qty}
+          onConfirm={handleConfirmStock}
+          onCancel={() => setConfirmPending(null)}
+        />
+      )}
+
       {/* ── Product Detail Modal ── */}
       {selectedProduct && (
         <ProductDetailModal
@@ -534,7 +630,15 @@ const LandingPage = ({ hideNavbar = false }) => {
               const inCartItem = getCart().find(i => i.id === p.id);
               const agotado = p.stock === 0;
               return (
-                <div key={p.id} className="group bg-white rounded-[40px] overflow-hidden border border-[#f1f8f1] hover:border-[#c8e6c9] hover:shadow-[0_30px_60px_rgba(27,94,32,0.1)] transition-all duration-500 flex flex-col">
+                <div
+                  key={p.id}
+                  className={`group bg-white rounded-[40px] overflow-hidden border transition-all duration-500 flex flex-col ${
+                    agotado
+                      ? 'border-gray-200 opacity-75'
+                      : 'border-[#f1f8f1] hover:border-[#c8e6c9] hover:shadow-[0_30px_60px_rgba(27,94,32,0.1)]'
+                  }`}
+                  style={agotado ? { filter: 'grayscale(0.65)' } : undefined}
+                >
                   <div className="relative h-72 overflow-hidden cursor-pointer" onClick={() => setSelectedProduct(p)}>
                     {p.imagenPreview || p.imagen
                       ? <img src={p.imagenPreview || p.imagen} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -549,7 +653,12 @@ const LandingPage = ({ hideNavbar = false }) => {
                     <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm px-5 py-2.5 rounded-2xl font-black text-[#1b5e20] shadow-lg">
                       ${p.precio?.toLocaleString('es-CO')}
                     </div>
-                    {inCartItem && (
+                    {agotado && (
+                      <div className="absolute top-6 left-6 bg-gray-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-lg">
+                        ⏳ Sin stock
+                      </div>
+                    )}
+                    {!agotado && inCartItem && (
                       <div className="absolute top-6 left-6 bg-[#1b5e20] text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-lg border border-white/20">
                         <ShoppingCart className="w-3 h-3" />
                         {inCartItem.cantidad} en carrito
@@ -561,6 +670,11 @@ const LandingPage = ({ hideNavbar = false }) => {
                       <h4 className="text-2xl font-black text-[#1b5e20] group-hover:text-[#388e3c] transition-colors">{p.nombre}</h4>
                       <span className="px-3 py-1 bg-[#e8f5e9] text-[#1b5e20] rounded-lg text-[10px] font-black uppercase tracking-widest">{cat.nombre}</span>
                     </div>
+                    {agotado && (
+                      <p className="text-amber-600 text-xs font-bold mb-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                        No disponible para entrega inmediata — puedes hacer un pedido programado.
+                      </p>
+                    )}
                     <p className="text-[#555] font-medium text-sm mb-6 flex-1 leading-relaxed">{cat.descripcion || 'Sabor auténtico y natural en cada bocado.'}</p>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 bg-[#f7faf8] rounded-2xl border border-[#e8f5e9] p-1.5">
@@ -574,10 +688,14 @@ const LandingPage = ({ hideNavbar = false }) => {
                       </div>
                       <button
                         onClick={() => handleAddToCart(p)}
-                        className="flex-1 flex items-center justify-center gap-2 py-4 font-black rounded-2xl transition-all shadow-sm bg-[#f1f8f1] text-[#1b5e20] group-hover:bg-[#1b5e20] group-hover:text-white active:scale-95"
+                        className={`flex-1 flex items-center justify-center gap-2 py-4 font-black rounded-2xl transition-all shadow-sm active:scale-95 ${
+                          agotado
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            : 'bg-[#f1f8f1] text-[#1b5e20] group-hover:bg-[#1b5e20] group-hover:text-white'
+                        }`}
                       >
                         <ShoppingCart className="w-4 h-4" />
-                        Agregar
+                        {agotado ? 'Pedir programado' : 'Agregar'}
                       </button>
                     </div>
                   </div>

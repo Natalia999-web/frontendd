@@ -5,6 +5,7 @@ export interface CartItem {
   cantidad: number;
   imagenPreview: string | null;
   stock?: number;
+  pedidoProgramado?: boolean;
 }
 
 const CART_KEY = "toston_app_cart";
@@ -69,4 +70,25 @@ export const getTotal = (): number => {
 export const getCartCount = (): number => {
   const cart = getCart();
   return cart.reduce((acc, item) => acc + item.cantidad, 0);
+};
+
+export const addToCartWithQty = (product: any, qty: number, pedidoProgramado = false): void => {
+  const cart = getCart();
+  const existing = cart.find((item) => item.id === product.id);
+  if (existing) {
+    existing.cantidad += qty;
+    if (pedidoProgramado) existing.pedidoProgramado = true;
+  } else {
+    cart.push({
+      id:               product.id,
+      nombre:           product.nombre,
+      precio:           product.precio,
+      cantidad:         qty,
+      imagenPreview:    product.imagenPreview || product.imagen || null,
+      stock:            product.stock ?? 0,
+      pedidoProgramado,
+    });
+  }
+  saveCart(cart);
+  window.dispatchEvent(new Event('cart-updated'));
 };

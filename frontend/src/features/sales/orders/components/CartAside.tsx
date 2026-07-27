@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, MapPin, Calendar, Trash2, Plus, Minus, ShoppingBag, LogIn, Sparkles, ChevronRight, ShoppingCart, FileText, Truck } from 'lucide-react';
+import { X, MapPin, Trash2, Plus, Minus, ShoppingBag, LogIn, Sparkles, ChevronRight, ShoppingCart, FileText, Truck } from 'lucide-react';
 import { CartItem, removeFromCart, updateQuantity, clearCart, getCart } from '../services/cartService';
 import { isAuthenticated } from '../../../../services/authService';
 import { apiFetch } from '../../../../utils/api';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
 
 const COSTO_DOMICILIO = 5000;
+const HORA_APERTURA  = 8;   // 8:00 am
+const HORA_CIERRE    = 20;  // 8:00 pm
 
 interface CartAsideProps {
   isOpen: boolean;
@@ -18,22 +20,31 @@ interface CartAsideProps {
 const COP = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
 
-const hoyISO = () => new Date().toISOString().split('T')[0];
+const estaAbierto = () => {
+  const h = new Date().getHours();
+  return h >= HORA_APERTURA && h < HORA_CIERRE;
+};
+
+const mensajeFueraHorario = () => {
+  const h = new Date().getHours();
+  if (h < HORA_APERTURA) return `Abrimos a las ${HORA_APERTURA}:00 am — tu pedido se procesará en cuanto abramos.`;
+  return `Cerramos a las ${HORA_CIERRE - 12}:00 pm — tu pedido se procesará mañana a las ${HORA_APERTURA}:00 am.`;
+};
 
 const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLoginRequired }) => {
   const [cart, setCart]               = useState<CartItem[]>(() => getCart());
   const [address, setAddress]         = useState('');
   const [departamento, setDepartamento] = useState('Antioquia');
   const [municipio, setMunicipio]     = useState('');
-  const [date, setDate]               = useState('');
   const [tieneDomicilio,    setTieneDomicilio]    = useState(false);
   const [observaciones,     setObservaciones]     = useState('');
   const [sinDireccionMsg,   setSinDireccionMsg]   = useState(false);
   const [confirmVaciar,     setConfirmVaciar]     = useState(false);
-  const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
+  const [showDeliveryInfo,  setShowDeliveryInfo]  = useState(false);
   const [total, setTotal]             = useState(() =>
     getCart().reduce((acc, i) => acc + i.precio * i.cantidad, 0)
   );
+  const abierto = estaAbierto();
 
   const syncCart = useCallback(() => {
     const c = getCart();
@@ -52,8 +63,19 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
     if (!item) return;
     const newQty = item.cantidad + delta;
     if (newQty <= 0) { removeFromCart(id); return; }
-    if (item.stock && newQty > item.stock) return;
+    if (item.stock && !((item as any).pedidoProgramado) && newQty > item.stock) return;
     updateQuantity(id, newQty);
+  };
+
+  const handleQtyDirect = (id: number, value: string) => {
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < 1) { removeFromCart(id); return; }
+    const item = cart.find(i => i.id === id);
+    if (item?.stock && !((item as any).pedidoProgramado) && num > item.stock) {
+      updateQuantity(id, item.stock);
+      return;
+    }
+    updateQuantity(id, num);
   };
 
   const usarDireccionRegistrada = async () => {
@@ -81,14 +103,12 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
 
   const handleCheckout = () => {
     if (cart.length === 0) return alert('El carrito está vacío');
-    if (!date)           return alert('Indica la fecha en que necesitas el pedido');
-    if (date < hoyISO()) return alert('La fecha no puede ser en el pasado');
     if (tieneDomicilio) {
       if (!address)   return alert('Ingresa una dirección de entrega');
       if (!municipio) return alert('Selecciona un municipio');
     }
     if (!isAuthenticated()) { onClose(); onLoginRequired(); return; }
-    onCheckout({ address, departamento, municipio, date, observaciones, tieneDomicilio });
+    onCheckout({ address, departamento, municipio, date: '', observaciones, tieneDomicilio });
   };
 
   if (!isOpen) return null;
@@ -122,6 +142,18 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
           </div>
         </div>
 
+        {/* Aviso horario */}
+        {!abierto && (
+          <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 shrink-0 flex items-start gap-2.5">
+            <span className="text-lg leading-none mt-0.5">⏰</span>
+            <div>
+              <p className="text-xs font-black text-amber-700">Fuera del horario de atención</p>
+              <p className="text-[11px] font-medium text-amber-600 mt-0.5 leading-snug">{mensajeFueraHorario()}</p>
+              <p className="text-[10px] text-amber-500 mt-1">Horario: lunes a sábado · 8:00 am – 8:00 pm</p>
+            </div>
+          </div>
+        )}
+
         {/* Toggle Recogida / Domicilio */}
         <div className="px-5 py-4 bg-white border-b border-gray-100 shrink-0">
           <div className="grid grid-cols-2 bg-gray-100 rounded-2xl p-1.5 gap-1.5">
@@ -141,21 +173,9 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
             </button>
           </div>
 
-          {/* Fecha siempre visible */}
-          <div className="mt-3 relative">
-            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="date"
-              min={hoyISO()}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-all font-medium text-gray-700"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-
           {/* Formulario de entrega (solo si domicilio) */}
           {tieneDomicilio && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-3 space-y-2">
               {loggedIn && (
                 <div>
                   <button
@@ -259,13 +279,23 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
                         <div>
                           <h4 className="font-black text-gray-800 text-[11px] mb-0.5 truncate">{item.nombre}</h4>
                           <p className="font-black text-[10px]" style={{ color: 'var(--green-700)' }}>{COP(item.precio)}</p>
+                          {(item as any).pedidoProgramado && (
+                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">⏳ Pedido programado</span>
+                          )}
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100">
                             <button onClick={() => handleQty(item.id, -1)} className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white hover:text-red-500 transition-all text-gray-400">
                               <Minus size={9} strokeWidth={3} />
                             </button>
-                            <span className="w-6 text-center text-[10px] font-black text-gray-800">{item.cantidad}</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.cantidad}
+                              onChange={e => handleQtyDirect(item.id, e.target.value)}
+                              className="w-8 text-center text-[10px] font-black text-gray-800 bg-transparent border-none outline-none"
+                              style={{ appearance: 'textfield', MozAppearance: 'textfield', WebkitAppearance: 'none' } as React.CSSProperties}
+                            />
                             <button onClick={() => handleQty(item.id, 1)} className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white hover:text-emerald-600 transition-all text-gray-400">
                               <Plus size={9} strokeWidth={3} />
                             </button>
@@ -303,7 +333,6 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
         <div className={`bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.04)] relative z-20 ${tieneDomicilio ? 'px-4 py-3' : 'p-4'}`}>
 
           {tieneDomicilio ? (
-            /* Vista compacta cuando hay domicilio */
             <div className="flex items-center justify-between mb-3">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-3 text-[11px] text-gray-400 font-medium">
@@ -319,7 +348,6 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
               <div className="text-amber-400"><Sparkles size={16} /></div>
             </div>
           ) : (
-            /* Vista normal */
             <div className="space-y-1.5 mb-4">
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-gray-500 font-bold">Subtotal productos</span>
@@ -359,6 +387,8 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       `}</style>
     </div>
   );

@@ -219,7 +219,10 @@ export default function Sidebar({ isOpen, onToggle }) {
               className="avatar"
               onClick={() => navigate(user.tipo === "cliente" ? "/cliente/perfil" : "/admin/perfil")}
             >
-              {user?.nombre?.charAt(0) || "U"}
+              {(user?.fotoPerfil || user?.Foto_perfil)
+                ? <img src={user.fotoPerfil || user.Foto_perfil} alt={user.nombre} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} />
+                : (user?.nombre?.charAt(0) || "U")
+              }
             </div>
             <div className="footer-info">
               <div className="user-name">{user?.nombre}</div>

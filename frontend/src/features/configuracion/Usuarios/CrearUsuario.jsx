@@ -90,7 +90,7 @@ const VALLE_ABURRA = [
   "Girardota", "Itagüí", "La Estrella", "Medellín", "Sabaneta",
 ];
 
-function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDepto, errMunicipio }) {
+function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDepto, errMunicipio, optional = false }) {
   useEffect(() => {
     if (!departamento) onDepto("Antioquia");
   }, []); // eslint-disable-line
@@ -109,7 +109,7 @@ function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDep
   return (
     <>
       <div className="field-wrap">
-        <label className="field-label">Departamento <span className="required">*</span></label>
+        <label className="field-label">Departamento {!optional && <span className="required">*</span>}</label>
         <div className="select-wrap">
           <select
             value={departamento || "Antioquia"}
@@ -124,7 +124,7 @@ function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDep
       </div>
 
       <div className="field-wrap">
-        <label className="field-label">Municipio <span className="required">*</span></label>
+        <label className="field-label">Municipio {!optional && <span className="required">*</span>}</label>
         <div className="select-wrap">
           <select
             value={municipio}
@@ -248,26 +248,29 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
     }
 
     if (s === 2) {
-      // En edición: ubicación es opcional si todos los campos están vacíos
-      const tieneUbicacion = form.departamento || form.municipio || form.direccion?.trim();
-      if (!isEdit || tieneUbicacion) {
+      if (!isEdit) {
         if (!form.departamento)      e.departamento = "Selecciona un departamento";
         if (!form.municipio)         e.municipio    = "Selecciona un municipio";
         if (!form.direccion?.trim()) e.direccion    = "La dirección es obligatoria";
         else if (!esUbicacionValida(form.direccion)) e.direccion = "La dirección debe tener letras y números (mín. 5 caracteres)";
+      } else if (form.direccion?.trim() && !esUbicacionValida(form.direccion)) {
+        e.direccion = "La dirección debe tener letras y números (mín. 5 caracteres)";
       }
     }
 
     if (s === 3) {
       if (!form.rol) e.rol = "Seleccione un rol";
-      if (isEdit) {
-        if (form.contrasena) {
+      const editandoCliente = isEdit && user?.tipo !== "empleado";
+      if (!editandoCliente) {
+        if (isEdit) {
+          if (form.contrasena) {
+            const passError = validatePassword(form.contrasena, form.confirmar);
+            if (passError) e.contrasena = passError;
+          }
+        } else {
           const passError = validatePassword(form.contrasena, form.confirmar);
           if (passError) e.contrasena = passError;
         }
-      } else {
-        const passError = validatePassword(form.contrasena, form.confirmar);
-        if (passError) e.contrasena = passError;
       }
     }
 
@@ -413,25 +416,18 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                   onMunicipio={v => set("municipio", v)}
                   errDepto={errors.departamento}
                   errMunicipio={errors.municipio}
-                  initialDepto={isEdit ? user.departamento : ""}
-                  initialMunicipio={isEdit ? user.municipio : ""}
+                  optional={isEdit}
                 />
               </div>
               <div style={{ marginTop: 4 }}>
                 <Field
-                  required
+                  required={!isEdit}
                   label="Dirección"
-                  placeholder={
-                    !form.departamento
-                      ? "Primero seleccione un departamento"
-                      : !form.municipio
-                      ? "Primero seleccione un municipio"
-                      : "Ej: Cra 5 #12-34, Apto 201"
-                  }
+                  placeholder="Ej: Cra 5 #12-34, Apto 201"
                   value={form.direccion}
                   onChange={e => set("direccion", e.target.value)}
                   error={errors.direccion}
-                  readOnly={!form.departamento || !form.municipio}
+                  readOnly={!isEdit && (!form.departamento || !form.municipio)}
                 />
               </div>
             </>
@@ -440,46 +436,54 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
           {/* ── Step 3: Acceso y Rol ── */}
           {step === 3 && (
             <>
-              {isEdit && (
-                <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                  <h4 style={{ margin: 0, fontSize: 13, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Ic.LockSvg /> Cambio de contraseña
-                  </h4>
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
-                    Complete estos campos solo si desea actualizar la contraseña del usuario.
-                  </p>
-                </div>
-              )}
-              <Field required={!isEdit} label={isEdit ? "Nueva contraseña" : "Contraseña"} error={errors.contrasena}>
-                <div className="pass-input-wrap">
-                  <input
-                    type={showPass ? "text" : "password"}
-                    value={form.contrasena}
-                    onChange={e => set("contrasena", e.target.value)}
-                    placeholder={isEdit ? "Dejar vacío para no cambiar" : "Mínimo 8 caracteres"}
-                    autoComplete="new-password"
-                    className={`field-input${errors.contrasena ? " error" : ""}`}
-                  />
-                  <button type="button" className="pass-eye-btn" onClick={() => setShowPass(v => !v)}>
-                    {showPass ? "🙈" : "👁"}
-                  </button>
-                </div>
-              </Field>
-              <Field required={!isEdit} label="Confirmar contraseña" error={errors.confirmar}>
-                <div className="pass-input-wrap">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    value={form.confirmar}
-                    onChange={e => set("confirmar", e.target.value)}
-                    placeholder={isEdit ? "Dejar vacío para no cambiar" : "Repite la contraseña"}
-                    autoComplete="new-password"
-                    className={`field-input${errors.confirmar ? " error" : ""}`}
-                  />
-                  <button type="button" className="pass-eye-btn" onClick={() => setShowConfirm(v => !v)}>
-                    {showConfirm ? "🙈" : "👁"}
-                  </button>
-                </div>
-              </Field>
+              {(() => {
+                const editandoCliente = isEdit && user?.tipo !== "empleado";
+                if (editandoCliente) return null;
+                return (
+                  <>
+                    {isEdit && (
+                      <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                        <h4 style={{ margin: 0, fontSize: 13, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
+                          <Ic.LockSvg /> Cambio de contraseña
+                        </h4>
+                        <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                          Complete estos campos solo si desea actualizar la contraseña del usuario.
+                        </p>
+                      </div>
+                    )}
+                    <Field required={!isEdit} label={isEdit ? "Nueva contraseña" : "Contraseña"} error={errors.contrasena}>
+                      <div className="pass-input-wrap">
+                        <input
+                          type={showPass ? "text" : "password"}
+                          value={form.contrasena}
+                          onChange={e => set("contrasena", e.target.value)}
+                          placeholder={isEdit ? "Dejar vacío para no cambiar" : "Mínimo 8 caracteres"}
+                          autoComplete="new-password"
+                          className={`field-input${errors.contrasena ? " error" : ""}`}
+                        />
+                        <button type="button" className="pass-eye-btn" onClick={() => setShowPass(v => !v)}>
+                          {showPass ? "🙈" : "👁"}
+                        </button>
+                      </div>
+                    </Field>
+                    <Field required={!isEdit} label="Confirmar contraseña" error={errors.confirmar}>
+                      <div className="pass-input-wrap">
+                        <input
+                          type={showConfirm ? "text" : "password"}
+                          value={form.confirmar}
+                          onChange={e => set("confirmar", e.target.value)}
+                          placeholder={isEdit ? "Dejar vacío para no cambiar" : "Repite la contraseña"}
+                          autoComplete="new-password"
+                          className={`field-input${errors.confirmar ? " error" : ""}`}
+                        />
+                        <button type="button" className="pass-eye-btn" onClick={() => setShowConfirm(v => !v)}>
+                          {showConfirm ? "🙈" : "👁"}
+                        </button>
+                      </div>
+                    </Field>
+                  </>
+                );
+              })()}
 
               <div className="field-wrap">
                 <label className="field-label">Rol <span className="required">*</span></label>
