@@ -67,7 +67,7 @@ export default function CrearCategoria({ onClose, onSave, existingCategories = [
           <input
             className={`field-input${errors.nombre ? " field-input--error" : ""}`}
             value={form.nombre}
-            maxLength={100}
+            maxLength={50}
             onChange={e => set("nombre", soloLetras(e.target.value))}
             placeholder="Ej. Snacks Premium"
             onFocus={e => (e.target.style.borderColor = "#4caf50")}
