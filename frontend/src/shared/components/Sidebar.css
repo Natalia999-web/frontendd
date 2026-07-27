@@ -96,13 +96,11 @@
 .sidebar-search .search-input:focus { border-color: var(--g-light); }
 
 .sidebar-search .search-icon {
-  position: static;
-  transform: none;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
   color: #95a5a6;
   pointer-events: none;
   flex-shrink: 0;
-  line-height: 1;
 }
 
 /* ─── LABEL ──────────────────────────────────────────────── */
@@ -148,10 +146,11 @@
   color: var(--g);
 }
 
-.section-icon-wrap { font-size: 16px; flex-shrink: 0; }
+.section-icon-wrap { display: flex; align-items: center; flex-shrink: 0; color: #7a9e7e; }
 .section-label { flex: 1; text-align: left; font-weight: 700; font-size: 13px; }
-.chevron { font-size: 9px; transition: transform 0.2s; color: #ccc; flex-shrink: 0; }
+.chevron { display: flex; align-items: center; transition: transform 0.2s; color: #ccc; flex-shrink: 0; }
 .chevron.rotated { transform: rotate(180deg); }
+.section-btn:hover .section-icon-wrap { color: var(--g); }
 
 /* ─── SUBMENU ────────────────────────────────────────────── */
 .submenu {
@@ -178,7 +177,9 @@
   white-space: nowrap;
 }
 
-.sub-icon { font-size: 15px; flex-shrink: 0; }
+.sub-icon { display: flex; align-items: center; flex-shrink: 0; color: #95a5a6; }
+.sub-item:hover .sub-icon,
+.sub-item.active .sub-icon { color: var(--g); }
 .sub-label { overflow: hidden; text-overflow: ellipsis; }
 
 .sub-item:hover { color: var(--g); background: var(--g-soft); }
@@ -241,11 +242,12 @@
   border: none;
   color: #ccc;
   cursor: pointer;
-  font-size: 17px;
-  padding: 4px;
+  padding: 6px;
   border-radius: 6px;
   transition: color 0.15s;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 .logout-btn-sidebar:hover { color: #e03131; }
 

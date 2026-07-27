@@ -4,6 +4,13 @@ import { getUser, logout } from "../../services/authService";
 import { usePrivilegios } from "../../context/PrivilegiosContext";
 import LogoutModal from "./LogoutModal";
 import "./Sidebar.css";
+import {
+  Globe, LayoutDashboard, Settings, ShoppingCart, Layers, TrendingUp, User,
+  Home, Pencil, Monitor, Shield, Users, Upload, FolderOpen, Package, Receipt,
+  Building2, Tag, Box, ClipboardList, Utensils, ShoppingBag, Truck,
+  Navigation, History, Banknote, Bell, UserCircle, RotateCcw,
+  Search, ChevronLeft, ChevronRight, ChevronDown, LogOut,
+} from "lucide-react";
 
 /* =========================
    MENÚS
@@ -12,73 +19,77 @@ import "./Sidebar.css";
 const adminMenuItems = [
   {
     section: "Sitio Web",
-    icon: "🌐",
+    Icon: Globe,
     items: [
-      { label: "Ver Landing Page",   icon: "🏠", link: "/",              privilegioKey: "LandingPage" },
-      { label: "Editar Landing Page", icon: "✏️", link: "/admin/landing", privilegioKey: "LandingPage" },
+      { label: "Ver Landing Page",    Icon: Home,    link: "/",              privilegioKey: "LandingPage" },
+      { label: "Editar Landing Page", Icon: Pencil,  link: "/admin/landing", privilegioKey: "LandingPage" },
     ],
   },
   {
     section: "Dashboard",
-    icon: "▦",
+    Icon: LayoutDashboard,
     items: [
-      { label: "Vista General", icon: "🖥️", link: "/admin", privilegioKey: "Dashboard" },
+      { label: "Vista General", Icon: Monitor, link: "/admin", privilegioKey: "Dashboard" },
     ],
   },
   {
     section: "Configuración",
-    icon: "⚙️",
+    Icon: Settings,
     items: [
-      { label: "Roles y Privilegios",  icon: "🛡️", link: "/admin/roles",     privilegioKey: "Roles" },
-      { label: "Gestión de Usuario",   icon: "👤", link: "/admin/usuarios",   privilegioKey: "Usuarios" },
-      { label: "Gestión de Salidas",   icon: "📤", link: "/admin/salidas",    privilegioKey: "GestionSalidas" },
+      { label: "Roles y Privilegios", Icon: Shield,  link: "/admin/roles",     privilegioKey: "Roles" },
+      { label: "Gestión de Usuario",  Icon: Users,   link: "/admin/usuarios",   privilegioKey: "Usuarios" },
+      { label: "Gestión de Salidas",  Icon: Upload,  link: "/admin/salidas",    privilegioKey: "GestionSalidas" },
     ],
   },
   {
     section: "Compras",
-    icon: "🛒",
+    Icon: ShoppingCart,
     items: [
-      { label: "Categorías de Insumos", icon: "🗂️", link: "/admin/categorias_insumos",  privilegioKey: "CategoriaInsumos" },
-      { label: "Gestión de Insumos",    icon: "📦", link: "/admin/gestion-insumos",      privilegioKey: "Insumos" },
-      { label: "Compras",               icon: "🧾", link: "/admin/compras",              privilegioKey: "Compras" },
-      { label: "Proveedores",           icon: "🏭", link: "/admin/proveedores",          privilegioKey: "Proveedores" },
+      { label: "Categorías de Insumos", Icon: FolderOpen, link: "/admin/categorias_insumos",  privilegioKey: "CategoriaInsumos" },
+      { label: "Gestión de Insumos",    Icon: Package,    link: "/admin/gestion-insumos",      privilegioKey: "Insumos" },
+      { label: "Compras",               Icon: Receipt,    link: "/admin/compras",              privilegioKey: "Compras" },
+      { label: "Proveedores",           Icon: Building2,  link: "/admin/proveedores",          privilegioKey: "Proveedores" },
     ],
   },
   {
     section: "Producción",
-    icon: "⚡",
+    Icon: Layers,
     items: [
-      { label: "Categoría de Productos", icon: "🏷️", link: "/admin/categorias_productos", privilegioKey: "CategoriaProductos" },
-      { label: "Gestión de Productos",   icon: "📦", link: "/admin/products",             privilegioKey: "GestionProductos" },
-      { label: "Órdenes de Producción",  icon: "📋", link: "/admin/ordenes-produccion",   privilegioKey: "OrdenesProduccion" },
-      { label: "Cocina",                 icon: "🍳", link: "/admin/cocina",             roleRequired: "Cocinero" },
+      { label: "Categoría de Productos", Icon: Tag,           link: "/admin/categorias_productos", privilegioKey: "CategoriaProductos" },
+      { label: "Gestión de Productos",   Icon: Box,           link: "/admin/products",             privilegioKey: "GestionProductos" },
+      { label: "Órdenes de Producción",  Icon: ClipboardList, link: "/admin/ordenes-produccion",   privilegioKey: "OrdenesProduccion" },
+      { label: "Cocina",                 Icon: Utensils,      link: "/admin/cocina",               roleRequired: "Cocinero" },
     ],
   },
   {
     section: "Ventas",
-    icon: "💰",
+    Icon: TrendingUp,
     items: [
-      { label: "Pedidos",       icon: "🛍️", link: "/admin/pedidos",              privilegioKey: "Pedidos" },
-      { label: "Domicilios",    icon: "🚚", link: "/admin/domicilios",           privilegioKey: "Domicilios", soloNoRepartidor: true },
-      { label: "Mi Dashboard",    icon: "🏠", link: "/admin/mi-dashboard",           clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Mis Entregas",    icon: "🛵", link: "/admin/mis-entregas",           clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Pedido Actual",   icon: "📦", link: "/admin/pedido-actual",          clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Historial",       icon: "📋", link: "/admin/historial-entregas",     clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Mis Ganancias",   icon: "💰", link: "/admin/mis-ganancias",          clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Notificaciones",  icon: "🔔", link: "/admin/mis-notificaciones",     clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Mi Perfil",       icon: "👤", link: "/admin/mi-perfil-repartidor",   clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Devoluciones",  icon: "🔄", link: "/admin/devoluciones",         privilegioKey: "Devoluciones" },
+      { label: "Pedidos",        Icon: ShoppingBag,    link: "/admin/pedidos",              privilegioKey: "Pedidos" },
+      { label: "Domicilios",     Icon: Truck,          link: "/admin/domicilios",           privilegioKey: "Domicilios", soloNoRepartidor: true },
+      { label: "Mi Dashboard",   Icon: LayoutDashboard,link: "/admin/mi-dashboard",         clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Mis Entregas",   Icon: Navigation,     link: "/admin/mis-entregas",         clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Pedido Actual",  Icon: Package,        link: "/admin/pedido-actual",        clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Historial",      Icon: History,        link: "/admin/historial-entregas",   clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Mis Ganancias",  Icon: Banknote,       link: "/admin/mis-ganancias",        clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Notificaciones", Icon: Bell,           link: "/admin/mis-notificaciones",   clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Mi Perfil",      Icon: UserCircle,     link: "/admin/mi-perfil-repartidor", clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
+      { label: "Devoluciones",   Icon: RotateCcw,      link: "/admin/devoluciones",         privilegioKey: "Devoluciones" },
     ],
   },
 ];
 
 const clienteMenuItems = [
-  { section: "Mi Cuenta", icon: "👤", items: [
-    { label: "Inicio",       icon: "🏠", link: "/cliente/inicio" },
-    { label: "Mis Pedidos",  icon: "🛍️", link: "/cliente/pedidos" },
-    { label: "Devoluciones", icon: "🔄", link: "/cliente/devoluciones" },
-    { label: "Mi Perfil",    icon: "👤", link: "/cliente/perfil" },
-  ]},
+  {
+    section: "Mi Cuenta",
+    Icon: User,
+    items: [
+      { label: "Inicio",       Icon: Home,        link: "/cliente/inicio" },
+      { label: "Mis Pedidos",  Icon: ShoppingBag, link: "/cliente/pedidos" },
+      { label: "Devoluciones", Icon: RotateCcw,   link: "/cliente/devoluciones" },
+      { label: "Mi Perfil",    Icon: UserCircle,  link: "/cliente/perfil" },
+    ],
+  },
 ];
 
 /* =========================
@@ -114,13 +125,12 @@ export default function Sidebar({ isOpen, onToggle }) {
       const matches = expected.some(r => r.toLowerCase() === rol);
       if (!matches) return false;
     }
-    // Vista admin de domicilios: solo para quienes NO son domiciliarios
     if (item.soloNoRepartidor && user?.rol === "Domiciliario") return false;
-    if (!item.privilegioKey && !item.clave) return true;  // sin restricción → siempre visible
-    if (loading) return false;                             // aún cargando → no mostrar hasta tener privilegios
-    if (item.hideFromAdmin && isAdmin) return false;       // ocultar al admin explícitamente
-    if (isAdmin) return true;                              // admin → todo lo demás visible
-    if (item.clave) return hasPrivilegio(item.clave);      // clave exacta (sin sufijo _ver)
+    if (!item.privilegioKey && !item.clave) return true;
+    if (loading) return false;
+    if (item.hideFromAdmin && isAdmin) return false;
+    if (isAdmin) return true;
+    if (item.clave) return hasPrivilegio(item.clave);
     return hasPrivilegio(`${item.privilegioKey}_ver`);
   };
 
@@ -141,14 +151,14 @@ export default function Sidebar({ isOpen, onToggle }) {
         onClick={onToggle}
         title={isOpen ? "Contraer menú" : "Expandir menú"}
       >
-        {isOpen ? "◀" : "▶"}
+        {isOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
       </button>
 
       <div className="sidebar-content">
         <div className="sidebar-inner">
 
           <div className="sidebar-search">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Search size={14} /></span>
             <input
               className="search-input"
               placeholder="Buscar módulo..."
@@ -160,13 +170,12 @@ export default function Sidebar({ isOpen, onToggle }) {
           <div className="nav-group-label">Módulos</div>
 
           <nav className="sidebar-nav">
-            {menuItems.map(({ section, icon, items }) => {
+            {menuItems.map(({ section, Icon: SectionIcon, items }) => {
               const filtered = search
                 ? items.filter(it => it.label.toLowerCase().includes(search.toLowerCase()))
                 : items;
 
               const visible = filtered.filter(canSeeItem);
-
               if (visible.length === 0) return null;
 
               const isSectionOpen = openSections[section] || !!search;
@@ -177,20 +186,24 @@ export default function Sidebar({ isOpen, onToggle }) {
                     className={`section-btn ${isSectionOpen ? "open" : ""}`}
                     onClick={() => toggle(section)}
                   >
-                    <span className="section-icon-wrap">{icon}</span>
+                    <span className="section-icon-wrap">
+                      <SectionIcon size={15} />
+                    </span>
                     <span className="section-label">{section}</span>
-                    <span className={`chevron ${isSectionOpen ? "rotated" : ""}`}>▼</span>
+                    <span className={`chevron ${isSectionOpen ? "rotated" : ""}`}>
+                      <ChevronDown size={13} />
+                    </span>
                   </button>
 
                   <div className={`submenu ${isSectionOpen ? "open" : ""}`}>
                     <div className="submenu-inner">
-                      {visible.map(({ label, icon: subIcon, link }) => (
+                      {visible.map(({ label, Icon: SubIcon, link }) => (
                         <Link
                           key={label}
                           to={link}
                           className={`sub-item ${location.pathname === link ? "active" : ""}`}
                         >
-                          <span className="sub-icon">{subIcon}</span>
+                          <span className="sub-icon"><SubIcon size={14} /></span>
                           <span className="sub-label">{label}</span>
                         </Link>
                       ))}
@@ -212,7 +225,9 @@ export default function Sidebar({ isOpen, onToggle }) {
               <div className="user-name">{user?.nombre}</div>
               <div className="user-role">{user?.tipo}</div>
             </div>
-            <button className="logout-btn-sidebar" onClick={handleLogout} title="Cerrar sesión">⏏</button>
+            <button className="logout-btn-sidebar" onClick={handleLogout} title="Cerrar sesión">
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </div>
