@@ -20,6 +20,7 @@ export const updateUser = async (updatedData) => {
   const currentUser = getCurrentUser();
   const updated = { ...currentUser, ...updatedData };
   localStorage.setItem('usuario', JSON.stringify(updated));
+  window.dispatchEvent(new Event('profileUpdated'));
 
   return updated;
 };

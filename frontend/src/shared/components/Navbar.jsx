@@ -46,11 +46,15 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
       getMiCredito().then(d => setCredito(d?.saldo || 0)).catch(() => {});
     };
 
+    const handleProfileUpdate = () => setUser(getUser());
+
     window.addEventListener('cart-updated', handleCartUpdate);
     window.addEventListener('credito-updated', handleCreditoUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => {
       window.removeEventListener('cart-updated', handleCartUpdate);
       window.removeEventListener('credito-updated', handleCreditoUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, []);
 
@@ -213,7 +217,12 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
                 onClick={() => navigate(user.tipo === "cliente" ? "/cliente/perfil" : "/admin/perfil")}
                 style={{ cursor: 'pointer' }}
               >
-                <div className="avatar">{user.nombre.charAt(0)}</div>
+                <div className="avatar">
+                  {(user.fotoPerfil || user.Foto_perfil)
+                    ? <img src={user.fotoPerfil || user.Foto_perfil} alt={user.nombre} />
+                    : user.nombre.charAt(0)
+                  }
+                </div>
                 <div className="user-info-text">
                   <div className="user-name">{user.nombre}</div>
                   <div className="user-role">{user.rol}</div>
