@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Mail, Phone, MapPin, CreditCard,
   Building2, Map, ShieldCheck, Edit2, LogOut
 } from 'lucide-react';
 import { clearSession } from '../../../../utils/api';
+import LogoutModal from '../../../../shared/components/LogoutModal';
 
 const InfoBlock = ({ icon: Icon, label, value, span = 1 }) => (
   <div style={{
@@ -41,14 +43,13 @@ const InfoBlock = ({ icon: Icon, label, value, span = 1 }) => (
 
 const ProfileView = ({ user, totalPedidos, onEdit }) => {
   const navigate = useNavigate();
+  const [showLogout, setShowLogout] = useState(false);
 
-  const handleLogout = () => {
-    clearSession();
-    navigate('/login');
-  };
+  const doLogout = () => { clearSession(); navigate('/login'); };
 
   return (
     <div>
+      {showLogout && <LogoutModal onConfirm={doLogout} onCancel={() => setShowLogout(false)} />}
       {/* Avatar + nombre */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 20,
@@ -149,7 +150,7 @@ const ProfileView = ({ user, totalPedidos, onEdit }) => {
       {/* Cerrar sesión */}
       <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--gray-100)' }}>
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogout(true)}
           style={{
             width: '100%', padding: '11px 0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

@@ -115,7 +115,11 @@ export default function Sidebar({ isOpen, onToggle }) {
     const sync = () => setUser(getUser());
     sync();
     window.addEventListener("session-changed", sync);
-    return () => window.removeEventListener("session-changed", sync);
+    window.addEventListener("profileUpdated", sync);
+    return () => {
+      window.removeEventListener("session-changed", sync);
+      window.removeEventListener("profileUpdated", sync);
+    };
   }, []);
 
   const canSeeItem = (item) => {

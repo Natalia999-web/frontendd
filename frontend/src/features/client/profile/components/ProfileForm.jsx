@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
-import { Mail, Phone, MapPin, Camera, Save, X, CreditCard, Lock } from 'lucide-react';
+import { Mail, Phone, MapPin, Camera, Save, X, CreditCard, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { apiFetch } from '../../../../utils/api';
 import { soloDigitos, esUbicacionValida } from '../../../../utils/inputFilters';
 
@@ -65,9 +65,11 @@ const LocationSelects = ({ municipio, onMunicipio }) => {
 
 const ProfileForm = ({ user, onSave, onCancel }) => {
   const fileRef = useRef(null);
-  const [errors,       setErrors]       = useState({});
-  const [loadingPerfil, setLoadingPerfil] = useState(true);
-  const [perfil,       setPerfil]       = useState(null); // datos reales del API
+  const [errors,          setErrors]          = useState({});
+  const [loadingPerfil,   setLoadingPerfil]   = useState(true);
+  const [perfil,          setPerfil]          = useState(null);
+  const [showPassSection, setShowPassSection] = useState(false);
+  const [passForm,        setPassForm]        = useState({ nueva: '', confirmar: '', showNueva: false, showConf: false });
 
   const [form, setForm] = useState({
     telefono:      '',
@@ -141,9 +143,17 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
     if (form.direccion?.trim() && !esUbicacionValida(form.direccion))
       e.direccion = 'La dirección debe tener letras y números (mín. 5 caracteres)';
 
-    // Cedula: si intenta establecerla por primera vez, debe poner tipo también
     if (!cedulaYaEstablecida && form.cedula.trim() && !form.tipo_documento)
       e.tipo_documento = 'Selecciona el tipo de documento';
+
+    if (showPassSection && passForm.nueva) {
+      if (passForm.nueva.length < 8)
+        e.passNueva = 'La contraseña debe tener al menos 8 caracteres';
+      else if (passForm.nueva !== passForm.confirmar)
+        e.passNueva = 'Las contraseñas no coinciden';
+    }
+    if (showPassSection && !passForm.nueva && passForm.confirmar)
+      e.passNueva = 'Escribe la nueva contraseña';
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -160,10 +170,11 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
       Departamento: form.departamento || null,
     };
 
-    // Incluir foto solo si el usuario seleccionó una nueva (base64)
-    if (form.fotoPerfil?.startsWith('data:image/')) {
+    if (form.fotoPerfil?.startsWith('data:image/'))
       payload.Foto_perfil = form.fotoPerfil;
-    }
+
+    if (showPassSection && passForm.nueva)
+      payload.Contrasena = passForm.nueva;
 
     // Solo enviar cédula si no estaba establecida y el usuario la llenó
     if (!cedulaYaEstablecida && form.cedula.trim()) {
@@ -291,6 +302,63 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
         municipio={form.municipio}
         onMunicipio={v => { setVal('municipio', v); setVal('departamento', 'Antioquia'); }}
       />
+
+      {/* Cambio de contraseña */}
+      <div style={{ marginBottom: 16, borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        <button
+          type="button"
+          onClick={() => { setShowPassSection(v => !v); setPassForm({ nueva: '', confirmar: '', showNueva: false, showConf: false }); setErrors(p => { const n = { ...p }; delete n.passNueva; return n; }); }}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '11px 14px', border: 'none', cursor: 'pointer',
+            background: showPassSection ? '#f0fdf4' : '#f8fafc',
+            color: showPassSection ? 'var(--green-700)' : 'var(--gray-600)',
+            fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <KeyRound size={13} /> {showPassSection ? 'Cancelar cambio de contraseña' : 'Cambiar contraseña'}
+          </span>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>{showPassSection ? '▲' : '▼'}</span>
+        </button>
+
+        {showPassSection && (
+          <div style={{ padding: '12px 14px 4px', borderTop: '1px solid #e2e8f0', background: '#fafdf9' }}>
+            <Field label="Nueva contraseña" icon={Lock} error={errors.passNueva}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={passForm.showNueva ? 'text' : 'password'}
+                  value={passForm.nueva}
+                  onChange={e => setPassForm(p => ({ ...p, nueva: e.target.value }))}
+                  placeholder="Mínimo 8 caracteres"
+                  style={{ ...inputBase, paddingRight: 40 }}
+                  onFocus={focusOn} onBlur={focusOff}
+                />
+                <button type="button" onClick={() => setPassForm(p => ({ ...p, showNueva: !p.showNueva }))}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--gray-400)', display: 'flex', padding: 0 }}>
+                  {passForm.showNueva ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </Field>
+            <Field label="Confirmar contraseña" icon={Lock}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={passForm.showConf ? 'text' : 'password'}
+                  value={passForm.confirmar}
+                  onChange={e => setPassForm(p => ({ ...p, confirmar: e.target.value }))}
+                  placeholder="Repite la nueva contraseña"
+                  style={{ ...inputBase, paddingRight: 40 }}
+                  onFocus={focusOn} onBlur={focusOff}
+                />
+                <button type="button" onClick={() => setPassForm(p => ({ ...p, showConf: !p.showConf }))}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--gray-400)', display: 'flex', padding: 0 }}>
+                  {passForm.showConf ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </Field>
+          </div>
+        )}
+      </div>
 
       {/* Botones */}
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>

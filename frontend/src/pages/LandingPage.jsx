@@ -675,7 +675,18 @@ const LandingPage = ({ hideNavbar = false }) => {
                         No disponible para entrega inmediata — puedes hacer un pedido programado.
                       </p>
                     )}
-                    <p className="text-[#555] font-medium text-sm mb-6 flex-1 leading-relaxed">{cat.descripcion || 'Sabor auténtico y natural en cada bocado.'}</p>
+                    <p className="text-[#555] font-medium text-sm mb-4 flex-1 leading-relaxed">{cat.descripcion || 'Sabor auténtico y natural en cada bocado.'}</p>
+                    {!agotado && (
+                      <div className="mb-4">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl border ${
+                          p.stock <= 5  ? 'bg-red-50 text-red-600 border-red-100' :
+                          p.stock <= 15 ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                          'bg-green-50 text-[#1b5e20] border-green-100'
+                        }`}>
+                          📦 {p.stock} disponible{p.stock !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 bg-[#f7faf8] rounded-2xl border border-[#e8f5e9] p-1.5">
                         <button onClick={() => setQty(p.id, qty - 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90">
