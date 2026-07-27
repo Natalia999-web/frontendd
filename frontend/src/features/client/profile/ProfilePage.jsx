@@ -234,8 +234,8 @@ const ProfilePage = () => {
     setUser(getCurrentUser());
     cargarPerfil();
     getMisVentas({ porPagina: 100 })
-      .then(data => setPedidos(data.pedidos || []))
-      .catch(() => getPedidos({ porPagina: 100 }).then(data => setPedidos(data.pedidos || [])).catch(() => {}));
+      .then(data => setPedidos([...(data.pedidos || [])].sort((a, b) => b.id - a.id)))
+      .catch(() => getPedidos({ porPagina: 100 }).then(data => setPedidos([...(data.pedidos || [])].sort((a, b) => b.id - a.id))).catch(() => {}));
     getMiCredito().then(d => setCredito(d?.saldo || 0)).catch(() => {});
   }, []);
 

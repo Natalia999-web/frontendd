@@ -62,7 +62,7 @@ export default function GestionUsuarios() {
     setLoading(true);
     try {
       const [users, rolesData] = await Promise.all([getUsuarios(), getRoles()]);
-      setUsuarios(users);
+      setUsuarios([...users].sort((a, b) => b.id - a.id));
       setRoles(rolesData);
     } catch (e) {
       showToast(e.message || "Error al cargar usuarios", "error");

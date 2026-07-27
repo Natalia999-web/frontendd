@@ -814,7 +814,7 @@ export default function GestionSalidas() {
     setLoading(true);
     try {
       const data = await getSalidas();
-      setSalidas(enriquecerSalidas(data.salidas || []));
+      setSalidas(enriquecerSalidas([...(data.salidas || [])].sort((a, b) => b.id - a.id)));
     } catch {
       // error shown in child toast
     } finally {
@@ -855,7 +855,7 @@ export default function GestionSalidas() {
 
         setProductos(prodList);
         setInsumos(insList);
-        setSalidas(enriquecerSalidas(sData.salidas || []));
+        setSalidas(enriquecerSalidas([...(sData.salidas || [])].sort((a, b) => b.id - a.id)));
       } catch {
         // fallback silencioso
       } finally {

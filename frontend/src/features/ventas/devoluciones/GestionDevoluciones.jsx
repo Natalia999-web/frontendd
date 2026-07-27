@@ -362,7 +362,7 @@ export default function GestionDevoluciones() {
     setLoading(true);
     try {
       const data = await getDevoluciones({ porPagina: 100 });
-      setDevoluciones(data.devoluciones);
+      setDevoluciones([...(data.devoluciones || [])].sort((a, b) => b.id - a.id));
     } catch (err) {
       showToast(err.message || "Error al cargar devoluciones", "error");
     } finally {

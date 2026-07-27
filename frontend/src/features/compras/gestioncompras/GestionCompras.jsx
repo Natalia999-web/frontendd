@@ -96,7 +96,7 @@ export default function GestionCompras() {
         getCompras({ porPagina: 100 }),
         getProveedores({ porPagina: 100 }),
       ]);
-      setCompras(cData.compras || []);
+      setCompras([...(cData.compras || [])].sort((a, b) => b.id - a.id));
       setProveedores(pData.proveedores || pData || []);
     } catch (err) {
       showToast(err?.message || "Error al cargar las compras. Intenta de nuevo.", "error");

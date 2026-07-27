@@ -1097,7 +1097,7 @@ export default function GestionOrdenesProduccion() {
         getProductos(),
         getInsumos(),
       ]);
-      setOrdenes(ordenesData);
+      setOrdenes([...(ordenesData || [])].sort((a, b) => b.id - a.id));
       setProductos(
         (pData.productos || [])
           .filter(p => p.Estado !== 0)

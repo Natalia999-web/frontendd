@@ -827,7 +827,7 @@ export default function GestionPedidos() {
         const preserved = prev.filter(p =>
           ["Entregado", "Cancelado"].includes(p.estado) && !newIds.has(p.id)
         );
-        return [...data.pedidos, ...preserved];
+        return [...data.pedidos, ...preserved].sort((a, b) => b.id - a.id);
       });
     } catch (err) {
       showToast(err.message || "Error al cargar pedidos", "error");
