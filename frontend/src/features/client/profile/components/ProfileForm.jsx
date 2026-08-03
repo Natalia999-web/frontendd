@@ -117,7 +117,12 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
     if (k === 'cedula') val = soloDigitos(val);
     if (k === 'telefono') val = soloDigitos(val, 10);
     setForm(p => ({ ...p, [k]: val }));
-    setErrors(p => { const n = { ...p }; delete n[k]; return n; });
+    setErrors(p => {
+      const n = { ...p };
+      if (val && k === 'direccion' && !esUbicacionValida(val)) n[k] = 'La dirección debe tener letras y números (mín. 5 caracteres)';
+      else delete n[k];
+      return n;
+    });
   };
   const setVal = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
@@ -329,7 +334,17 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
                 <input
                   type={passForm.showNueva ? 'text' : 'password'}
                   value={passForm.nueva}
-                  onChange={e => setPassForm(p => ({ ...p, nueva: e.target.value }))}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setPassForm(p => ({ ...p, nueva: val }));
+                    setErrors(p => {
+                      const n = { ...p };
+                      if (val && val.length < 8) n.passNueva = 'La contraseña debe tener al menos 8 caracteres';
+                      else if (val && passForm.confirmar && val !== passForm.confirmar) n.passNueva = 'Las contraseñas no coinciden';
+                      else delete n.passNueva;
+                      return n;
+                    });
+                  }}
                   placeholder="Mínimo 8 caracteres"
                   style={{ ...inputBase, paddingRight: 40 }}
                   onFocus={focusOn} onBlur={focusOff}
@@ -345,7 +360,16 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
                 <input
                   type={passForm.showConf ? 'text' : 'password'}
                   value={passForm.confirmar}
-                  onChange={e => setPassForm(p => ({ ...p, confirmar: e.target.value }))}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setPassForm(p => ({ ...p, confirmar: val }));
+                    setErrors(p => {
+                      const n = { ...p };
+                      if (val && passForm.nueva && val !== passForm.nueva) n.passNueva = 'Las contraseñas no coinciden';
+                      else if (!passForm.nueva || passForm.nueva.length >= 8) delete n.passNueva;
+                      return n;
+                    });
+                  }}
                   placeholder="Repite la nueva contraseña"
                   style={{ ...inputBase, paddingRight: 40 }}
                   onFocus={focusOn} onBlur={focusOff}

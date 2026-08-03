@@ -62,17 +62,18 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
   const sugerirPrecioConGanancia = () => 0;
 
   const [form, setForm] = useState({
-    nombre:           "",
-    idCategoria:      "",
-    precio:           "",
-    stockMinimo:      "10",
-    descripcion_corta: "",
-    descripcion_larga: "",
-    activo:            true,
-    publicado:         true,
-    archivos:         [], // File objects reales para subir a la API
-    imagenesPreview:  [], // base64 para mostrar en la UI
-    ficha:            null,
+    nombre:              "",
+    idCategoria:         "",
+    precio:              "",
+    stockMinimo:         "10",
+    descripcion_corta:   "",
+    descripcion_larga:   "",
+    activo:              true,
+    publicado:           true,
+    requiereProduccion:  false,
+    archivos:            [], // File objects reales para subir a la API
+    imagenesPreview:     [], // base64 para mostrar en la UI
+    ficha:               null,
   });
   const [errors,    setErrors]    = useState({});
   const [saving,    setSaving]    = useState(false);
@@ -83,7 +84,14 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
   /* ── Setters ──────────────────────────────────────────── */
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
-    setErrors((p) => ({ ...p, [k]: "" }));
+    let err = "";
+    if (v !== "" && v !== null) {
+      if ((k === "descripcion_corta" || k === "descripcion_larga") && !tieneLetras(v)) err = "La descripción debe contener letras";
+      if (k === "precio" && (isNaN(v) || Number(v) <= 0)) err = "Precio válido requerido";
+      if (k === "stockMinimo" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
+      if (k === "stockMinimo" && !isNaN(v) && Number(v) > 99999) err = "Máximo 99 999 unidades";
+    }
+    setErrors((p) => ({ ...p, [k]: err }));
   };
 
   /* ── Imágenes ─────────────────────────────────────────── */
@@ -162,9 +170,10 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
         Precio_venta:      Number(form.precio),
         Stock:             0,
         Stock_Minimo:      Number(form.stockMinimo),
-        Descripcion_Corta: form.descripcion_corta.trim(),
-        Descripcion_Larga: form.descripcion_larga.trim(),
-        Publicado:         form.publicado ? 1 : 0,
+        Descripcion_Corta:    form.descripcion_corta.trim(),
+        Descripcion_Larga:    form.descripcion_larga.trim(),
+        Publicado:            form.publicado ? 1 : 0,
+        Requiere_Produccion:  form.requiereProduccion ? 1 : 0,
         ...(form.ficha
           ? {
               ficha_tecnica: {
@@ -357,6 +366,27 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
                       </button>
                       <span style={{ fontSize: 13, color: form.publicado ? "#2e7d32" : "#9e9e9e" }}>
                         {form.publicado ? "Visible en la tienda" : "Oculto en la tienda"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => set("requiereProduccion", !form.requiereProduccion)}
+                        style={{
+                          width: 52, height: 28, borderRadius: 14, border: "none",
+                          background: form.requiereProduccion ? "#1565c0" : "#bdbdbd",
+                          position: "relative", cursor: "pointer", transition: "background 0.2s",
+                        }}
+                      >
+                        <span style={{
+                          position: "absolute", top: 3,
+                          left: form.requiereProduccion ? 26 : 3,
+                          width: 22, height: 22, borderRadius: "50%",
+                          background: "#fff", transition: "left 0.2s",
+                        }} />
+                      </button>
+                      <span style={{ fontSize: 13, color: form.requiereProduccion ? "#1565c0" : "#9e9e9e" }}>
+                        {form.requiereProduccion ? "Requiere producción" : "Stock directo"}
                       </span>
                     </div>
                   </div>

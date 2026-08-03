@@ -173,6 +173,29 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
 export default function VerInsumo({ ins, categorias, unidades, onClose }) {
   const navigate = useNavigate();
   const [tab,     setTab]     = useState("info");
+
+  // Guardia: si el insumo no existe o fue eliminado
+  if (!ins) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="modal-header">
+            <h2 className="modal-header__title">Insumo no encontrado</h2>
+            <button className="modal-close-btn" onClick={onClose}>✕</button>
+          </div>
+          <div className="modal-body">
+            <div className="empty-state" style={{ padding: "32px 0" }}>
+              <div className="empty-state__icon" style={{ fontSize: 36 }}>🔍</div>
+              <p className="empty-state__text">El insumo no existe o fue eliminado del sistema.</p>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn-ghost" onClick={onClose}>Cerrar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [lotes,   setLotes]   = useState([]);
   const [lotesLoading, setLotesLoading] = useState(false);
 

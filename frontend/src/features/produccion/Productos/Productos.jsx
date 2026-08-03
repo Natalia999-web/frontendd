@@ -91,6 +91,7 @@ function adaptarProducto(p) {
     estado:            p.estado_label ?? null,
     proxVencimiento:   p.proximo_vencimiento ?? null,
     diasParaVencer:    p.dias_para_vencer ?? null,
+    requiereProduccion: (p.Requiere_Produccion ?? 0) === 1,
     imagenesApi:       p.imagenes ?? [],
     imagenesPreview:   (p.imagenes ?? []).map((img) => img.url).filter(Boolean),
     ficha: ft ? {

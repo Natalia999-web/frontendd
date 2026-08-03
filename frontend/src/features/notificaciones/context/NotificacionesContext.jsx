@@ -21,8 +21,10 @@ export const TIPOS = {
   PEDIDO_CONFIRMADO:    "pedido_confirmado",
   PEDIDO_ENTREGADO:     "pedido_entregado",
   PEDIDO_CANCELADO:     "pedido_cancelado",
-  DEVOLUCION_APROBADA:  "devolucion_aprobada",
-  DEVOLUCION_RECHAZADA: "devolucion_rechazada",
+  DEVOLUCION_APROBADA:       "devolucion_aprobada",
+  DEVOLUCION_RECHAZADA:      "devolucion_rechazada",
+  PEDIDO_EN_PRODUCCION:      "pedido_en_produccion",
+  FECHA_PROPUESTA:           "fecha_propuesta",
 };
 
 export const TIPO_LABELS = {
@@ -39,6 +41,8 @@ export const TIPO_LABELS = {
   [TIPOS.PEDIDO_CANCELADO]:     "Pedido",
   [TIPOS.DEVOLUCION_APROBADA]:  "Devolución",
   [TIPOS.DEVOLUCION_RECHAZADA]: "Devolución",
+  [TIPOS.PEDIDO_EN_PRODUCCION]: "Producción",
+  [TIPOS.FECHA_PROPUESTA]:      "Fecha propuesta",
 };
 
 export const TIPO_ICONS = {
@@ -55,6 +59,8 @@ export const TIPO_ICONS = {
   [TIPOS.PEDIDO_CANCELADO]:     "❌",
   [TIPOS.DEVOLUCION_APROBADA]:  "✅",
   [TIPOS.DEVOLUCION_RECHAZADA]: "❌",
+  [TIPOS.PEDIDO_EN_PRODUCCION]: "🏭",
+  [TIPOS.FECHA_PROPUESTA]:      "📅",
 };
 
 export const TIPO_COLORS = {
@@ -71,6 +77,8 @@ export const TIPO_COLORS = {
   [TIPOS.PEDIDO_CANCELADO]:     "#c62828",
   [TIPOS.DEVOLUCION_APROBADA]:  "#2e7d32",
   [TIPOS.DEVOLUCION_RECHAZADA]: "#c62828",
+  [TIPOS.PEDIDO_EN_PRODUCCION]: "#1565c0",
+  [TIPOS.FECHA_PROPUESTA]:      "#283593",
 };
 
 // Tipos backend → tipos frontend
@@ -83,6 +91,8 @@ const BACKEND_TYPE_MAP = {
   produccion_requerida:   TIPOS.SISTEMA,
   domicilio_pendiente:    TIPOS.PEDIDO_NUEVO,
   devolucion_pendiente:   TIPOS.DEVOLUCION_PENDIENTE,
+  pedido_en_produccion:   TIPOS.PEDIDO_EN_PRODUCCION,
+  fecha_propuesta:        TIPOS.FECHA_PROPUESTA,
 };
 
 // Tipos propios de notificaciones de cliente (no van a localStorage de admin)
@@ -92,6 +102,8 @@ const TIPOS_CLIENTE = new Set([
   TIPOS.PEDIDO_CANCELADO,
   TIPOS.DEVOLUCION_APROBADA,
   TIPOS.DEVOLUCION_RECHAZADA,
+  TIPOS.PEDIDO_EN_PRODUCCION,
+  TIPOS.FECHA_PROPUESTA,
 ]);
 
 const uid = () => `N-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;

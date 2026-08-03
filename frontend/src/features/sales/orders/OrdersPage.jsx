@@ -32,13 +32,14 @@ const OrdersPage = () => {
   useEffect(() => {
     getProductos({ porPagina: 100 }).then(data => {
       const lista = (data.productos || data || []).map(p => ({
-        id:          p.ID_Producto || p.id,
-        nombre:      p.Nombre      || p.nombre      || "",
-        precio:      p.Precio_venta || p.Precio_Venta || p.precio || 0,
-        stock:       p.Stock       || p.stock       || 0,
-        idCategoria: p.ID_Categoria|| p.idCategoria || null,
-        publicado:   !!p.Publicado,
-        imagen:      p.Imagen      || p.imagen      || null,
+        id:                 p.ID_Producto || p.id,
+        nombre:             p.Nombre      || p.nombre      || "",
+        precio:             p.Precio_venta || p.Precio_Venta || p.precio || 0,
+        stock:              p.Stock       || p.stock       || 0,
+        idCategoria:        p.ID_Categoria|| p.idCategoria || null,
+        publicado:          !!p.Publicado,
+        imagen:             p.Imagen      || p.imagen      || null,
+        requiereProduccion: !!p.Requiere_Produccion,
       }));
       setProductos(lista.filter(p => p.publicado));
     }).catch(() => {});
@@ -98,14 +99,20 @@ const OrdersPage = () => {
     setCheckoutOpen(true);
   };
 
-  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito) => {
+  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo) => {
     const user = getUser();
     const cart = getCart();
 
-    const tieneDomicilio = orderDetails?.tieneDomicilio;
-    const direccion      = orderDetails?.address      || '';
-    const municipio      = orderDetails?.municipio    || '';
-    const departamento   = orderDetails?.departamento || '';
+    const tieneDomicilio = deliveryInfo?.tieneDomicilio ?? orderDetails?.tieneDomicilio;
+    const direccion      = deliveryInfo?.address      || orderDetails?.address      || '';
+    const municipio      = deliveryInfo?.municipio    || orderDetails?.municipio    || '';
+    const departamento   = deliveryInfo?.departamento || orderDetails?.departamento || '';
+
+    let fechaEntregaEsperada = null;
+    if (deliveryInfo?.date) {
+      const t = deliveryInfo.time || '00:00';
+      fechaEntregaEsperada = `${deliveryInfo.date}T${t}:00`;
+    }
 
     // Subir comprobante a Cloudinary si existe
     let comprobanteUrl = null;
@@ -119,20 +126,21 @@ const OrdersPage = () => {
     }
 
     const payload = {
-      ID_Usuario:       user?.id || null,
-      productos:        cart.map(item => ({
+      ID_Usuario:             user?.id || null,
+      productos:              cart.map(item => ({
         ID_Producto: Number(item.id),
         Cantidad:    Number(item.cantidad),
       })),
-      Metodo_Pago:      paymentMethod === 'digital' ? 'Transferencia' : 'Efectivo',
-      A_Nombre_De:      onBehalfOf || null,
-      usar_credito:     usarCredito || false,
-      comprobante_pago: comprobanteUrl,
+      Metodo_Pago:            paymentMethod === 'digital' ? 'Transferencia' : 'Efectivo',
+      A_Nombre_De:            onBehalfOf || null,
+      usar_credito:           usarCredito || false,
+      comprobante_pago:       comprobanteUrl,
+      Fecha_entrega_esperada: fechaEntregaEsperada,
       domicilio: tieneDomicilio && direccion ? {
         Direccion_entrega:    direccion,
         Municipio_entrega:    municipio || 'Sin municipio',
         Departamento_entrega: departamento || 'Sin departamento',
-        Observaciones:        orderDetails?.observaciones || null,
+        Observaciones:        deliveryInfo?.observaciones || orderDetails?.observaciones || null,
       } : null,
     };
 

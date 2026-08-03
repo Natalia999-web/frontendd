@@ -41,7 +41,9 @@ export default function EditarCategoria({ category, onClose, onSave, existingCat
 
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
-    setErrors(p => ({ ...p, [k]: "" }));
+    let err = "";
+    if (v && k === "descripcion" && !tieneLetras(v)) err = "La descripción debe contener letras";
+    setErrors(p => ({ ...p, [k]: err }));
   };
 
   const validate = () => {

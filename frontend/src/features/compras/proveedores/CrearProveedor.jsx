@@ -120,7 +120,12 @@ export default function CrearProveedor({ onClose, onSave }) {
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: "" }));
+    let err = "";
+    if (v) {
+      if (k === "correo" && v.includes("@") && !/\S+@\S+\.\S+/.test(v)) err = "Formato de correo inválido";
+      if (k === "direccion" && !esUbicacionValida(v)) err = "La dirección debe tener letras y números (mín. 5 caracteres)";
+    }
+    setErrors(e => ({ ...e, [k]: err }));
   };
 
   const labelResponsable = form.tipo === "juridica" ? "Razón Social" : "Nombre del responsable";

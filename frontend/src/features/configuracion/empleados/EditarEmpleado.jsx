@@ -234,8 +234,22 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
     let val = v;
     if ((k === "nombre" || k === "apellidos") && typeof v === "string") val = soloLetras(v);
     if (k === "numDoc" && typeof v === "string") val = soloDigitos(v);
-    setForm(p => ({ ...p, [k]: val }));
-    setErrors(p => ({ ...p, [k]: "" }));
+    const newForm = { ...form, [k]: val };
+    setForm(newForm);
+    let err = "";
+    if (val) {
+      if (k === "correo" && val.includes("@") && !/\S+@\S+\.\S+/.test(val)) err = "Correo inválido";
+      if (k === "contrasena") { const pe = validatePassword(val, newForm.confirmar || undefined); err = pe || ""; }
+      if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    }
+    setErrors(p => {
+      const n = { ...p, [k]: err };
+      if (k === "contrasena" && newForm.confirmar) {
+        const pe = val ? validatePassword(val, newForm.confirmar) : null;
+        n.confirmar = pe ? "Las contraseñas no coinciden" : "";
+      }
+      return n;
+    });
   };
 
   const handleFoto = e => {

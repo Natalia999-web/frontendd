@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotificaciones, TIPO_ICONS, TIPO_LABELS, TIPO_COLORS, TIPOS } from "../context/NotificacionesContext";
 import { fmtFechaHora as fmtFechaCompleta } from "../../../utils/dateUtils.js";
+import { aceptarFechaProduccion, rechazarFechaProduccion } from "../../../services/pedidosService.js";
 import "./notificaciones.css";
 
 /* Mapeo de rutas para navegación rápida */
@@ -19,15 +21,23 @@ const RUTA_MAP = {
   [TIPOS.PEDIDO_CANCELADO]:     "/cliente/pedidos",
   [TIPOS.DEVOLUCION_APROBADA]:  "/cliente/devoluciones",
   [TIPOS.DEVOLUCION_RECHAZADA]: "/cliente/devoluciones",
+  [TIPOS.PEDIDO_EN_PRODUCCION]: "/cliente/pedidos",
+  [TIPOS.FECHA_PROPUESTA]:      "/cliente/pedidos",
 };
 
 export default function NotificacionDetalle({ notif, onClose }) {
   const { eliminarNotificacion } = useNotificaciones();
   const navigate = useNavigate();
+  const [accionando, setAccionando] = useState(null); // "aceptar" | "rechazar"
+  const [accionError, setAccionError] = useState("");
+  const [accionDone,  setAccionDone]  = useState(false);
+
   if (!notif) return null;
 
   const color = TIPO_COLORS[notif.tipo] || "#2e7d32";
   const ruta  = RUTA_MAP[notif.tipo] || "/dashboard";
+
+  const esFechaPropuesta = notif.tipo === TIPOS.FECHA_PROPUESTA;
 
   const handleIrAlRecurso = () => {
     navigate(ruta);
@@ -37,6 +47,36 @@ export default function NotificacionDetalle({ notif, onClose }) {
   const handleListo = () => {
     eliminarNotificacion(notif.id);
     onClose();
+  };
+
+  const handleAceptar = async () => {
+    if (!notif.idPedido) { setAccionError("No se encontró el pedido asociado."); return; }
+    setAccionando("aceptar");
+    setAccionError("");
+    try {
+      await aceptarFechaProduccion(notif.idPedido);
+      setAccionDone(true);
+      eliminarNotificacion(notif.id);
+    } catch (e) {
+      setAccionError(e.message || "No se pudo aceptar la fecha");
+    } finally {
+      setAccionando(null);
+    }
+  };
+
+  const handleRechazar = async () => {
+    if (!notif.idPedido) { setAccionError("No se encontró el pedido asociado."); return; }
+    setAccionando("rechazar");
+    setAccionError("");
+    try {
+      await rechazarFechaProduccion(notif.idPedido);
+      setAccionDone(true);
+      eliminarNotificacion(notif.id);
+    } catch (e) {
+      setAccionError(e.message || "No se pudo rechazar la fecha");
+    } finally {
+      setAccionando(null);
+    }
   };
 
   return (
@@ -73,32 +113,73 @@ export default function NotificacionDetalle({ notif, onClose }) {
             </div>
           )}
 
-          <div className="info-box info-box--info" style={{ marginTop: 20 }}>
-            <span className="info-box__icon">💡</span>
-            <span className="info-box__text">
-              Accede directamente al módulo relacionado para gestionar este evento.
-            </span>
-          </div>
+          {esFechaPropuesta && !accionDone && (
+            <div style={{ marginTop: 20, background: "#e8eaf6", border: "1px solid #9fa8da", borderRadius: 10, padding: "14px 16px" }}>
+              <p style={{ fontWeight: 800, fontSize: 13, color: "#283593", marginBottom: 6 }}>
+                📅 ¿Confirmas esta fecha de entrega?
+              </p>
+              <p style={{ fontSize: 12, color: "#3949ab", marginBottom: 12 }}>
+                Si rechazas, el pedido será cancelado.
+              </p>
+              {accionError && (
+                <p style={{ fontSize: 11, color: "#c62828", fontWeight: 700, marginBottom: 8 }}>⚠ {accionError}</p>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  disabled={!!accionando}
+                  onClick={handleAceptar}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: "#2e7d32", color: "#fff", fontWeight: 700, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "rechazar" ? 0.5 : 1 }}
+                >
+                  {accionando === "aceptar" ? "Aceptando…" : "✓ Aceptar"}
+                </button>
+                <button
+                  disabled={!!accionando}
+                  onClick={handleRechazar}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: "#c62828", color: "#fff", fontWeight: 700, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "aceptar" ? 0.5 : 1 }}
+                >
+                  {accionando === "rechazar" ? "Rechazando…" : "✕ Rechazar"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {esFechaPropuesta && accionDone && (
+            <div className="info-box info-box--success" style={{ marginTop: 20 }}>
+              <span className="info-box__icon">✅</span>
+              <span className="info-box__text">Respuesta enviada. Puedes cerrar esta notificación.</span>
+            </div>
+          )}
+
+          {!esFechaPropuesta && (
+            <div className="info-box info-box--info" style={{ marginTop: 20 }}>
+              <span className="info-box__icon">💡</span>
+              <span className="info-box__text">
+                Accede directamente al módulo relacionado para gestionar este evento.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="modal-footer" style={{ gap: 10 }}>
-          <button 
-            className="btn-save" 
-            style={{ background: color, border: "none", color: "#fff" }} 
-            onClick={handleIrAlRecurso}
-          >
-            🚀 Ir al módulo
-          </button>
-          
-          <button 
-            className="btn-save" 
+          {!esFechaPropuesta && (
+            <button
+              className="btn-save"
+              style={{ background: color, border: "none", color: "#fff" }}
+              onClick={handleIrAlRecurso}
+            >
+              🚀 Ir al módulo
+            </button>
+          )}
+
+          <button
+            className="btn-save"
             onClick={handleListo}
             title="Marcar como completado y eliminar de la lista"
           >
             ✓ Listo
           </button>
-          
+
           <button className="btn-ghost" onClick={onClose}>Cerrar</button>
         </div>
       </div>

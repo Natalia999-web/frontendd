@@ -143,8 +143,22 @@ export default function CrearEmpleado({ onClose, onSave }) {
     let val = v;
     if ((k === "nombre" || k === "apellidos") && typeof v === "string") val = soloLetras(v);
     if (k === "numDoc" && typeof v === "string") val = soloDigitos(v);
-    setForm(p => ({ ...p, [k]: val }));
-    setErrors(p => ({ ...p, [k]: "" }));
+    const newForm = { ...form, [k]: val };
+    setForm(newForm);
+    let err = "";
+    if (val) {
+      if (k === "correo" && val.includes("@") && !/\S+@\S+\.\S+/.test(val)) err = "Formato de correo inválido";
+      if (k === "contrasena" && val.length < 8) err = "Mínimo 8 caracteres";
+      if (k === "contrasena" && val.length >= 8 && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(val)) err = "Debe incluir mayúsculas, minúsculas y números";
+      if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    }
+    setErrors(p => {
+      const n = { ...p, [k]: err };
+      if (k === "contrasena" && newForm.confirmar) {
+        n.confirmar = val !== newForm.confirmar ? "Las contraseñas no coinciden" : "";
+      }
+      return n;
+    });
   };
 
   const handleFoto = e => {

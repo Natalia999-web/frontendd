@@ -223,8 +223,21 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
     if (k === "cedula"   && typeof v === "string") val = soloDigitos(v);
     if (k === "telefono" && typeof v === "string") val = soloDigitos(v, 10);
     if ((k === "nombre" || k === "apellidos") && typeof v === "string") val = soloLetras(v);
-    setForm(f => ({ ...f, [k]: val }));
-    setErrors(e => ({ ...e, [k]: "" }));
+    const newForm = { ...form, [k]: val };
+    setForm(newForm);
+    let err = "";
+    if (val) {
+      if (k === "correo" && val.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = "Formato de correo inválido";
+      if (k === "contrasena") err = validatePassword(val, newForm.confirmar || undefined) || "";
+      if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    }
+    setErrors(e => {
+      const n = { ...e, [k]: err };
+      if (k === "contrasena" && newForm.confirmar) {
+        n.confirmar = val !== newForm.confirmar ? "Las contraseñas no coinciden" : "";
+      }
+      return n;
+    });
   };
 
   const validateStep = (s) => {

@@ -104,6 +104,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
 
   if (!isOpen || !orderDetails) return null;
 
+  const itemsConDeficit = (orderDetails.items || []).filter(
+    (it: CartItem) => it.requiereProduccion && it.cantidad > (it.stock ?? 0)
+  );
+
   const soloDigitos = (tel: string) => tel.replace(/\D/g, '');
   const telefonoValido = soloDigitos(telefono).length === 10;
   const telefonoError = telefonoTocado && !telefonoValido
@@ -187,6 +191,29 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 px-4 py-3 space-y-3">
+
+          {/* Aviso de producción */}
+          {itemsConDeficit.length > 0 && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3">
+              <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                🏭 Orden de producción requerida
+              </p>
+              <p className="text-xs font-semibold text-blue-700 mb-2">
+                Los siguientes productos no tienen suficiente stock. Se creará una orden de producción y el administrador te propondrá una fecha de entrega.
+              </p>
+              <ul className="space-y-1">
+                {itemsConDeficit.map((it: CartItem) => (
+                  <li key={it.id} className="flex justify-between text-[11px] font-bold text-blue-800">
+                    <span>{it.nombre}</span>
+                    <span className="text-blue-500">
+                      Stock: {it.stock ?? 0} · Pedido: {it.cantidad}
+                      {it.cantidad > (it.stock ?? 0) ? ` · Déficit: ${it.cantidad - (it.stock ?? 0)}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Quién recibe + a nombre de */}
           <div className="grid grid-cols-2 gap-2">

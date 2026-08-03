@@ -6,6 +6,7 @@ export interface CartItem {
   imagenPreview: string | null;
   stock?: number;
   pedidoProgramado?: boolean;
+  requiereProduccion?: boolean;
 }
 
 const CART_KEY = "toston_app_cart";
@@ -24,16 +25,17 @@ export const addToCart = (product: any): void => {
   const existing = cart.find((item) => item.id === product.id);
 
   if (existing) {
-    if (existing.stock && existing.cantidad >= existing.stock) return;
+    if (!existing.requiereProduccion && existing.stock && existing.cantidad >= existing.stock) return;
     existing.cantidad += 1;
   } else {
     cart.push({
-      id: product.id,
-      nombre: product.nombre,
-      precio: product.precio,
-      cantidad: 1,
-      imagenPreview: product.imagenPreview || product.imagen || null,
-      stock: product.stock || 0,
+      id:                 product.id,
+      nombre:             product.nombre,
+      precio:             product.precio,
+      cantidad:           1,
+      imagenPreview:      product.imagenPreview || product.imagen || null,
+      stock:              product.stock || 0,
+      requiereProduccion: product.requiereProduccion ?? false,
     });
   }
   saveCart(cart);
@@ -50,7 +52,7 @@ export const updateQuantity = (productId: number, quantity: number): void => {
   const cart = getCart();
   const item = cart.find((i) => i.id === productId);
   if (item) {
-    const maxQty = item.stock || Infinity;
+    const maxQty = item.requiereProduccion ? Infinity : (item.stock || Infinity);
     item.cantidad = Math.max(1, Math.min(quantity, maxQty));
     saveCart(cart);
     window.dispatchEvent(new Event('cart-updated'));
@@ -80,13 +82,14 @@ export const addToCartWithQty = (product: any, qty: number, pedidoProgramado = f
     if (pedidoProgramado) existing.pedidoProgramado = true;
   } else {
     cart.push({
-      id:               product.id,
-      nombre:           product.nombre,
-      precio:           product.precio,
-      cantidad:         qty,
-      imagenPreview:    product.imagenPreview || product.imagen || null,
-      stock:            product.stock ?? 0,
+      id:                 product.id,
+      nombre:             product.nombre,
+      precio:             product.precio,
+      cantidad:           qty,
+      imagenPreview:      product.imagenPreview || product.imagen || null,
+      stock:              product.stock ?? 0,
       pedidoProgramado,
+      requiereProduccion: product.requiereProduccion ?? false,
     });
   }
   saveCart(cart);

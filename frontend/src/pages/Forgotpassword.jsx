@@ -273,6 +273,11 @@ const ForgotPassword = () => {
                         {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {password && password.length < 8 && (
+                      <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#991b1b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        ✗ Mínimo 8 caracteres ({8 - password.length} restantes)
+                      </p>
+                    )}
                   </div>
                   <div className="auth-field">
                     <label className="auth-label"><Lock size={11} /> Confirmar contraseña</label>

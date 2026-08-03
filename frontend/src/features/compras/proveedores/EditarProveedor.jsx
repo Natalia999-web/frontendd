@@ -180,7 +180,12 @@ export default function EditarProveedor({ proveedor, mode = "edit", onClose, onS
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: "" }));
+    let err = "";
+    if (v) {
+      if (k === "correo" && v.includes("@") && !/\S+@\S+\.\S+/.test(v)) err = "Correo inválido";
+      if (k === "direccion" && !esUbicacionValida(v)) err = "La dirección debe tener letras y números (mín. 5 caracteres)";
+    }
+    setErrors(e => ({ ...e, [k]: err }));
   };
 
   const validate = () => {

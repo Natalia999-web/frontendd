@@ -39,7 +39,9 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
 
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
-    setSErrors(p => ({ ...p, [k]: "" }));
+    let err = "";
+    if (k === "stockMinimo" && v !== "" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
+    setSErrors(p => ({ ...p, [k]: err }));
   };
 
   const validateStep = (s) => {

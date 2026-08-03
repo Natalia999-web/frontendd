@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingBag, Leaf, Sparkles,
@@ -246,11 +246,15 @@ function ConfirmStockModal({ product, qty, onConfirm, onCancel }) {
 /* ═══════════════════════════════════════════
    LANDING PAGE
 ═══════════════════════════════════════════ */
+const PRODUCTS_PER_PAGE = 6;
+
 const LandingPage = ({ hideNavbar = false }) => {
   const navigate = useNavigate();
   const { agregarNotificacion } = useNotificaciones();
   const [content, setContent] = useState(() => getLandingConfig());
   const [activeTab, setActiveTab] = useState('Todos');
+  const [productsPage, setProductsPage] = useState(1);
+  const productsSectionRef = useRef(null);
   const [user, setUser] = useState(null);
   const [productos, setProductos] = useState([]);
   const [categoriasMap, setCategoriasMap] = useState({});
@@ -306,15 +310,16 @@ const LandingPage = ({ hideNavbar = false }) => {
         lista
           .filter(p => p.Estado !== 0 && !p.lote_vencido && !p.Lote_Vencido)
           .map(p => ({
-            id:               p.ID_Producto,
-            nombre:           p.nombre,
-            precio:           p.Precio_venta,
-            stock:            p.Stock ?? 0,
-            idCategoria:      p.ID_Categoria,
-            imagen:           p.imagenes?.[0]?.url || null,
-            imagenes:         p.imagenes?.map(i => i.url) || [],
-            descripcion_corta: p.Descripcion_Corta ?? "",
-            descripcion_larga: p.Descripcion_Larga ?? "",
+            id:                 p.ID_Producto,
+            nombre:             p.nombre,
+            precio:             p.Precio_venta,
+            stock:              p.Stock ?? 0,
+            idCategoria:        p.ID_Categoria,
+            imagen:             p.imagenes?.[0]?.url || null,
+            imagenes:           p.imagenes?.map(i => i.url) || [],
+            descripcion_corta:  p.Descripcion_Corta ?? "",
+            descripcion_larga:  p.Descripcion_Larga ?? "",
+            requiereProduccion: !!p.Requiere_Produccion,
           }))
       );
     } catch {
@@ -476,6 +481,18 @@ const LandingPage = ({ hideNavbar = false }) => {
     ? productos
     : productos.filter(p => getCat(p.idCategoria).nombre === activeTab);
 
+  const totalProductPages  = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const safeProductsPage   = Math.min(productsPage, totalProductPages);
+  const paginatedProducts  = filteredProducts.slice(
+    (safeProductsPage - 1) * PRODUCTS_PER_PAGE,
+    safeProductsPage * PRODUCTS_PER_PAGE
+  );
+
+  const handleProductsPage = (n) => {
+    setProductsPage(n);
+    productsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const scrollToSection = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
@@ -607,7 +624,7 @@ const LandingPage = ({ hideNavbar = false }) => {
 
       {/* ─── CATEGORÍAS ─── */}
       {/* ─── PRODUCTOS ─── */}
-      <section id="productos" className="py-20 bg-white relative">
+      <section id="productos" ref={productsSectionRef} className="py-20 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-10">
             <h2 className="text-[#4caf50] font-black tracking-[0.3em] uppercase text-sm">Nuestro Menú</h2>
@@ -617,14 +634,14 @@ const LandingPage = ({ hideNavbar = false }) => {
           <p className="text-center text-xs font-black uppercase tracking-[0.25em] text-[#4caf50] mb-4">Categorías</p>
           <div className="flex flex-wrap justify-center gap-3 mb-16">
             {categories.map(cat => (
-              <button key={cat} onClick={() => setActiveTab(cat)}
+              <button key={cat} onClick={() => { setActiveTab(cat); setProductsPage(1); }}
                 className={`px-8 py-3 rounded-2xl font-bold transition-all ${activeTab === cat ? 'bg-[#1b5e20] text-white shadow-lg scale-105' : 'bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9]'}`}>
                 {cat}
               </button>
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-            {filteredProducts.map((p) => {
+            {paginatedProducts.map((p) => {
               const cat = getCat(p.idCategoria);
               const qty = getQty(p.id);
               const inCartItem = getCart().find(i => i.id === p.id);
@@ -714,6 +731,67 @@ const LandingPage = ({ hideNavbar = false }) => {
               );
             })}
           </div>
+
+          {/* ── Paginación ── */}
+          {totalProductPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-14 flex-wrap">
+              {/* Anterior */}
+              <button
+                onClick={() => handleProductsPage(safeProductsPage - 1)}
+                disabled={safeProductsPage === 1}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9] active:scale-95"
+              >
+                <ChevronLeft className="w-4 h-4" /> Anterior
+              </button>
+
+              {/* Páginas */}
+              {(() => {
+                const pages = [];
+                const show = (n) => pages.push(
+                  <button
+                    key={n}
+                    onClick={() => handleProductsPage(n)}
+                    className={`w-10 h-10 rounded-xl font-black text-sm transition-all active:scale-95 ${
+                      n === safeProductsPage
+                        ? 'bg-[#1b5e20] text-white shadow-lg scale-110'
+                        : 'bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9]'
+                    }`}
+                  >{n}</button>
+                );
+                const dots = (key) => pages.push(
+                  <span key={key} className="w-10 text-center text-[#9e9e9e] font-bold">…</span>
+                );
+                if (totalProductPages <= 7) {
+                  for (let i = 1; i <= totalProductPages; i++) show(i);
+                } else {
+                  show(1);
+                  if (safeProductsPage > 3) dots('l');
+                  const start = Math.max(2, safeProductsPage - 1);
+                  const end   = Math.min(totalProductPages - 1, safeProductsPage + 1);
+                  for (let i = start; i <= end; i++) show(i);
+                  if (safeProductsPage < totalProductPages - 2) dots('r');
+                  show(totalProductPages);
+                }
+                return pages;
+              })()}
+
+              {/* Siguiente */}
+              <button
+                onClick={() => handleProductsPage(safeProductsPage + 1)}
+                disabled={safeProductsPage === totalProductPages}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9] active:scale-95"
+              >
+                Siguiente <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Contador de resultados */}
+          {filteredProducts.length > 0 && (
+            <p className="text-center text-xs text-[#9e9e9e] font-medium mt-4">
+              Mostrando {(safeProductsPage - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(safeProductsPage * PRODUCTS_PER_PAGE, filteredProducts.length)} de {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       </section>
 
@@ -801,6 +879,57 @@ const LandingPage = ({ hideNavbar = false }) => {
                   <span className="text-sm font-bold text-[#2e7d32] group-hover:text-[#1b5e20] transition-colors duration-200">@tostonesbroms</span>
                 </a>
               </div>
+            </div>
+
+            {/* Horario */}
+            <div className="space-y-6 min-w-[220px]">
+              <p className="text-xs font-black uppercase tracking-widest text-[#a5d6a7]">Horario de atención</p>
+              <div className="space-y-2">
+                {[
+                  { dias: 'Lunes – Viernes', horas: '8:00 am – 8:00 pm', abierto: true  },
+                  { dias: 'Sábado',          horas: '8:00 am – 8:00 pm', abierto: true  },
+                  { dias: 'Domingo',         horas: 'Cerrado',            abierto: false },
+                ].map(({ dias, horas, abierto }) => (
+                  <div key={dias} className="flex items-start justify-between gap-4">
+                    <span className="text-sm font-bold text-[#2e7d32]">{dias}</span>
+                    <span className={`text-sm font-bold whitespace-nowrap ${abierto ? 'text-[#1b5e20]' : 'text-[#9e9e9e]'}`}>
+                      {horas}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Indicador en tiempo real */}
+              {(() => {
+                const h = new Date().getHours();
+                const abierto = h >= 8 && h < 20 && new Date().getDay() !== 0;
+                return (
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black border ${
+                    abierto
+                      ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#1b5e20]'
+                      : 'bg-gray-50 border-gray-200 text-[#9e9e9e]'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${abierto ? 'bg-[#4caf50] animate-pulse' : 'bg-gray-300'}`} />
+                    {abierto ? 'Abierto ahora' : 'Cerrado ahora'}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Mapa */}
+          <div className="mb-16">
+            <p className="text-xs font-black uppercase tracking-widest text-[#a5d6a7] mb-5">📍 Encuéntranos</p>
+            <div className="rounded-[24px] overflow-hidden border-2 border-[#e8f5e9] shadow-lg">
+              <iframe
+                title="Ubicación Tostón App"
+                src="https://maps.google.com/maps?q=Carrera+38A+No.+80-12&output=embed&z=16&hl=es"
+                width="100%"
+                height="300"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </div>
 

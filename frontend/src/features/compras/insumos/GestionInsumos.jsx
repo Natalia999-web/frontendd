@@ -22,19 +22,21 @@ export const UNIDADES = [
 ];
 
 const ADAPT_INSUMO = raw => ({
-  id:               raw.ID_Insumo,
-  nombre:           raw.Nombre,
-  idCategoria:      raw.ID_Categoria,
-  idUnidad:         raw.Unidad_Medida,
-  stockActual:      raw.Stock_Actual,
-  stockMinimo:      raw.Stock_Minimo,
-  estado:           raw.Estado === 1,
-  simboloUnidad:    raw.simbolo_unidad ?? "",
-  proxVencimiento:  raw.proximo_vencimiento ?? null,
-  diasParaVencer:   raw.dias_para_vencer ?? null,
-  loteId:           raw.lote_id ?? null,
-  tieneFicha:       raw.tiene_ficha_tecnica ?? false,
-  tieneOrden:       raw.tiene_orden_produccion ?? false,
+  id:                 raw.ID_Insumo,
+  nombre:             raw.Nombre,
+  idCategoria:        raw.ID_Categoria,
+  idUnidad:           raw.Unidad_Medida,
+  stockActual:        raw.Stock_Actual,
+  stockMinimo:        raw.Stock_Minimo,
+  estado:             raw.Estado === 1,
+  simboloUnidad:      raw.simbolo_unidad ?? "",
+  proxVencimiento:    raw.proximo_vencimiento ?? null,
+  diasParaVencer:     raw.dias_para_vencer ?? null,
+  loteId:             raw.lote_id ?? null,
+  tieneFicha:         raw.tiene_ficha_tecnica ?? false,
+  tieneOrden:         raw.tiene_orden_produccion ?? false,
+  tieneCompra:        raw.tiene_compra ?? false,
+  ultimaActualizacion: raw.Fecha_Actualizacion ?? raw.ultima_actualizacion ?? null,
 });
 
 const ADAPT_CAT = raw => ({
@@ -51,12 +53,21 @@ function calcEstado(actual, minimo) {
   return "disponible";
 }
 
-function Toggle({ value, onChange }) {
+function Toggle({ value, onChange, disabled = false }) {
   return (
-    <button onClick={() => onChange(!value)} className="toggle-btn"
-      style={{ background: value ? "#43a047" : "#c62828", boxShadow: value ? "0 2px 8px rgba(67,160,71,0.45)" : "0 2px 8px rgba(198,40,40,0.3)" }}>
+    <button
+      onClick={disabled ? undefined : () => onChange(!value)}
+      className="toggle-btn"
+      disabled={disabled}
+      title={disabled ? "Sin permiso para cambiar estado" : undefined}
+      style={{
+        background:  value ? "#43a047" : "#c62828",
+        boxShadow:   value ? "0 2px 8px rgba(67,160,71,0.45)" : "0 2px 8px rgba(198,40,40,0.3)",
+        opacity:     disabled ? 0.5 : 1,
+        cursor:      disabled ? "not-allowed" : "pointer",
+      }}>
       <span className="toggle-thumb" style={{ left: value ? 27 : 3 }}>
-        <span className="toggle-label" style={{ color:"black" }}>{value ? "ON" : "OFF"}</span>
+        <span className="toggle-label" style={{ color: "black" }}>{value ? "ON" : "OFF"}</span>
       </span>
     </button>
   );
@@ -177,6 +188,7 @@ function SkeletonRows() {
       <td><div className="skeleton-cell" style={{ width: 56 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 120 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 70 }} /></td>
+      <td><div className="skeleton-cell" style={{ width: 72 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 52 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 90 }} /></td>
     </tr>
@@ -184,20 +196,22 @@ function SkeletonRows() {
 }
 
 export default function GestionInsumos() {
+  const puedeVer      = usePrivilegio("Insumos_ver");
   const puedeCrear    = usePrivilegio("Insumos_crear");
   const puedeEditar   = usePrivilegio("Insumos_editar");
   const puedeEliminar = usePrivilegio("Insumos_eliminar");
 
-  const [insumos,    setInsumos]    = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState("");
-  const [filterCat,  setFilterCat]  = useState("todas");
-  const [filterEst,  setFilterEst]  = useState("todos");
-  const [showFilter, setShowFilter] = useState(false);
-  const [page,       setPage]       = useState(1);
-  const [modal,      setModal]      = useState(null);
-  const [toast,      setToast]      = useState(null);
+  const [insumos,          setInsumos]          = useState([]);
+  const [categorias,       setCategorias]       = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [search,           setSearch]           = useState("");
+  const [filterCat,        setFilterCat]        = useState("todas");
+  const [filterEst,        setFilterEst]        = useState("todos");
+  const [showFilter,       setShowFilter]       = useState(false);
+  const [page,             setPage]             = useState(1);
+  const [modal,            setModal]            = useState(null);
+  const [toast,            setToast]            = useState(null);
+  const [alertaDismissed,  setAlertaDismissed]  = useState(false);
   const filterRef = useRef();
 
   useEffect(() => {
@@ -333,6 +347,31 @@ export default function GestionInsumos() {
         <div className="page-header__line" />
       </div>
 
+      {/* ── Alerta de stock bajo (notificación a usuarios con permiso) ── */}
+      {!alertaDismissed && !loading && (() => {
+        const bajoStock = insumos.filter(i => i.estado && i.stockActual <= i.stockMinimo);
+        if (!bajoStock.length) return null;
+        return (
+          <div className="ins-stock-alert">
+            <span className="ins-stock-alert__icon">⚠️</span>
+            <div className="ins-stock-alert__body">
+              <strong>
+                {bajoStock.filter(i => i.stockActual === 0).length > 0
+                  ? `${bajoStock.length} insumo${bajoStock.length !== 1 ? "s" : ""} con stock crítico`
+                  : `${bajoStock.length} insumo${bajoStock.length !== 1 ? "s" : ""} bajo el stock mínimo`}
+              </strong>
+              <span className="ins-stock-alert__names">
+                {bajoStock.slice(0, 4).map(i =>
+                  i.stockActual === 0 ? `${i.nombre} (agotado)` : `${i.nombre} (${i.stockActual}/${i.stockMinimo})`
+                ).join(" · ")}
+                {bajoStock.length > 4 && ` · y ${bajoStock.length - 4} más`}
+              </span>
+            </div>
+            <button className="ins-stock-alert__close" onClick={() => setAlertaDismissed(true)} title="Cerrar">✕</button>
+          </div>
+        );
+      })()}
+
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
@@ -403,6 +442,7 @@ export default function GestionInsumos() {
                   <th>Lote</th>
                   <th>Stock</th>
                   <th>Próx. Venc.</th>
+                  <th>Última act.</th>
                   <th>Activo</th>
                   <th>Acciones</th>
                 </tr>
@@ -412,7 +452,7 @@ export default function GestionInsumos() {
                   <SkeletonRows />
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={9}>
                       <div className="empty-state">
                         <div className="empty-state__icon">🧺</div>
                         <p className="empty-state__text">
@@ -446,12 +486,25 @@ export default function GestionInsumos() {
                       </td>
                       <td><StockBar actual={ins.stockActual} minimo={ins.stockMinimo} simbolo={ins.simboloUnidad} /></td>
                       <td><VencCell fecha={ins.proxVencimiento} dias={ins.diasParaVencer} /></td>
-                      <td><Toggle value={ins.estado} onChange={() => handleToggle(ins)} /></td>
+                      <td>
+                        <span style={{ fontSize: 11, color: "#9e9e9e", whiteSpace: "nowrap" }}>
+                          {ins.ultimaActualizacion
+                            ? new Date(ins.ultimaActualizacion).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
+                            : "—"}
+                        </span>
+                      </td>
+                      <td>
+                        <Toggle
+                          value={ins.estado}
+                          onChange={() => handleToggle(ins)}
+                          disabled={!puedeEditar}
+                        />
+                      </td>
                       <td>
                         <div className="actions-cell">
-                          <button className="act-btn act-btn--view"   title="Ver detalle"      onClick={() => setModal({ type: "ver",      ins })}>👁</button>
+                          {puedeVer      && <button className="act-btn act-btn--view"   title="Ver detalle"      onClick={() => setModal({ type: "ver",      ins })}>👁</button>}
                           {puedeEditar   && <button className="act-btn act-btn--edit"   title="Editar"           onClick={() => setModal({ type: "editar",   ins })}>✎</button>}
-                          <button className="act-btn act-btn--salida" title="Registrar salida" onClick={() => setModal({ type: "salida",   ins })}>🚚</button>
+                          {puedeEditar   && <button className="act-btn act-btn--salida" title="Registrar salida" onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
                           {puedeEliminar && <button className="act-btn act-btn--delete" title="Eliminar"         onClick={() => setModal({ type: "eliminar", ins })}>🗑️</button>}
                         </div>
                       </td>
@@ -499,7 +552,7 @@ export default function GestionInsumos() {
         />
       )}
       {modal?.type === "eliminar" && (
-        (modal.ins.tieneFicha || modal.ins.tieneOrden) ? (
+        (modal.ins.tieneFicha || modal.ins.tieneOrden || modal.ins.tieneCompra) ? (
           <div className="modal-overlay" onClick={() => setModal(null)} style={{ zIndex: 30000 }}>
             <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, overflow: "hidden" }}>
 
@@ -543,6 +596,17 @@ export default function GestionInsumos() {
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>Órdenes de producción</p>
                         <p style={{ margin: "2px 0 0", fontSize: 12, color: "#616161" }}>
                           Está asignado a órdenes de producción activas. Espera a que terminen o cancélalas.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {modal.ins.tieneCompra && (
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10 }}>
+                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🛒</span>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>Compras registradas</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#616161" }}>
+                          Este insumo está asociado a una o más compras. No se puede eliminar mientras existan registros de compra vinculados.
                         </p>
                       </div>
                     </div>

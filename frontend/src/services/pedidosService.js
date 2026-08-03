@@ -11,6 +11,7 @@ const ESTADO_PEDIDO_MAP = {
   10: "Asignado",
   11: "Listo",
   13: "En producción",
+  14: "Fecha propuesta",
 };
 
 const adaptPedido = (p) => {
@@ -35,6 +36,7 @@ const adaptPedido = (p) => {
     idEmpleado:          p.ID_Empleado          || p.id_empleado         || null,
     nombre_domiciliario: p.nombre_domiciliario  || null,
     orden_produccion: (p.ordenes_produccion_pendientes > 0) || !!(p.Orden_Produccion ?? p.orden_produccion),
+    fecha_propuesta:  p.Fecha_Propuesta || p.fecha_propuesta || null,
     comprobante:      p.comprobante_pago || p.Comprobante || p.comprobante || null,
     cliente: {
       nombre:   p.nombre_cliente   || "",
@@ -121,3 +123,15 @@ export const getMisVentas = async ({ pagina = 1, porPagina = 100 } = {}) => {
 
 export const cancelarMiPedido = async (id) =>
   apiFetch(`/pedidos/${id}/cancelar-mi-pedido`, { method: "PATCH" });
+
+export const proponerFechaProduccion = async (id, fecha) =>
+  apiFetch(`/ventas/${id}/proponer-fecha`, {
+    method: "PATCH",
+    body: JSON.stringify({ Fecha_Propuesta: fecha }),
+  });
+
+export const aceptarFechaProduccion = async (id) =>
+  apiFetch(`/ventas/${id}/aceptar-fecha`, { method: "PATCH" });
+
+export const rechazarFechaProduccion = async (id) =>
+  apiFetch(`/ventas/${id}/rechazar-fecha`, { method: "PATCH" });

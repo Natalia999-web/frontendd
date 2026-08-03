@@ -88,14 +88,15 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
   //   archivosNuevos     → File objects del <input> que el usuario acaba de agregar
   //   imagenesABorrar    → IDs de imágenes existentes que el usuario quitó
   const [form, setForm] = useState(() => ({
-    nombre:            product.nombre ?? "",
-    idCategoria:       String(product.idCategoria ?? ""),
-    precio:            String(product.precio ?? ""),
-    stockMinimo:       String(product.stockMinimo ?? "10"),
-    activo:            product.activo !== false,
-    publicado:         product.publicado !== false,
-    descripcion_corta: product.descripcion_corta ?? "",
-    descripcion_larga: product.descripcion_larga ?? "",
+    nombre:              product.nombre ?? "",
+    idCategoria:         String(product.idCategoria ?? ""),
+    precio:              String(product.precio ?? ""),
+    stockMinimo:         String(product.stockMinimo ?? "10"),
+    activo:              product.activo !== false,
+    publicado:           product.publicado !== false,
+    requiereProduccion:  product.requiereProduccion ?? false,
+    descripcion_corta:   product.descripcion_corta ?? "",
+    descripcion_larga:   product.descripcion_larga ?? "",
 
     // Imágenes existentes (array de { ID_Producto_Img, url })
     imagenesExistentes: product.imagenesApi ?? [],
@@ -127,7 +128,14 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
   /* ── Setter genérico ──────────────────────────────────── */
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
-    setErrors((p) => ({ ...p, [k]: "" }));
+    let err = "";
+    if (v !== "" && v !== null) {
+      if ((k === "descripcion_corta" || k === "descripcion_larga") && !tieneLetras(v)) err = "La descripción debe contener letras";
+      if (k === "precio" && (isNaN(v) || Number(v) <= 0)) err = "Precio válido requerido";
+      if (k === "stockMinimo" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
+      if (k === "stockMinimo" && !isNaN(v) && Number(v) > 99999) err = "Máximo 99 999 unidades";
+    }
+    setErrors((p) => ({ ...p, [k]: err }));
   };
 
   /* ── Imágenes ─────────────────────────────────────────── */
@@ -221,14 +229,15 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
 
       // ── 1. Editar datos del producto ────────────────────
       await apiEditarProducto(id, {
-        nombre:            form.nombre.trim(),
-        ID_Categoria:      Number(form.idCategoria),
-        Precio_venta:      Number(form.precio),
-        Stock_Minimo:      Number(form.stockMinimo),
-        Estado:            form.activo ? 1 : 0,
-        Publicado:         form.publicado ? 1 : 0,
-        Descripcion_Corta: form.descripcion_corta.trim(),
-        Descripcion_Larga: form.descripcion_larga.trim(),
+        nombre:               form.nombre.trim(),
+        ID_Categoria:         Number(form.idCategoria),
+        Precio_venta:         Number(form.precio),
+        Stock_Minimo:         Number(form.stockMinimo),
+        Estado:               form.activo ? 1 : 0,
+        Publicado:            form.publicado ? 1 : 0,
+        Requiere_Produccion:  form.requiereProduccion ? 1 : 0,
+        Descripcion_Corta:    form.descripcion_corta.trim(),
+        Descripcion_Larga:    form.descripcion_larga.trim(),
       });
 
       // ── 2. Borrar imágenes marcadas ─────────────────────
@@ -342,6 +351,13 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                   <Toggle value={form.publicado} onChange={(v) => set("publicado", v)} />
                   <span className="estado-label" style={{ color: form.publicado ? "#2e7d32" : "#9e9e9e" }}>
                     {form.publicado ? "Visible en la tienda" : "Oculto en la tienda"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Toggle value={form.requiereProduccion} onChange={(v) => set("requiereProduccion", v)}
+                    title="Cuando el stock no alcanza, el déficit se convierte en orden de producción" />
+                  <span className="estado-label" style={{ color: form.requiereProduccion ? "#1565c0" : "#9e9e9e" }}>
+                    {form.requiereProduccion ? "Requiere producción" : "Stock directo"}
                   </span>
                 </div>
               </div>

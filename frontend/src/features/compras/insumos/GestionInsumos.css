@@ -507,3 +507,45 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
   .form-row, .detail-grid, .lote-section__body { grid-template-columns: 1fr; }
 }
 
+/* ── Alerta de stock bajo ─────────────────────────────────── */
+.ins-stock-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  background: #fff8e1;
+  border: 1.5px solid #ffe082;
+  border-left: 4px solid #f9a825;
+  border-radius: 12px;
+  animation: fadeIn 0.3s ease;
+}
+.ins-stock-alert__icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.ins-stock-alert__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ins-stock-alert__body strong { font-size: 13px; color: #e65100; }
+.ins-stock-alert__names {
+  font-size: 12px;
+  color: #795548;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ins-stock-alert__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #bdbdbd;
+  padding: 0 2px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.ins-stock-alert__close:hover { color: #757575; }
+

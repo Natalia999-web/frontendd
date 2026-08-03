@@ -30,8 +30,21 @@ const Register = () => {
     let val = e.target.value;
     if (k === 'Nombre' || k === 'Apellidos') val = soloLetras(val);
     if (k === 'Numero_documento') val = val.replace(/\D/g, '');
-    setForm(p => ({ ...p, [k]: val }));
-    setErrors(p => { const n = { ...p }; delete n[k]; return n; });
+    const newForm = { ...form, [k]: val };
+    setForm(newForm);
+    setErrors(p => {
+      const n = { ...p };
+      if (!val) { delete n[k]; return n; }
+      if (k === 'Correo' && val.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) n[k] = 'Formato de correo inválido';
+      else if (k === 'Contrasena' && val.length < 8) n[k] = 'Mínimo 8 caracteres';
+      else if (k === 'Confirmar_contrasena' && newForm.Contrasena && val !== newForm.Contrasena) n[k] = 'Las contraseñas no coinciden';
+      else delete n[k];
+      if (k === 'Contrasena' && newForm.Confirmar_contrasena) {
+        if (val !== newForm.Confirmar_contrasena) n.Confirmar_contrasena = 'Las contraseñas no coinciden';
+        else delete n.Confirmar_contrasena;
+      }
+      return n;
+    });
   };
 
   const validate = () => {

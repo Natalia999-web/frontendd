@@ -677,3 +677,207 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }
+
+/* ══════════════════════════════════════════════════════════
+   REPORTE DE SALIDAS
+══════════════════════════════════════════════════════════ */
+.sl-report { gap: 20px; }
+
+/* Filtro de fechas */
+.sl-report-filter.card {
+  padding: 20px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sl-report-filter__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2e7d32;
+}
+.sl-report-dates {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.sl-report-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sl-report-date-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #616161;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sl-report-date-field input[type="date"] {
+  padding: 9px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.sl-report-date-field input[type="date"]:focus {
+  border-color: #2e7d32;
+  background: #fff;
+}
+
+/* Botones de exportación */
+.sl-report-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sl-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sl-report-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.sl-report-btn--csv { background: #e8f5e9; color: #2e7d32; border: 1.5px solid #a5d6a7; }
+.sl-report-btn--pdf { background: #fff3e0; color: #e65100; border: 1.5px solid #ffcc80; }
+
+/* Secciones del reporte */
+.sl-report-body { display: flex; flex-direction: column; gap: 20px; }
+.sl-report-section { display: flex; flex-direction: column; gap: 12px; }
+.sl-report-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #424242;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-left: 3px solid #2e7d32;
+  padding-left: 10px;
+}
+
+/* Tarjetas de resumen */
+.sl-report-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sl-report-sum-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 20px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 14px;
+  background: #fafafa;
+  min-width: 110px;
+  text-align: center;
+}
+.sl-report-sum-card--total {
+  background: #f1f8e9;
+  border-color: #c5e1a5;
+}
+.sl-report-sum-card__num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #2e7d32;
+  line-height: 1;
+}
+.sl-report-sum-card--total .sl-report-sum-card__num { color: #2e7d32; }
+.sl-report-sum-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.sl-report-sum-card__sub {
+  font-size: 11px;
+  color: #9e9e9e;
+  margin-top: 2px;
+}
+
+/* Top elementos */
+.sl-report-top-list { display: flex; flex-direction: column; gap: 8px; }
+.sl-report-top-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 12px;
+  background: #fafafa;
+}
+.sl-report-top-rank {
+  font-size: 12px;
+  font-weight: 800;
+  color: #bdbdbd;
+  min-width: 26px;
+}
+.sl-report-top-info { flex: 1; min-width: 0; }
+.sl-report-top-name {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sl-report-top-meta { font-size: 11px; color: #9e9e9e; margin-top: 1px; }
+.sl-report-top-bar-wrap {
+  width: 100px;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sl-report-top-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #43a047, #1b5e20);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ── Impresión PDF ───────────────────────────────────────── */
+.print-only { display: none; }
+
+@media print {
+  /* Ocultar TODO menos el reporte activo */
+  body > * { display: none !important; }
+  .sl-page { display: block !important; }
+  .sl-page__header,
+  .sl-page__tabs,
+  .no-print { display: none !important; }
+  .sl-page__body { display: block !important; }
+  .sl-tab-content { display: block !important; }
+
+  /* Mostrar cabecera de impresión */
+  .print-only { display: block !important; margin-bottom: 20px; }
+  .sl-print-header__logo { font-size: 22px; font-weight: 800; color: #2e7d32; }
+  .sl-print-header__title { margin: 4px 0 2px; font-size: 18px; }
+  .sl-print-header__periodo { font-size: 13px; color: #616161; margin: 0; }
+  .sl-print-header__gen { font-size: 11px; color: #9e9e9e; margin: 0; }
+
+  /* Diseño impreso */
+  .sl-report-filter.card { display: none !important; }
+  .sl-report-body { gap: 16px; }
+  .sl-report-section-title { font-size: 12px; }
+  .sl-report-sum-card { border: 1px solid #ddd; padding: 10px 14px; }
+  .sl-report-sum-card__num { font-size: 20px; }
+  .tbl { font-size: 12px; }
+  .tbl th, .tbl td { padding: 6px 8px; }
+  .card { box-shadow: none; border: 1px solid #e0e0e0; }
+  .sl-report-top-bar-wrap { display: none; }
+  .sl-tipo-badge { border: 1px solid #ccc !important; }
+}

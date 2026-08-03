@@ -3,6 +3,7 @@ import { getSalidas, registrarSalida, anularSalida, procesarVencidos } from "../
 import { getProductos } from "../../services/productosService.js";
 import { getInsumos } from "../../services/insumosService.js";
 import { fmtFecha } from "../../utils/dateUtils.js";
+import { usePrivilegios } from "../../context/PrivilegiosContext.jsx";
 import "./Salidas.css";
 
 /* ══════════════════════════════════════════════════════════
@@ -785,6 +786,265 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   REPORTE DE SALIDAS  (A_48_01 – CA_48_06)
+══════════════════════════════════════════════════════════ */
+function ReporteSalidas({ salidas, loading }) {
+  const { hasPrivilegio, isAdmin } = usePrivilegios();
+  const canReport = isAdmin || hasPrivilegio("GestionSalidas_ver");
+
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin,    setFechaFin]    = useState(hoyISO());
+  const [generado,    setGenerado]    = useState(false);
+  const [errFecha,    setErrFecha]    = useState("");
+
+  const handleGenerar = () => {
+    if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+      setErrFecha("La fecha de inicio no puede ser posterior a la fecha fin.");
+      return;
+    }
+    setErrFecha("");
+    setGenerado(true);
+  };
+
+  // Salidas activas (no anuladas) dentro del rango seleccionado
+  const filtradas = generado
+    ? salidas.filter(s => {
+        if (s.anulada) return false;
+        const f = String(s.fecha || "").split("T")[0];
+        if (fechaInicio && f < fechaInicio) return false;
+        if (fechaFin    && f > fechaFin)    return false;
+        return true;
+      })
+    : [];
+
+  const totalUds = filtradas.reduce((a, s) => a + (s.cantidad || 0), 0);
+
+  const statsPorTipo = TIPOS.map(t => ({
+    ...t,
+    count: filtradas.filter(s => s.tipo === t.val).length,
+    uds:   filtradas.filter(s => s.tipo === t.val).reduce((a, s) => a + (s.cantidad || 0), 0),
+  }));
+
+  const topElementos = Object.values(
+    filtradas.reduce((acc, s) => {
+      const key = `${s.entidadTipo}-${s.entidadId}`;
+      if (!acc[key]) acc[key] = { nombre: s.entidadNombre, tipo: s.entidadTipo, total: 0, count: 0 };
+      acc[key].total += s.cantidad || 0;
+      acc[key].count += 1;
+      return acc;
+    }, {})
+  ).sort((a, b) => b.total - a.total).slice(0, 5);
+
+  const exportCSV = () => {
+    const headers = ["Elemento", "Tipo", "Cantidad", "Unidad", "Motivo", "Fecha"];
+    const rows = filtradas.map(s => [
+      s.entidadNombre,
+      TIPO_MAP[s.tipo]?.label || s.tipo,
+      s.cantidad,
+      s.unidad || "uds.",
+      s.motivo || "",
+      s.fecha  || "",
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `reporte-salidas${fechaInicio ? "-" + fechaInicio : ""}${fechaFin ? "-al-" + fechaFin : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!canReport) {
+    return (
+      <div className="sl-tab-content">
+        <div className="empty-state" style={{ marginTop: 60 }}>
+          <div className="empty-state__icon">🔒</div>
+          <p className="empty-state__text">No tienes permiso para generar reportes de salidas.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rangoLabel = fechaInicio && fechaFin
+    ? `${fechaInicio} al ${fechaFin}`
+    : fechaInicio ? `Desde ${fechaInicio}`
+    : fechaFin    ? `Hasta ${fechaFin}`
+    : "Todo el historial";
+
+  return (
+    <div className="sl-tab-content sl-report">
+
+      {/* ─── Filtro de fechas ─── */}
+      <div className="sl-report-filter card no-print">
+        <h3 className="sl-report-filter__title">📅 Selecciona el rango de fechas</h3>
+        <div className="sl-report-dates">
+          <div className="sl-report-date-field">
+            <label>Desde</label>
+            <input
+              type="date"
+              value={fechaInicio}
+              max={fechaFin || hoyISO()}
+              onChange={e => { setFechaInicio(e.target.value); setGenerado(false); }} />
+          </div>
+          <div className="sl-report-date-field">
+            <label>Hasta</label>
+            <input
+              type="date"
+              value={fechaFin}
+              max={hoyISO()}
+              onChange={e => { setFechaFin(e.target.value); setGenerado(false); }} />
+          </div>
+          <button
+            className="btn-agregar"
+            style={{ alignSelf: "flex-end" }}
+            onClick={handleGenerar}
+            disabled={loading}>
+            {loading ? "Cargando…" : "📊 Generar reporte"}
+          </button>
+        </div>
+        {errFecha && <p className="field-error" style={{ marginTop: 6 }}>{errFecha}</p>}
+      </div>
+
+      {/* ─── Contenido generado ─── */}
+      {generado && (
+        <div className="sl-report-body">
+          {/* Encabezado para impresión */}
+          <div className="sl-print-header print-only">
+            <div className="sl-print-header__logo">TostonApp</div>
+            <h2 className="sl-print-header__title">Reporte de Salidas de Inventario</h2>
+            <p className="sl-print-header__periodo">Período: {rangoLabel}</p>
+            <p className="sl-print-header__gen">Generado el {hoyISO()}</p>
+          </div>
+
+          {filtradas.length === 0 ? (
+            /* CA_48_05 – estado vacío */
+            <div className="empty-state" style={{ marginTop: 40 }}>
+              <div className="empty-state__icon">📋</div>
+              <p className="empty-state__text">No hay salidas en el periodo seleccionado.</p>
+              <p style={{ fontSize: 13, color: "#9e9e9e", marginTop: 4 }}>
+                Intenta con un rango de fechas diferente.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* CA_48_04 – botones de exportación */}
+              <div className="sl-report-actions no-print">
+                <button className="sl-report-btn sl-report-btn--csv" onClick={exportCSV}>
+                  📊 Exportar Excel / CSV
+                </button>
+                <button className="sl-report-btn sl-report-btn--pdf" onClick={() => window.print()}>
+                  🖨️ Exportar PDF
+                </button>
+              </div>
+
+              {/* CA_48_03 – resumen del período */}
+              <div className="sl-report-section">
+                <h3 className="sl-report-section-title">Resumen del período · {rangoLabel}</h3>
+                <div className="sl-report-summary-grid">
+                  <div className="sl-report-sum-card sl-report-sum-card--total">
+                    <span className="sl-report-sum-card__num">{filtradas.length}</span>
+                    <span className="sl-report-sum-card__label">Total salidas</span>
+                  </div>
+                  <div className="sl-report-sum-card sl-report-sum-card--total">
+                    <span className="sl-report-sum-card__num">{totalUds}</span>
+                    <span className="sl-report-sum-card__label">Unidades retiradas</span>
+                  </div>
+                  {statsPorTipo.filter(t => t.count > 0).map(t => (
+                    <div key={t.val} className="sl-report-sum-card"
+                      style={{ borderColor: t.border, background: t.bg }}>
+                      <span style={{ fontSize: 20 }}>{t.icon}</span>
+                      <span className="sl-report-sum-card__num" style={{ color: t.color }}>{t.count}</span>
+                      <span className="sl-report-sum-card__label">{t.label}</span>
+                      <span className="sl-report-sum-card__sub">{t.uds} uds.</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CA_48_03 – top elementos */}
+              {topElementos.length > 0 && (
+                <div className="sl-report-section">
+                  <h3 className="sl-report-section-title">Elementos con mayor movimiento</h3>
+                  <div className="sl-report-top-list">
+                    {topElementos.map((el, i) => (
+                      <div key={i} className="sl-report-top-item">
+                        <span className="sl-report-top-rank">#{i + 1}</span>
+                        <span style={{ fontSize: 18 }}>{el.tipo === "producto" ? "📦" : "🧺"}</span>
+                        <div className="sl-report-top-info">
+                          <div className="sl-report-top-name">{el.nombre}</div>
+                          <div className="sl-report-top-meta">{el.count} salida{el.count !== 1 ? "s" : ""} · {el.total} uds.</div>
+                        </div>
+                        <div className="sl-report-top-bar-wrap">
+                          <div
+                            className="sl-report-top-bar"
+                            style={{ width: `${Math.round((el.total / topElementos[0].total) * 100)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CA_48_02 – tabla de detalle */}
+              <div className="sl-report-section">
+                <h3 className="sl-report-section-title">Detalle de salidas</h3>
+                <div className="card">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Elemento</th>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Motivo</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtradas.map((s, idx) => {
+                        const tc = TIPO_MAP[s.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋", label: s.tipo };
+                        return (
+                          <tr key={s.id || idx} className="tbl-row">
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 15 }}>{s.entidadTipo === "producto" ? "📦" : "🧺"}</span>
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: 13 }}>{s.entidadNombre}</div>
+                                  <div style={{ fontSize: 11, color: "#9e9e9e" }}>{s.entidadCat}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="sl-tipo-badge"
+                                style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>
+                                {tc.icon} {tc.label}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 700, color: "#c62828", fontSize: 14 }}>
+                                -{s.cantidad} <span style={{ fontWeight: 400, fontSize: 11, color: "#9e9e9e" }}>{s.unidad || "uds."}</span>
+                              </span>
+                            </td>
+                            <td><span style={{ fontSize: 13, color: "#424242" }}>{s.motivo || "—"}</span></td>
+                            <td><span style={{ fontSize: 12, color: "#9e9e9e" }}>{s.fecha || "—"}</span></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    PÁGINA PRINCIPAL
 ══════════════════════════════════════════════════════════ */
 export default function GestionSalidas() {
@@ -867,6 +1127,7 @@ export default function GestionSalidas() {
   const TABS = [
     { key: "historial", label: "📋 Historial" },
     { key: "vencidos",  label: "⛔ Vencidos"  },
+    { key: "reporte",   label: "📊 Reporte"   },
   ];
 
   return (
@@ -897,6 +1158,9 @@ export default function GestionSalidas() {
         )}
         {tab === "vencidos" && (
           <Vencidos salidas={salidas} loading={loading} cargarSalidas={cargarSalidas} />
+        )}
+        {tab === "reporte" && (
+          <ReporteSalidas salidas={salidas} loading={loading} />
         )}
       </div>
 

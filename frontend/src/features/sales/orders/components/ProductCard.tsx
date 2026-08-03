@@ -10,6 +10,7 @@ interface ProductCardProps {
     precio: number;
     stock: number;
     imagenPreview: string | null;
+    requiereProduccion?: boolean;
   };
   onAddToCart: (product: any) => void;
 }
@@ -50,7 +51,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         </button>
 
         {/* Availability Badge */}
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4 flex flex-col gap-1">
           {product.stock > 0 ? (
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold shadow-lg border border-emerald-400/50">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -60,6 +61,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg border border-amber-400/50">
               <span className="w-2 h-2 rounded-full bg-white" />
               Bajo pedido
+            </div>
+          )}
+          {product.requiereProduccion && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/90 text-white text-xs font-bold shadow-md">
+              🏭 Producción
             </div>
           )}
         </div>

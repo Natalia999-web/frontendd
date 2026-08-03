@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMisVentas, cancelarMiPedido } from '../../../services/pedidosService';
+import { getMisVentas, cancelarMiPedido, aceptarFechaProduccion, rechazarFechaProduccion } from '../../../services/pedidosService';
 import { crearDevolucion } from '../../../services/devolucionesService';
 import { fmtFecha } from '../../../utils/dateUtils.js';
 import { getCurrentUser } from '../../client/profile/services/profileService.js';
@@ -144,6 +144,15 @@ const ESTADO_CONFIG = {
     text: 'text-red-700',
     border: 'border-red-200',
     badge: 'bg-red-100 text-red-700'
+  },
+  'Fecha propuesta': {
+    color: 'indigo',
+    icon: Calendar,
+    label: 'Fecha propuesta',
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-700',
+    border: 'border-indigo-200',
+    badge: 'bg-indigo-100 text-indigo-700'
   },
 };
 
@@ -310,6 +319,8 @@ const PedidosClientePage = () => {
   const [cancelando,     setCancelando]     = useState(false);
   const [confirmCancel,  setConfirmCancel]  = useState(false);
   const [cancelError,    setCancelError]    = useState('');
+  const [accionFecha,    setAccionFecha]    = useState(null); // "aceptar" | "rechazar"
+  const [accionFechaErr, setAccionFechaErr] = useState('');
   const [devModal,       setDevModal]       = useState(null);
   const [devToast,       setDevToast]       = useState(null);
   const navigate = useNavigate();
@@ -371,10 +382,38 @@ const PedidosClientePage = () => {
     }
   };
 
+  const handleAceptarFecha = async (pedido) => {
+    setAccionFecha("aceptar");
+    setAccionFechaErr('');
+    try {
+      await aceptarFechaProduccion(pedido.id);
+      fetchPedidos();
+      setSelectedPedido(prev => prev ? { ...prev, estado: 'Confirmado' } : prev);
+    } catch (e) {
+      setAccionFechaErr(e.message || 'No se pudo aceptar la fecha');
+    } finally {
+      setAccionFecha(null);
+    }
+  };
+
+  const handleRechazarFecha = async (pedido) => {
+    setAccionFecha("rechazar");
+    setAccionFechaErr('');
+    try {
+      await rechazarFechaProduccion(pedido.id);
+      fetchPedidos();
+      closeModal();
+    } catch (e) {
+      setAccionFechaErr(e.message || 'No se pudo rechazar la fecha');
+      setAccionFecha(null);
+    }
+  };
+
   const closeModal = () => {
     setSelectedPedido(null);
     setConfirmCancel(false);
     setCancelError('');
+    setAccionFechaErr('');
   };
 
   const openModal = (pedido) => {
@@ -453,7 +492,7 @@ const PedidosClientePage = () => {
               >
                 Todos
               </button>
-              {['Pendiente', 'En producción', 'En camino', 'Entregado', 'Cancelado'].map(estado => (
+              {['Pendiente', 'En producción', 'Fecha propuesta', 'En camino', 'Entregado', 'Cancelado'].map(estado => (
                 <button
                   key={estado}
                   className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -624,6 +663,52 @@ const PedidosClientePage = () => {
 
             {/* Body */}
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
+
+              {/* Aviso de producción */}
+              {selectedPedido.orden_produccion && selectedPedido.estado === 'Pendiente' && (
+                <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 12, padding: '12px 14px', marginBottom: 4 }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: '#1565c0', marginBottom: 2 }}>🏭 Pedido en espera de producción</p>
+                  <p style={{ fontSize: 11, color: '#1976d2', lineHeight: 1.5 }}>
+                    Uno o más productos requieren producción. El equipo te propondrá una fecha de entrega pronto.
+                  </p>
+                </div>
+              )}
+
+              {/* Aviso de fecha propuesta */}
+              {selectedPedido.estado === 'Fecha propuesta' && (
+                <div style={{ background: '#e8eaf6', border: '1.5px solid #9fa8da', borderRadius: 12, padding: '14px 16px', marginBottom: 4 }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: '#283593', marginBottom: 4 }}>
+                    📅 El administrador propuso una fecha de entrega
+                  </p>
+                  {selectedPedido.fecha_propuesta && (
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#3949ab', marginBottom: 6 }}>
+                      Fecha propuesta: <strong>{new Date(selectedPedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                    </p>
+                  )}
+                  <p style={{ fontSize: 11, color: '#3949ab', marginBottom: 10 }}>
+                    ¿Confirmas esta fecha? Si la rechazas, el pedido será cancelado.
+                  </p>
+                  {accionFechaErr && (
+                    <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8 }}>⚠ {accionFechaErr}</p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      disabled={!!accionFecha}
+                      onClick={() => handleAceptarFecha(selectedPedido)}
+                      style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 700, fontSize: 12, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}
+                    >
+                      {accionFecha === 'aceptar' ? 'Aceptando…' : '✓ Aceptar fecha'}
+                    </button>
+                    <button
+                      disabled={!!accionFecha}
+                      onClick={() => handleRechazarFecha(selectedPedido)}
+                      style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#c62828', color: '#fff', fontWeight: 700, fontSize: 12, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}
+                    >
+                      {accionFecha === 'rechazar' ? 'Rechazando…' : '✕ Rechazar fecha'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Entrega */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
