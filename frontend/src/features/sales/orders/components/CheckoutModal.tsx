@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Banknote, User, MapPin, ShoppingBag, CheckCircle2, Sparkles, ShieldCheck, UploadCloud, ChevronRight, Gift, Truck, Calendar, Phone, Save } from 'lucide-react';
+import { X, CreditCard, Banknote, User, MapPin, ShoppingBag, CheckCircle2, Sparkles, ShieldCheck, UploadCloud, ChevronRight, Gift, Truck, Phone, Save } from 'lucide-react';
 import { CartItem } from '../services/cartService';
 import { getUser } from '../../../../services/authService';
 import { getMiCredito } from '../../../../services/pedidosService';
@@ -135,10 +135,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
       setMunicipioTocado(true);
     }
     if (!telefonoValido) return;
-    if (!date) {
-      alert('Indica la fecha en que necesitas el pedido');
-      return;
-    }
     if (tieneDomicilio && (!addressValida || !municipioValido)) return;
 
     setIsConfirming(true);
@@ -309,30 +305,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               </div>
             )}
 
-            {/* Fecha y hora de entrega */}
-            <div className="space-y-1.5">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="date"
-                    min={hoyISO()}
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    className={inputCls + " pl-8"}
-                  />
-                </div>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-              <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1 pl-1">
-                ⏰ La hora es aproximada — pueden existir otros pedidos programados para ese momento.
-              </p>
-            </div>
 
             {tieneDomicilio && (
               <div className="space-y-2">
