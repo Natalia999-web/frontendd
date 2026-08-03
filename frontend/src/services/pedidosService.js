@@ -37,7 +37,7 @@ const adaptPedido = (p) => {
     nombre_domiciliario: p.nombre_domiciliario  || null,
     orden_produccion:   (p.ordenes_produccion_pendientes > 0) || !!(p.Orden_Produccion ?? p.orden_produccion),
     requiereProduccion: !!(p.requiere_produccion),
-    fecha_propuesta:  p.Fecha_Propuesta || p.fecha_propuesta || null,
+    fecha_propuesta:  p.Fecha_Propuesta || p.fecha_propuesta || p.Fecha_entrega_esperada || null,
     comprobante:      p.comprobante_pago || p.Comprobante || p.comprobante || null,
     cliente: {
       nombre:   p.nombre_cliente   || "",

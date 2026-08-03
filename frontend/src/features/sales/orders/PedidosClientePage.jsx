@@ -582,6 +582,14 @@ const PedidosClientePage = () => {
                     </div>
 
                     <div className="pt-4 border-t border-gray-50">
+                      {pedido.estado === 'Fecha propuesta' && pedido.fecha_propuesta && (
+                        <div style={{ background: '#e8eaf6', border: '1px solid #9fa8da', borderRadius: 10, padding: '7px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 14 }}>📅</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#283593', textTransform: 'capitalize' }}>
+                            {new Date(pedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-gray-400 mb-4">
                         <MapPin size={14} style={{ color: 'var(--green-600)' }} />
                         <span className="text-[10px] font-bold truncate max-w-[200px]">
@@ -676,18 +684,29 @@ const PedidosClientePage = () => {
 
               {/* Aviso de fecha propuesta */}
               {selectedPedido.estado === 'Fecha propuesta' && (
-                <div style={{ background: '#e8eaf6', border: '1.5px solid #9fa8da', borderRadius: 12, padding: '14px 16px', marginBottom: 4 }}>
-                  <p style={{ fontSize: 12, fontWeight: 800, color: '#283593', marginBottom: 4 }}>
-                    📅 El administrador propuso una fecha de entrega
-                  </p>
-                  {selectedPedido.fecha_propuesta && (
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#3949ab', marginBottom: 6 }}>
-                      Fecha propuesta: <strong>{new Date(selectedPedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                <div style={{ background: 'linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)', border: '2px solid #9fa8da', borderRadius: 16, padding: '16px 18px', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>📅</span>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#283593', margin: 0 }}>
+                      El equipo propuso una fecha de entrega
                     </p>
-                  )}
-                  <p style={{ fontSize: 11, color: '#3949ab', marginBottom: 10 }}>
-                    ¿Confirmas esta fecha? Si la rechazas, el pedido será cancelado.
+                  </div>
+
+                  {selectedPedido.fecha_propuesta ? (
+                    <div style={{ background: '#fff', border: '1.5px solid #9fa8da', borderRadius: 12, padding: '10px 14px', marginBottom: 10, textAlign: 'center' }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#7986cb', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 4px' }}>
+                        Fecha estimada de entrega
+                      </p>
+                      <p style={{ fontSize: 17, fontWeight: 900, color: '#283593', margin: 0, lineHeight: 1.25, textTransform: 'capitalize' }}>
+                        {new Date(selectedPedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <p style={{ fontSize: 11, color: '#3949ab', marginBottom: 12, lineHeight: 1.5 }}>
+                    ¿Puedes recibir tu pedido en esta fecha? Si rechazas, el pedido quedará cancelado.
                   </p>
+
                   {accionFechaErr && (
                     <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8 }}>⚠ {accionFechaErr}</p>
                   )}
@@ -695,14 +714,14 @@ const PedidosClientePage = () => {
                     <button
                       disabled={!!accionFecha}
                       onClick={() => handleAceptarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 700, fontSize: 12, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}
                     >
-                      {accionFecha === 'aceptar' ? 'Aceptando…' : '✓ Aceptar fecha'}
+                      {accionFecha === 'aceptar' ? 'Aceptando…' : '✓ Sí, acepto esta fecha'}
                     </button>
                     <button
                       disabled={!!accionFecha}
                       onClick={() => handleRechazarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#c62828', color: '#fff', fontWeight: 700, fontSize: 12, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c62828', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}
                     >
                       {accionFecha === 'rechazar' ? 'Rechazando…' : '✕ Rechazar fecha'}
                     </button>
