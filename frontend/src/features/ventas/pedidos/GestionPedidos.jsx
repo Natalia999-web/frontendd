@@ -6,6 +6,7 @@ import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crear
 import { asignarRepartidor } from "../../../services/domiciliosService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
 import { getUsuarios } from "../../../services/usuariosService.js";
+import { getProductos } from "../../../services/productosService.js";
 import CrearPedido from "./CrearPedido.jsx";
 import EditarPedido from "./EditarPedido.jsx";
 import {
@@ -904,13 +905,26 @@ export default function GestionPedidos() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const data = await getPedidos({ porPagina: 100 });
+      const [data, prodData] = await Promise.all([
+        getPedidos({ porPagina: 100 }),
+        getProductos({ porPagina: 100 }).catch(() => ({ productos: [] })),
+      ]);
+      const produccionIds = new Set(
+        (prodData.productos || prodData || [])
+          .filter(p => p.Requiere_Produccion || p.requiereProduccion)
+          .map(p => p.ID_Producto || p.id)
+      );
       setPedidos(prev => {
         const newIds = new Set(data.pedidos.map(p => p.id));
         const preserved = prev.filter(p =>
           ["Entregado", "Cancelado"].includes(p.estado) && !newIds.has(p.id)
         );
-        return [...data.pedidos, ...preserved].sort((a, b) => b.id - a.id);
+        const enhanced = data.pedidos.map(p => ({
+          ...p,
+          requiereProduccion: p.requiereProduccion ||
+            (p.productosItems || []).some(i => produccionIds.has(i.idProducto)),
+        }));
+        return [...enhanced, ...preserved].sort((a, b) => b.id - a.id);
       });
     } catch (err) {
       showToast(err.message || "Error al cargar pedidos", "error");
