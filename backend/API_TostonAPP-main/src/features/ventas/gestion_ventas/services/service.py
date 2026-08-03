@@ -47,9 +47,12 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
 
     vxp       = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == venta.ID_Venta).all()
     productos = []
+    requiere_produccion = False
     for v in vxp:
         producto = db.query(Producto).filter(Producto.ID_Producto == v.ID_Producto).first()
         precio   = producto.Precio_venta if producto else Decimal("0")
+        if getattr(producto, "Requiere_Produccion", 0):
+            requiere_produccion = True
         productos.append({
             "ID_Producto":     v.ID_Producto,
             "nombre_producto": producto.nombre if producto else None,
@@ -104,6 +107,7 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
         "departamento_entrega":         domicilio.Departamento_entrega   if domicilio else None,
         "nombre_domiciliario":          domiciliario,
         "ordenes_produccion_pendientes": ordenes_pendientes,
+        "requiere_produccion":           requiere_produccion,
     }
 
 
@@ -349,60 +353,15 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             Cantidad    = p.Cantidad,
         ))
 
-    # Auto-crear órdenes de producción para productos con Requiere_Produccion=1 sin stock suficiente
+    # Detectar productos de producción con déficit (la orden se crea cuando el cliente acepta la fecha)
     necesita_produccion = False
     for p in datos.productos:
         prod = db.query(Producto).filter(Producto.ID_Producto == p.ID_Producto).first()
-        if not getattr(prod, "Requiere_Produccion", 0):
-            continue
-        stock_actual = prod.Stock or 0
-        shortfall = p.Cantidad - stock_actual
-        if shortfall <= 0:
-            continue
-
-        # Buscar ficha técnica activa del producto
-        ficha = (
-            db.query(FichaTecnica)
-            .filter(FichaTecnica.ID_Producto == p.ID_Producto, FichaTecnica.Estado == 1)
-            .order_by(FichaTecnica.ID_Ficha.desc())
-            .first()
-        )
-        # Tomar insumo de la orden más reciente del mismo producto como referencia
-        template = (
-            db.query(OrdenProduccion)
-            .filter(
-                OrdenProduccion.ID_Producto == p.ID_Producto,
-                OrdenProduccion.ID_Insumo   != None,
-                OrdenProduccion.Estado      != 5,
-            )
-            .order_by(OrdenProduccion.ID_Orden_Produccion.desc())
-            .first()
-        )
-        id_ficha  = ficha.ID_Ficha     if ficha    else (template.ID_Ficha  if template else None)
-        id_insumo = template.ID_Insumo if template else None
-
-        # Usar savepoint para que un fallo aquí no revierta la venta completa
-        try:
-            sp = db.begin_nested()
-            db.add(OrdenProduccion(
-                ID_Venta      = nueva_venta.ID_Venta,
-                ID_Producto   = p.ID_Producto,
-                ID_Insumo     = id_insumo,
-                ID_Ficha      = id_ficha,
-                Cantidad      = shortfall,
-                Fecha_inicio  = _now(),
-                Fecha_Entrega = _now(),
-                Estado        = ESTADO_PENDIENTE,
-                Costo         = Decimal("0"),
-            ))
-            sp.commit()
+        if getattr(prod, "Requiere_Produccion", 0) and p.Cantidad > (prod.Stock or 0):
             necesita_produccion = True
-        except Exception as e:
-            sp.rollback()
-            raise HTTPException(status_code=500, detail=f"Error al crear orden de producción: {e}")
+            break
 
     if necesita_produccion:
-        nueva_venta.Estado = EstadoPedido.PENDIENTE
         notificar(
             db, "produccion_requerida", "Pedido requiere producción",
             f"El pedido #{nueva_venta.ID_Venta} incluye productos por encargo. Revisá y proponé una fecha de entrega.",
@@ -626,6 +585,48 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
         raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
 
     venta.Estado = EstadoPedido.CONFIRMADO
+
+    # Crear órdenes de producción para los productos con déficit de stock
+    items_venta = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
+    for item in items_venta:
+        prod = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
+        if not prod or not getattr(prod, "Requiere_Produccion", 0):
+            continue
+        shortfall = (item.Cantidad or 0) - (prod.Stock or 0)
+        if shortfall <= 0:
+            continue
+
+        ficha = (
+            db.query(FichaTecnica)
+            .filter(FichaTecnica.ID_Producto == item.ID_Producto, FichaTecnica.Estado == 1)
+            .order_by(FichaTecnica.ID_Ficha.desc())
+            .first()
+        )
+        template = (
+            db.query(OrdenProduccion)
+            .filter(
+                OrdenProduccion.ID_Producto == item.ID_Producto,
+                OrdenProduccion.ID_Insumo   != None,
+                OrdenProduccion.Estado      != 5,
+            )
+            .order_by(OrdenProduccion.ID_Orden_Produccion.desc())
+            .first()
+        )
+        id_ficha  = ficha.ID_Ficha     if ficha    else (template.ID_Ficha  if template else None)
+        id_insumo = template.ID_Insumo if template else None
+
+        db.add(OrdenProduccion(
+            ID_Venta      = id_venta,
+            ID_Producto   = item.ID_Producto,
+            ID_Insumo     = id_insumo,
+            ID_Ficha      = id_ficha,
+            Cantidad      = shortfall,
+            Fecha_inicio  = _now(),
+            Fecha_Entrega = venta.Fecha_entrega_esperada or _now(),
+            Estado        = 1,
+            Costo         = Decimal("0"),
+        ))
+
     notificar(
         db, "fecha_aceptada", "Fecha aceptada por el cliente",
         f"El cliente aceptó la fecha propuesta para el pedido #{id_venta}",

@@ -757,7 +757,7 @@ function AccionesMenu({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canCancel           = !["Entregado", "Cancelado"].includes(ped.estado);
   const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
-  const canProponerFecha    = ped.estado === "Pendiente" && ped.orden_produccion;
+  const canProponerFecha    = ped.estado === "Pendiente" && ped.requiereProduccion;
   const hasMenu             = canEdit || canAdvance || canMarcarListo || canEntregarTienda || canAsignarDomicilio || canCancel || canProponerFecha;
 
   return (
