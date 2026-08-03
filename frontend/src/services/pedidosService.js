@@ -127,7 +127,7 @@ export const cancelarMiPedido = async (id) =>
 export const proponerFechaProduccion = async (id, fecha) =>
   apiFetch(`/ventas/${id}/proponer-fecha`, {
     method: "PATCH",
-    body: JSON.stringify({ Fecha_Propuesta: fecha }),
+    body: JSON.stringify({ fecha_entrega: fecha }),
   });
 
 export const aceptarFechaProduccion = async (id) =>
