@@ -400,7 +400,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             sp.rollback()
 
     if necesita_produccion:
-        nueva_venta.Estado = EstadoPedido.FECHA_PROPUESTA
+        nueva_venta.Estado = EstadoPedido.PENDIENTE
         notificar(
             db, "produccion_requerida", "Pedido requiere producción",
             f"El pedido #{nueva_venta.ID_Venta} incluye productos por encargo. Revisá y proponé una fecha de entrega.",

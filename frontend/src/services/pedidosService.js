@@ -11,7 +11,7 @@ const ESTADO_PEDIDO_MAP = {
   10: "Asignado",
   11: "Listo",
   13: "En producción",
-  14: "Fecha propuesta",
+  16: "Fecha propuesta",
 };
 
 const adaptPedido = (p) => {
