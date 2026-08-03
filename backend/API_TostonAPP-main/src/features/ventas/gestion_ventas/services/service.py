@@ -308,16 +308,20 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             detail="Debes registrar tu número de teléfono en tu perfil antes de solicitar un domicilio"
         )
 
-    # Valida productos y calcula subtotal (sin bloquear por stock)
+    # Valida productos, stock (para los que NO requieren producción) y calcula subtotal
     subtotal_bruto = Decimal("0")
     for p in datos.productos:
         producto = db.query(Producto).filter(Producto.ID_Producto == p.ID_Producto).first()
         if not producto:
             raise HTTPException(status_code=404, detail=f"Producto {p.ID_Producto} no encontrado")
+        if not getattr(producto, "Requiere_Produccion", 0) and (producto.Stock or 0) < p.Cantidad:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Stock insuficiente para '{producto.nombre}' (disponible: {producto.Stock or 0})",
+            )
         subtotal_bruto += producto.Precio_venta * Decimal(str(p.Cantidad))
 
-    ESTADO_PENDIENTE  = 1
-    ESTADO_EN_PROCESO = 13
+    ESTADO_PENDIENTE = 1
 
     nueva_venta = Venta(
         ID_Usuario             = datos.ID_Usuario,
@@ -345,59 +349,62 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             Cantidad    = p.Cantidad,
         ))
 
-    # Auto-crear órdenes de producción para productos sin stock suficiente
+    # Auto-crear órdenes de producción para productos con Requiere_Produccion=1 sin stock suficiente
     necesita_produccion = False
     for p in datos.productos:
-        prod         = db.query(Producto).filter(Producto.ID_Producto == p.ID_Producto).first()
+        prod = db.query(Producto).filter(Producto.ID_Producto == p.ID_Producto).first()
+        if not getattr(prod, "Requiere_Produccion", 0):
+            continue
         stock_actual = prod.Stock or 0
-        if stock_actual < p.Cantidad:
-            shortfall = p.Cantidad - stock_actual
+        shortfall = p.Cantidad - stock_actual
+        if shortfall <= 0:
+            continue
 
-            # Buscar ficha técnica activa del producto
-            ficha = (
-                db.query(FichaTecnica)
-                .filter(FichaTecnica.ID_Producto == p.ID_Producto, FichaTecnica.Estado == 1)
-                .order_by(FichaTecnica.ID_Ficha.desc())
-                .first()
+        # Buscar ficha técnica activa del producto
+        ficha = (
+            db.query(FichaTecnica)
+            .filter(FichaTecnica.ID_Producto == p.ID_Producto, FichaTecnica.Estado == 1)
+            .order_by(FichaTecnica.ID_Ficha.desc())
+            .first()
+        )
+        # Tomar insumo de la orden más reciente del mismo producto como referencia
+        template = (
+            db.query(OrdenProduccion)
+            .filter(
+                OrdenProduccion.ID_Producto == p.ID_Producto,
+                OrdenProduccion.ID_Insumo   != None,
+                OrdenProduccion.Estado      != 5,
             )
-            # Tomar insumo de la orden más reciente del mismo producto como referencia
-            template = (
-                db.query(OrdenProduccion)
-                .filter(
-                    OrdenProduccion.ID_Producto == p.ID_Producto,
-                    OrdenProduccion.ID_Insumo   != None,
-                    OrdenProduccion.Estado      != 5,
-                )
-                .order_by(OrdenProduccion.ID_Orden_Produccion.desc())
-                .first()
-            )
-            id_ficha  = ficha.ID_Ficha        if ficha    else (template.ID_Ficha  if template else None)
-            id_insumo = template.ID_Insumo    if template else None
+            .order_by(OrdenProduccion.ID_Orden_Produccion.desc())
+            .first()
+        )
+        id_ficha  = ficha.ID_Ficha     if ficha    else (template.ID_Ficha  if template else None)
+        id_insumo = template.ID_Insumo if template else None
 
-            # Usar savepoint para que un fallo aquí no revierta la venta completa
-            try:
-                sp = db.begin_nested()
-                db.add(OrdenProduccion(
-                    ID_Venta     = nueva_venta.ID_Venta,
-                    ID_Producto  = p.ID_Producto,
-                    ID_Insumo    = id_insumo,
-                    ID_Ficha     = id_ficha,
-                    Cantidad     = shortfall,
-                    Fecha_inicio = _now(),
-                    Estado       = ESTADO_PENDIENTE,
-                    Costo        = Decimal("0"),
-                ))
-                sp.commit()
-                necesita_produccion = True
-            except Exception:
-                sp.rollback()
+        # Usar savepoint para que un fallo aquí no revierta la venta completa
+        try:
+            sp = db.begin_nested()
+            db.add(OrdenProduccion(
+                ID_Venta     = nueva_venta.ID_Venta,
+                ID_Producto  = p.ID_Producto,
+                ID_Insumo    = id_insumo,
+                ID_Ficha     = id_ficha,
+                Cantidad     = shortfall,
+                Fecha_inicio = _now(),
+                Estado       = ESTADO_PENDIENTE,
+                Costo        = Decimal("0"),
+            ))
+            sp.commit()
+            necesita_produccion = True
+        except Exception:
+            sp.rollback()
 
     if necesita_produccion:
-        nueva_venta.Estado = ESTADO_EN_PROCESO
+        nueva_venta.Estado = EstadoPedido.FECHA_PROPUESTA
         notificar(
-            db, "produccion_requerida", "Orden de producción requerida",
-            f"El pedido #{nueva_venta.ID_Venta} requiere producción antes de confirmarse",
-            nueva_venta.ID_Venta, "/produccion/ordenes",
+            db, "produccion_requerida", "Pedido requiere producción",
+            f"El pedido #{nueva_venta.ID_Venta} incluye productos por encargo. Revisá y proponé una fecha de entrega.",
+            nueva_venta.ID_Venta, "/ventas/pedidos",
         )
 
     monto_restante   = subtotal_bruto
@@ -580,3 +587,103 @@ def obtener_mi_credito(db: Session, usuario_actual: dict) -> dict:
     ).first()
     saldo = float(credito.Saldo) if credito and credito.Saldo else 0.0
     return {"saldo": saldo, "id_usuario": id_usuario}
+
+
+# ── Feature "Fecha propuesta" ──────────────────────────────────────────────
+
+def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
+    """Admin propone una fecha de entrega. Solo válido en ventas Pendientes o con Fecha propuesta."""
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    if venta.Estado not in (EstadoPedido.PENDIENTE, EstadoPedido.FECHA_PROPUESTA):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se puede proponer fecha en ventas Pendientes o en estado Fecha propuesta",
+        )
+    descartar_notificacion(db, "produccion_requerida", id_venta)
+    venta.Estado = EstadoPedido.FECHA_PROPUESTA
+    venta.Fecha_entrega_esperada = fecha_entrega
+    db.commit()
+    db.refresh(venta)
+    return _formato_venta(venta, db)
+
+
+def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
+    """El cliente acepta la fecha propuesta → Estado Confirmado (4)."""
+    if actual["tipo"] != "cliente":
+        raise HTTPException(status_code=403, detail="Solo disponible para clientes")
+    id_usuario = actual["registro"].ID_Usuario
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    if venta.ID_Usuario != id_usuario:
+        raise HTTPException(status_code=403, detail="No puedes aceptar pedidos de otros clientes")
+    if venta.Estado != EstadoPedido.FECHA_PROPUESTA:
+        raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
+
+    venta.Estado = EstadoPedido.CONFIRMADO
+    notificar(
+        db, "fecha_aceptada", "Fecha aceptada por el cliente",
+        f"El cliente aceptó la fecha propuesta para el pedido #{id_venta}",
+        id_venta, "/ventas/pedidos",
+    )
+    db.commit()
+    db.refresh(venta)
+    try:
+        from src.shared.services.fcm_service import notificar_cambio_pedido_push
+        notificar_cambio_pedido_push(
+            id_usuario_cliente=venta.ID_Usuario,
+            id_venta=id_venta,
+            nuevo_estado=EstadoPedido.CONFIRMADO,
+            db=db,
+        )
+    except Exception:
+        pass
+    return _formato_venta(venta, db)
+
+
+def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
+    """El cliente rechaza la fecha propuesta → Estado Cancelado (5). Devuelve crédito si aplica."""
+    if actual["tipo"] != "cliente":
+        raise HTTPException(status_code=403, detail="Solo disponible para clientes")
+    id_usuario = actual["registro"].ID_Usuario
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    if venta.ID_Usuario != id_usuario:
+        raise HTTPException(status_code=403, detail="No puedes rechazar pedidos de otros clientes")
+    if venta.Estado != EstadoPedido.FECHA_PROPUESTA:
+        raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
+
+    venta.Estado = EstadoPedido.CANCELADO
+    notificar(
+        db, "fecha_rechazada", "Fecha rechazada por el cliente",
+        f"El cliente rechazó la fecha propuesta para el pedido #{id_venta}",
+        id_venta, "/ventas/pedidos",
+    )
+    descartar_notificacion(db, "produccion_requerida", id_venta)
+
+    # Devolver crédito si se usó al crear el pedido
+    detalle = db.query(DetalleVenta).filter(DetalleVenta.ID_Venta == id_venta).first()
+    if detalle and detalle.Descuento and detalle.Descuento > 0:
+        credito = db.query(CreditoCliente).filter(
+            CreditoCliente.ID_Usuario == venta.ID_Usuario
+        ).first()
+        if credito:
+            credito.Saldo        += detalle.Descuento
+            credito.Fecha_Update  = _now()
+            db.add(MovimientoCredito(
+                ID_Credito    = credito.ID_Credito,
+                ID_Devolucion = None,
+                ID_Venta      = id_venta,
+                Tipo          = "recarga",
+                Monto         = detalle.Descuento,
+                Fecha         = _now(),
+            ))
+
+    db.commit()
+    db.refresh(venta)
+    return _formato_venta(venta, db)

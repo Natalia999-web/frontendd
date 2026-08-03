@@ -3,13 +3,14 @@ from fastapi import HTTPException
 
 
 class EstadoPedido(IntEnum):
-    PENDIENTE  = 1   # nuevo pedido del cliente
-    CONFIRMADO = 4   # aceptado por el admin/empleado
-    PREPARANDO = 13  # en cocina / producción  ("En proceso" en la BD)
-    LISTO      = 11  # terminado, esperando entrega o recogida ("Completada" en la BD)
-    EN_CAMINO  = 9   # domicilio en tránsito
-    ENTREGADO  = 8   # entregado al cliente o recogido en tienda
-    CANCELADO  = 5   # cancelado (estado final)
+    PENDIENTE       = 1   # nuevo pedido del cliente
+    CONFIRMADO      = 4   # aceptado por el admin/empleado
+    CANCELADO       = 5   # cancelado (estado final)
+    ENTREGADO       = 8   # entregado al cliente o recogido en tienda
+    EN_CAMINO       = 9   # domicilio en tránsito
+    LISTO           = 11  # terminado, esperando entrega o recogida ("Completada" en la BD)
+    PREPARANDO      = 13  # en cocina / producción  ("En proceso" en la BD)
+    FECHA_PROPUESTA = 16  # admin propuso fecha; cliente debe aceptar o rechazar
 
 
 ESTADOS_FINALES = frozenset({EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO})
@@ -29,17 +30,20 @@ ESTADOS_ACTIVOS = frozenset({
     EstadoPedido.PREPARANDO,
     EstadoPedido.LISTO,
     EstadoPedido.EN_CAMINO,
+    EstadoPedido.FECHA_PROPUESTA,
 })
 
 TRANSICIONES: dict[int, frozenset[int]] = {
-    EstadoPedido.PENDIENTE:  frozenset({EstadoPedido.CONFIRMADO, EstadoPedido.CANCELADO}),
+    EstadoPedido.PENDIENTE:       frozenset({EstadoPedido.CONFIRMADO, EstadoPedido.CANCELADO}),
     # confirmado → listo (saltar preparando) es válido si el pedido ya está listo de inmediato
-    EstadoPedido.CONFIRMADO: frozenset({EstadoPedido.PREPARANDO, EstadoPedido.LISTO, EstadoPedido.CANCELADO}),
-    EstadoPedido.PREPARANDO: frozenset({EstadoPedido.LISTO, EstadoPedido.CANCELADO}),
-    EstadoPedido.LISTO:      frozenset({EstadoPedido.EN_CAMINO, EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO}),
-    EstadoPedido.EN_CAMINO:  frozenset({EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO}),
-    EstadoPedido.ENTREGADO:  frozenset(),
-    EstadoPedido.CANCELADO:  frozenset(),
+    EstadoPedido.CONFIRMADO:      frozenset({EstadoPedido.PREPARANDO, EstadoPedido.LISTO, EstadoPedido.CANCELADO}),
+    EstadoPedido.PREPARANDO:      frozenset({EstadoPedido.LISTO, EstadoPedido.CANCELADO}),
+    EstadoPedido.LISTO:           frozenset({EstadoPedido.EN_CAMINO, EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO}),
+    EstadoPedido.EN_CAMINO:       frozenset({EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO}),
+    EstadoPedido.ENTREGADO:       frozenset(),
+    EstadoPedido.CANCELADO:       frozenset(),
+    # Fecha propuesta: el cliente acepta (→ Confirmado) o rechaza (→ Cancelado)
+    EstadoPedido.FECHA_PROPUESTA: frozenset({EstadoPedido.CONFIRMADO, EstadoPedido.CANCELADO}),
 }
 
 

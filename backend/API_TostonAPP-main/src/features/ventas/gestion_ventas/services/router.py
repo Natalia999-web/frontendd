@@ -4,8 +4,12 @@ from typing import Optional
 
 from src.shared.services.database import get_db
 from src.features.auth.services.dependencies import requiere_permiso, obtener_usuario_actual
-from .schemas import VentaCreate, VentaEstado, VentaResponse, VentaListResponse
-from .service import obtener_ventas, obtener_venta, obtener_mi_venta, crear_venta, cambiar_estado, obtener_mis_ventas, obtener_mi_credito
+from .schemas import VentaCreate, VentaEstado, VentaResponse, VentaListResponse, FechaEntregaInput
+from .service import (
+    obtener_ventas, obtener_venta, obtener_mi_venta, crear_venta, cambiar_estado,
+    obtener_mis_ventas, obtener_mi_credito,
+    proponer_fecha, aceptar_fecha, rechazar_fecha,
+)
 
 router = APIRouter(prefix="/ventas", tags=["Gestión de Ventas"])
 
@@ -90,3 +94,34 @@ def actualizar_estado(
 ):
     """Cambia el estado de la venta."""
     return cambiar_estado(db, id_venta, datos.Estado)
+
+
+@router.patch("/{id_venta}/proponer-fecha", response_model=VentaResponse)
+def proponer_fecha_endpoint(
+    id_venta: int,
+    datos:    FechaEntregaInput,
+    db:       Session = Depends(get_db),
+    _:        dict    = Depends(requiere_permiso("editar_ventas")),
+):
+    """Admin propone una fecha de entrega para un pedido de producción. Pasa el pedido a estado Fecha propuesta (16)."""
+    return proponer_fecha(db, id_venta, datos.fecha_entrega)
+
+
+@router.patch("/{id_venta}/aceptar-fecha", response_model=VentaResponse)
+def aceptar_fecha_endpoint(
+    id_venta: int,
+    db:       Session = Depends(get_db),
+    actual:   dict    = Depends(obtener_usuario_actual),
+):
+    """El cliente acepta la fecha propuesta → pedido pasa a Confirmado (4)."""
+    return aceptar_fecha(db, id_venta, actual)
+
+
+@router.patch("/{id_venta}/rechazar-fecha", response_model=VentaResponse)
+def rechazar_fecha_endpoint(
+    id_venta: int,
+    db:       Session = Depends(get_db),
+    actual:   dict    = Depends(obtener_usuario_actual),
+):
+    """El cliente rechaza la fecha propuesta → pedido pasa a Cancelado (5). Devuelve crédito si aplica."""
+    return rechazar_fecha(db, id_venta, actual)

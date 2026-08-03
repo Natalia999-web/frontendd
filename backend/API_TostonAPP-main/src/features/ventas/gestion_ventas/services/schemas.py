@@ -38,6 +38,11 @@ class VentaEstado(BaseModel):
     Estado: int
 
 
+# ── Proponer fecha de entrega ──
+class FechaEntregaInput(BaseModel):
+    fecha_entrega: datetime
+
+
 # ── Respuesta de producto en venta ──
 class ProductoVentaResponse(BaseModel):
     ID_Producto:     int

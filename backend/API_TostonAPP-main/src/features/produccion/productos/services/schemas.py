@@ -49,7 +49,8 @@ class ProductoCreate(BaseModel):
     Publicado:         Optional[int] = 0
     Descripcion_Corta: Optional[str] = None
     Descripcion_Larga: Optional[str] = None
-    ficha_tecnica:     Optional[FichaTecnicaInput] = None
+    ficha_tecnica:        Optional[FichaTecnicaInput] = None
+    Requiere_Produccion:  Optional[int] = 0
 
 
 # ── Editar producto ──
@@ -60,8 +61,9 @@ class ProductoUpdate(BaseModel):
     Stock:             Optional[int]     = None
     Stock_Minimo:      Optional[int]     = None
     Publicado:         Optional[int]     = None
-    Descripcion_Corta: Optional[str]     = None
-    Descripcion_Larga: Optional[str]     = None
+    Descripcion_Corta:   Optional[str]     = None
+    Descripcion_Larga:   Optional[str]     = None
+    Requiere_Produccion: Optional[int]     = None
 
 
 # ── Respuesta de imagen ──
@@ -101,9 +103,10 @@ class ProductoResponse(BaseModel):
     Estado:            Optional[int]     = None
     estado_label:      Optional[str]     = None
     Publicado:         Optional[int]     = 0
-    Descripcion_Corta: Optional[str]     = None
-    Descripcion_Larga: Optional[str]     = None
-    imagenes:          list[ImagenResponse] = []
+    Descripcion_Corta:   Optional[str]     = None
+    Descripcion_Larga:   Optional[str]     = None
+    Requiere_Produccion: Optional[int]     = 0
+    imagenes:            list[ImagenResponse] = []
     ficha_tecnica:     Optional[FichaTecnicaResumida] = None
 
     class Config:

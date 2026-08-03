@@ -268,6 +268,7 @@ class Producto(Base):
     Precio_venta        = Column(Numeric(30, 2))
     Stock               = Column(Integer)
     Stock_Minimo        = Column(Integer)
+    Requiere_Produccion = Column(Integer, default=0, nullable=False)
     Estado              = Column(Integer, ForeignKey("Estados.ID_Estados"))
     ID_Orden_Produccion = Column(Integer, ForeignKey("Orden_Produccion.ID_Orden_Produccion"))
     Imagen              = Column(Integer, ForeignKey("Producto_Imagenes.ID_Producto_Img"))
