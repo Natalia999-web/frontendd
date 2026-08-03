@@ -25,7 +25,15 @@ from .schemas import VentaCreate, DomicilioVentaInput
 COSTO_DOMICILIO = Decimal("5000")
 
 
+_ESTADO_VENTA_LABEL = {
+    1: "Pendiente", 4: "Confirmado", 5: "Cancelado",
+    8: "Entregado", 9: "En camino", 10: "Asignado",
+    11: "Listo", 13: "En producción", 16: "Fecha propuesta",
+}
+
 def _label_estado(db: Session, id_estado: int) -> str:
+    if id_estado in _ESTADO_VENTA_LABEL:
+        return _ESTADO_VENTA_LABEL[id_estado]
     estado = db.query(Estado).filter(Estado.ID_Estados == id_estado).first()
     return estado.Estado if estado else None
 
@@ -455,6 +463,13 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
     # Valida que la transición esté permitida por la máquina de estados
     validar_transicion(venta.Estado, nuevo_estado, tiene_domicilio)
 
+    # Comprobante obligatorio para marcar como entregado
+    if nuevo_estado == EstadoPedido.ENTREGADO and not venta.Comprobante_Pago:
+        raise HTTPException(
+            status_code=400,
+            detail="Se requiere comprobante de pago para marcar el pedido como entregado",
+        )
+
     # Al confirmar un pedido SIN domicilio (recoger en tienda): descontar stock
     if nuevo_estado == EstadoPedido.CONFIRMADO and not tiene_domicilio:
         items = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
@@ -570,30 +585,16 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
     return _formato_venta(venta, db)
 
 
-def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
-    """El cliente acepta la fecha propuesta → Estado Confirmado (4)."""
-    if actual["tipo"] != "cliente":
-        raise HTTPException(status_code=403, detail="Solo disponible para clientes")
-    id_usuario = actual["registro"].ID_Usuario
-
-    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
-    if not venta:
-        raise HTTPException(status_code=404, detail="Venta no encontrada")
-    if venta.ID_Usuario != id_usuario:
-        raise HTTPException(status_code=403, detail="No puedes aceptar pedidos de otros clientes")
-    if venta.Estado != EstadoPedido.FECHA_PROPUESTA:
-        raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
-
-    venta.Estado = EstadoPedido.CONFIRMADO
-
-    # Crear órdenes de producción para los productos con déficit de stock
+def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> None:
+    """Crea órdenes de producción para los productos que requieren producción."""
     items_venta = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
     for item in items_venta:
         prod = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
         if not prod or not getattr(prod, "Requiere_Produccion", 0):
             continue
-        shortfall = (item.Cantidad or 0) - (prod.Stock or 0)
-        if shortfall <= 0:
+
+        cantidad = (item.Cantidad or 0)
+        if cantidad <= 0:
             continue
 
         ficha = (
@@ -620,12 +621,31 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
             ID_Producto   = item.ID_Producto,
             ID_Insumo     = id_insumo,
             ID_Ficha      = id_ficha,
-            Cantidad      = shortfall,
+            Cantidad      = cantidad,
             Fecha_inicio  = _now(),
-            Fecha_Entrega = venta.Fecha_entrega_esperada or _now(),
+            Fecha_Entrega = fecha_entrega or _now(),
             Estado        = 1,
             Costo         = Decimal("0"),
         ))
+
+
+def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
+    """El cliente acepta la fecha propuesta → Estado Confirmado (4)."""
+    if actual["tipo"] != "cliente":
+        raise HTTPException(status_code=403, detail="Solo disponible para clientes")
+    id_usuario = actual["registro"].ID_Usuario
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    if venta.ID_Usuario != id_usuario:
+        raise HTTPException(status_code=403, detail="No puedes aceptar pedidos de otros clientes")
+    if venta.Estado != EstadoPedido.FECHA_PROPUESTA:
+        raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
+
+    venta.Estado = EstadoPedido.CONFIRMADO
+
+    _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada)
 
     notificar(
         db, "fecha_aceptada", "Fecha aceptada por el cliente",

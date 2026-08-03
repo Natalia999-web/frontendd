@@ -21,12 +21,15 @@ class PedidoResponse(BaseModel):
     Fecha_pedido:           Optional[datetime] = None
     Fecha_entrega_esperada: Optional[datetime] = None
     productos:              list               = []
-    tiene_domicilio:      bool              = False
-    ID_Domicilio:         Optional[int]     = None
-    direccion_entrega:    Optional[str]     = None
-    municipio_entrega:    Optional[str]     = None
-    departamento_entrega: Optional[str]     = None
-    comprobante_pago:     Optional[str]     = None
+    tiene_domicilio:              bool              = False
+    ID_Domicilio:                 Optional[int]     = None
+    direccion_entrega:            Optional[str]     = None
+    municipio_entrega:            Optional[str]     = None
+    departamento_entrega:         Optional[str]     = None
+    comprobante_pago:             Optional[str]     = None
+    nombre_domiciliario:          Optional[str]     = None
+    ordenes_produccion_pendientes: int              = 0
+    requiere_produccion:          bool              = False
 
     class Config:
         from_attributes = True
