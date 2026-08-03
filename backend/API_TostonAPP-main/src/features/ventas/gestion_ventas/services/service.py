@@ -385,19 +385,21 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         try:
             sp = db.begin_nested()
             db.add(OrdenProduccion(
-                ID_Venta     = nueva_venta.ID_Venta,
-                ID_Producto  = p.ID_Producto,
-                ID_Insumo    = id_insumo,
-                ID_Ficha     = id_ficha,
-                Cantidad     = shortfall,
-                Fecha_inicio = _now(),
-                Estado       = ESTADO_PENDIENTE,
-                Costo        = Decimal("0"),
+                ID_Venta      = nueva_venta.ID_Venta,
+                ID_Producto   = p.ID_Producto,
+                ID_Insumo     = id_insumo,
+                ID_Ficha      = id_ficha,
+                Cantidad      = shortfall,
+                Fecha_inicio  = _now(),
+                Fecha_Entrega = _now(),
+                Estado        = ESTADO_PENDIENTE,
+                Costo         = Decimal("0"),
             ))
             sp.commit()
             necesita_produccion = True
-        except Exception:
+        except Exception as e:
             sp.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al crear orden de producción: {e}")
 
     if necesita_produccion:
         nueva_venta.Estado = EstadoPedido.PENDIENTE
