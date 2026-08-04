@@ -56,8 +56,7 @@ _VENTA_NOTIF = {
          "Tu pedido fue cancelado. Contáctanos si tienes dudas."),
     8:  ("pedido_entregado",  "Pedido entregado",
          "Tu pedido fue entregado exitosamente. ¡Gracias por tu compra!"),
-    16: ("fecha_propuesta",   "Fecha de entrega propuesta",
-         "El admin propuso una fecha de entrega para tu pedido. Acéptala o recházala desde tus pedidos."),
+    16: ("fecha_propuesta",   "Fecha de entrega propuesta", None),
 }
 
 _DEVOLUCION_NOTIF = {
@@ -81,14 +80,23 @@ def obtener_notificaciones_cliente(db: Session, id_usuario: int) -> dict:
     )
     for v in ventas:
         if v.Estado in _VENTA_NOTIF:
-            tipo, titulo, mensaje = _VENTA_NOTIF[v.Estado]
+            tipo, titulo, mensaje_base = _VENTA_NOTIF[v.Estado]
+            fecha_entrega_iso = None
+            if v.Estado == 16 and v.Fecha_entrega_esperada:
+                fecha_entrega_iso = v.Fecha_entrega_esperada.isoformat()
+                fecha_fmt = v.Fecha_entrega_esperada.strftime("%d/%m/%Y")
+                mensaje = f"Fecha propuesta: {fecha_fmt}. Acéptala o recházala desde tus pedidos."
+            else:
+                mensaje = mensaje_base or ""
             notifs.append({
-                "id_ref":  f"venta_{v.ID_Venta}_{v.Estado}",
-                "tipo":    tipo,
-                "titulo":  f"{titulo} — Pedido #{v.ID_Venta}",
-                "mensaje": mensaje,
-                "ruta":    "/cliente/pedidos",
-                "fecha":   v.Fecha_Venta,
+                "id_ref":         f"venta_{v.ID_Venta}_{v.Estado}",
+                "tipo":           tipo,
+                "titulo":         f"{titulo} — Pedido #{v.ID_Venta}",
+                "mensaje":        mensaje,
+                "id_venta":       v.ID_Venta,
+                "fecha_entrega":  fecha_entrega_iso,
+                "ruta":           "/cliente/pedidos",
+                "fecha":          v.Fecha_Venta,
             })
 
     devs = (

@@ -114,10 +114,23 @@ export default function NotificacionDetalle({ notif, onClose }) {
           )}
 
           {esFechaPropuesta && !accionDone && (
-            <div style={{ marginTop: 20, background: "#e8eaf6", border: "1px solid #9fa8da", borderRadius: 10, padding: "14px 16px" }}>
-              <p style={{ fontWeight: 800, fontSize: 13, color: "#283593", marginBottom: 6 }}>
-                📅 ¿Confirmas esta fecha de entrega?
-              </p>
+            <div style={{ marginTop: 20, background: "linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)", border: "2px solid #9fa8da", borderRadius: 14, padding: "16px 18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 20 }}>📅</span>
+                <p style={{ fontWeight: 800, fontSize: 13, color: "#283593", margin: 0 }}>¿Confirmas esta fecha de entrega?</p>
+              </div>
+
+              {notif.fechaEntrega && (
+                <div style={{ background: "#fff", border: "1.5px solid #9fa8da", borderRadius: 10, padding: "10px 14px", marginBottom: 10, textAlign: "center" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "#7986cb", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 4px" }}>
+                    Fecha estimada de entrega
+                  </p>
+                  <p style={{ fontSize: 17, fontWeight: 900, color: "#283593", margin: 0, lineHeight: 1.25, textTransform: "capitalize" }}>
+                    {new Date(notif.fechaEntrega + "T00:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+              )}
+
               <p style={{ fontSize: 12, color: "#3949ab", marginBottom: 12 }}>
                 Si rechazas, el pedido será cancelado.
               </p>
@@ -128,14 +141,14 @@ export default function NotificacionDetalle({ notif, onClose }) {
                 <button
                   disabled={!!accionando}
                   onClick={handleAceptar}
-                  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: "#2e7d32", color: "#fff", fontWeight: 700, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "rechazar" ? 0.5 : 1 }}
+                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: "#2e7d32", color: "#fff", fontWeight: 800, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "rechazar" ? 0.5 : 1 }}
                 >
-                  {accionando === "aceptar" ? "Aceptando…" : "✓ Aceptar"}
+                  {accionando === "aceptar" ? "Aceptando…" : "✓ Sí, acepto"}
                 </button>
                 <button
                   disabled={!!accionando}
                   onClick={handleRechazar}
-                  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: "#c62828", color: "#fff", fontWeight: 700, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "aceptar" ? 0.5 : 1 }}
+                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: "#c62828", color: "#fff", fontWeight: 800, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "aceptar" ? 0.5 : 1 }}
                 >
                   {accionando === "rechazar" ? "Rechazando…" : "✕ Rechazar"}
                 </button>

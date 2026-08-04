@@ -220,18 +220,25 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
       try {
         const data   = await getMisNotificacionesCliente();
         const vistas = loadFromLS('notif_cliente_vistas', []);
-        const cliente = (data.notificaciones || []).map(n => ({
-          id:             n.id_ref,
-          clave:          n.id_ref,
-          id_backend:     n.ID_Notificacion || n.id_notificacion || null,
-          tipo:           n.tipo,
-          titulo:         n.titulo,
-          mensaje:        n.mensaje || "",
-          ruta:           n.ruta,
-          fecha:          n.fecha,
-          leida:          n.leida ?? n.Leida ?? vistas.includes(n.id_ref),
-          idDestinatario: String(user.id),
-        }));
+        const cliente = (data.notificaciones || []).map(n => {
+          // Extraer idPedido: viene explícito como id_venta, o se deriva del id_ref ("venta_28_16")
+          const parts = (n.id_ref || '').split('_');
+          const idPedido = n.id_venta || (parts[0] === 'venta' ? Number(parts[1]) : null);
+          return {
+            id:             n.id_ref,
+            clave:          n.id_ref,
+            id_backend:     n.ID_Notificacion || n.id_notificacion || null,
+            tipo:           n.tipo,
+            titulo:         n.titulo,
+            mensaje:        n.mensaje || "",
+            ruta:           n.ruta,
+            fecha:          n.fecha,
+            leida:          n.leida ?? n.Leida ?? vistas.includes(n.id_ref),
+            idDestinatario: String(user.id),
+            idPedido,
+            fechaEntrega:   n.fecha_entrega || null,
+          };
+        });
         setNotificaciones(prev => [
           ...cliente,
           ...prev.filter(n => !TIPOS_CLIENTE.has(n.tipo)),
