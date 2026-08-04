@@ -965,7 +965,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               min={1}
               className={`field-input${errors.cantidad ? " error" : ""}`}
               value={form.cantidad}
-              onChange={e => set("cantidad", Number(e.target.value))}
+              onChange={e => set("cantidad", e.target.value)}
             />
             {errors.cantidad && <span className="field-error">{errors.cantidad}</span>}
           </div>

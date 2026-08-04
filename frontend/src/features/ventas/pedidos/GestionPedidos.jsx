@@ -997,7 +997,9 @@ export default function GestionPedidos() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage   = Math.min(page, totalPages);
-  const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+  const paged      = [...filtered]
+    .sort((a, b) => (b.fecha_pedido || '').localeCompare(a.fecha_pedido || ''))
+    .slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   useEffect(() => setPage(1), [search, filterEstado, filterTipo]);
 
