@@ -63,7 +63,7 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
     if (!item) return;
     const newQty = item.cantidad + delta;
     if (newQty <= 0) { removeFromCart(id); return; }
-    if (item.stock && !((item as any).pedidoProgramado) && newQty > item.stock) return;
+    if (item.stock && !((item as any).pedidoProgramado) && !((item as any).requiereProduccion) && newQty > item.stock) return;
     updateQuantity(id, newQty);
   };
 
@@ -71,7 +71,7 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 1) { removeFromCart(id); return; }
     const item = cart.find(i => i.id === id);
-    if (item?.stock && !((item as any).pedidoProgramado) && num > item.stock) {
+    if (item?.stock && !((item as any).pedidoProgramado) && !((item as any).requiereProduccion) && num > item.stock) {
       updateQuantity(id, item.stock);
       return;
     }

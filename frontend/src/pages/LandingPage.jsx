@@ -362,7 +362,7 @@ const LandingPage = ({ hideNavbar = false }) => {
   const handleAddToCart = (product) => {
     const qty = getQty(product.id);
     const stock = product.stock ?? 0;
-    if (stock === 0) {
+    if (stock === 0 || (product.requiereProduccion && qty > stock)) {
       realizarAdd(product, qty, true);
       setCartOpen(true);
       return;
@@ -377,7 +377,7 @@ const LandingPage = ({ hideNavbar = false }) => {
 
   const handleAddFromModal = (product, qty) => {
     const stock = product.stock ?? 0;
-    if (stock === 0) {
+    if (stock === 0 || (product.requiereProduccion && qty > stock)) {
       realizarAdd(product, qty, true);
       setSelectedProduct(null);
       setCartOpen(true);
