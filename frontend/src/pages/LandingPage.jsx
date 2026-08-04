@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   ShoppingBag, Leaf, Sparkles,
   Plus, Minus, ShoppingCart, CheckCircle2, X, ChevronLeft, ChevronRight, Eye,
-  Phone, MapPin, ExternalLink,
 } from 'lucide-react';
 import { getUser } from '../services/authService.js';
 import { crearPedido } from '../services/pedidosService.js';
 import { getProductos } from '../services/productosService.js';
 import { useNotificaciones, TIPOS } from '../features/notificaciones/context/NotificacionesContext.jsx';
 import Navbar from '../shared/components/Navbar.jsx';
+import Footer from '../shared/components/Footer.jsx';
 
 import CartAside from '../features/sales/orders/components/CartAside';
 import CheckoutModal from '../features/sales/orders/components/CheckoutModal';
@@ -826,118 +826,7 @@ const LandingPage = ({ hideNavbar = false }) => {
         </div>
       </section>
 
-      {/* ─── FOOTER ─── */}
-      <footer className="bg-white text-[#1b5e20] pt-32 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start gap-20 mb-20">
-            {/* Brand */}
-            <div className="max-w-md space-y-8">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#1b5e20] rounded-2xl flex items-center justify-center shadow-lg">
-                  <Leaf className="text-white w-7 h-7" />
-                </div>
-                <span className="text-3xl font-black tracking-tighter">Tostón App</span>
-              </div>
-              <p className="text-[#388e3c] font-medium leading-relaxed">Calidad premium y frescura garantizada para los amantes del buen sabor.</p>
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-6 min-w-[240px]">
-              <p className="text-xs font-black uppercase tracking-widest text-[#a5d6a7]">Contáctanos</p>
-
-              <div className="space-y-3">
-                <a href="tel:3217543305" className="flex items-center gap-3 group">
-                  <div className="w-9 h-9 rounded-xl bg-[#e8f5e9] flex items-center justify-center group-hover:bg-[#1b5e20] transition-colors duration-200">
-                    <Phone size={15} className="text-[#1b5e20] group-hover:text-white transition-colors duration-200" />
-                  </div>
-                  <span className="text-sm font-bold text-[#2e7d32] group-hover:text-[#1b5e20] transition-colors duration-200">321 754 3305</span>
-                </a>
-
-                <a href="tel:3137899946" className="flex items-center gap-3 group">
-                  <div className="w-9 h-9 rounded-xl bg-[#e8f5e9] flex items-center justify-center group-hover:bg-[#1b5e20] transition-colors duration-200">
-                    <Phone size={15} className="text-[#1b5e20] group-hover:text-white transition-colors duration-200" />
-                  </div>
-                  <span className="text-sm font-bold text-[#2e7d32] group-hover:text-[#1b5e20] transition-colors duration-200">313 789 9946</span>
-                </a>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#e8f5e9] flex items-center justify-center shrink-0 mt-0.5">
-                    <MapPin size={15} className="text-[#1b5e20]" />
-                  </div>
-                  <span className="text-sm font-bold text-[#2e7d32] leading-snug">CARRERA 38 A NO. 80 12</span>
-                </div>
-
-                <a
-                  href="https://www.instagram.com/tostonesbroms?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 group"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-[#e8f5e9] flex items-center justify-center group-hover:bg-[#1b5e20] transition-colors duration-200">
-                    <ExternalLink size={15} className="text-[#1b5e20] group-hover:text-white transition-colors duration-200" />
-                  </div>
-                  <span className="text-sm font-bold text-[#2e7d32] group-hover:text-[#1b5e20] transition-colors duration-200">@tostonesbroms</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Horario */}
-            <div className="space-y-6 min-w-[220px]">
-              <p className="text-xs font-black uppercase tracking-widest text-[#a5d6a7]">Horario de atención</p>
-              <div className="space-y-2">
-                {[
-                  { dias: 'Lunes – Viernes', horas: '8:00 am – 8:00 pm', abierto: true  },
-                  { dias: 'Sábado',          horas: '8:00 am – 8:00 pm', abierto: true  },
-                  { dias: 'Domingo',         horas: 'Cerrado',            abierto: false },
-                ].map(({ dias, horas, abierto }) => (
-                  <div key={dias} className="flex items-start justify-between gap-4">
-                    <span className="text-sm font-bold text-[#2e7d32]">{dias}</span>
-                    <span className={`text-sm font-bold whitespace-nowrap ${abierto ? 'text-[#1b5e20]' : 'text-[#9e9e9e]'}`}>
-                      {horas}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {/* Indicador en tiempo real */}
-              {(() => {
-                const h = new Date().getHours();
-                const abierto = h >= 8 && h < 20 && new Date().getDay() !== 0;
-                return (
-                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black border ${
-                    abierto
-                      ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#1b5e20]'
-                      : 'bg-gray-50 border-gray-200 text-[#9e9e9e]'
-                  }`}>
-                    <span className={`w-2 h-2 rounded-full ${abierto ? 'bg-[#4caf50] animate-pulse' : 'bg-gray-300'}`} />
-                    {abierto ? 'Abierto ahora' : 'Cerrado ahora'}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Mapa */}
-          <div className="mb-16">
-            <p className="text-xs font-black uppercase tracking-widest text-[#a5d6a7] mb-5">📍 Encuéntranos</p>
-            <div className="rounded-[24px] overflow-hidden border-2 border-[#e8f5e9] shadow-lg">
-              <iframe
-                title="Ubicación Tostón App"
-                src="https://maps.google.com/maps?q=Carrera+38A+No.+80-12&output=embed&z=16&hl=es"
-                width="100%"
-                height="300"
-                style={{ border: 0, display: 'block' }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-          </div>
-
-          <div className="pt-12 border-t border-[#e8f5e9] text-center">
-            <p className="font-bold text-sm text-[#81c784]">© 2026 Tostón App — Hecho con Pasión.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer onExplorar={() => scrollToSection('productos')} />
     </div>
   );
 };

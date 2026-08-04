@@ -9,6 +9,8 @@ import {
   editarProveedor,
   eliminarProveedor,
 } from "../../../services/proveedoresService.js";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import { getRecordDate } from "../../../utils/dateUtils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -54,6 +56,8 @@ export default function GestionProveedores() {
   const [search,       setSearch]       = useState("");
   const [filterCiudad, setFilterCiudad] = useState("todas");
   const [showFilter,   setShowFilter]   = useState(false);
+  const [filterDesde,  setFilterDesde]   = useState("");
+  const [filterHasta,  setFilterHasta]   = useState("");
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
   const [toast,        setToast]        = useState(null);
@@ -97,7 +101,18 @@ export default function GestionProveedores() {
       (p.direccion || "").toLowerCase().includes(q)
     );
     const matchCiudad = filterCiudad === "todas" || p.ciudad === filterCiudad;
-    return matchQ && matchCiudad;
+    // Fecha range over ultimaCompraFecha or other candidate
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const val = getRecordDate(p) || p.ultimaCompraFecha;
+      if (!val) matchFecha = false;
+      else {
+        const d = new Date(String(val).split('T')[0]);
+        if (filterDesde && new Date(filterDesde) > d) matchFecha = false;
+        if (filterHasta && new Date(filterHasta) < d) matchFecha = false;
+      }
+    }
+    return matchQ && matchCiudad && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
@@ -189,6 +204,15 @@ export default function GestionProveedores() {
                       <span className="filter-dot" style={{ background: "#2e7d32" }} />{ciudad}
                     </button>
                   ))}
+                </div>
+                <div style={{ padding: 12 }}>
+                  <DateRangeFilter
+                    desde={filterDesde}
+                    hasta={filterHasta}
+                    onApply={({desde, hasta}) => { setFilterDesde(desde || ''); setFilterHasta(hasta || ''); setShowFilter(false); }}
+                    onClear={() => { setFilterDesde(''); setFilterHasta(''); setShowFilter(false); }}
+                    label="Filtrar por fecha (última compra)"
+                  />
                 </div>
               </div>
             )}

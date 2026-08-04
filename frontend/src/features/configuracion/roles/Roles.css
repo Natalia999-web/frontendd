@@ -37,36 +37,6 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
 }
 .search-input:focus { border-color: #4caf50; }
 
-/* ─── Filter icon button ─────────────────────────────────── */
-.filter-icon-btn {
-  width: 44px; height: 44px; border-radius: 10px;
-  border: 1.5px solid #e0e0e0; background: #fff;
-  cursor: pointer; font-size: 16px; color: #757575;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; flex-shrink: 0; position: relative;
-  text-transform: none;
-}
-.filter-icon-btn:hover       { border-color: #4caf50; color: #2e7d32; }
-.filter-icon-btn.has-filter  { border-color: #4caf50; color: #2e7d32; background: #f1f8f1; }
-
-/* ─── Filter dropdown ────────────────────────────────────── */
-.filter-dropdown {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  background: #fff; border-radius: 10px;
-  border: 1px solid #e0e0e0; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  min-width: 150px; z-index: 100; overflow: hidden;
-  animation: slideUp 0.18s ease;
-}
-.filter-option {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; font-size: 13px; font-weight: 500;
-  color: #424242; cursor: pointer; transition: background 0.12s;
-  border: none; background: transparent; width: 100%; font-family: inherit;
-  text-transform: none;
-}
-.filter-option:hover  { background: #f5f5f5; }
-.filter-option.active { background: #f1f8f1; color: #2e7d32; font-weight: 700; }
-.filter-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 /* ─── Card ───────────────────────────────────────────────── */
 

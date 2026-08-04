@@ -28,6 +28,7 @@ const adaptDomicilio = (d) => {
     fecha_entrega_real: d.Fecha_entrega       || null,
     total:              d.total               || 0,
     metodo_pago:        d.metodo_pago         || "",
+    comprobante_pago:   d.comprobante_pago    || null,
     productos:          d.productos           || [],
     domicilio:          true,
     venta_estado_id:    d.venta_estado ?? null,

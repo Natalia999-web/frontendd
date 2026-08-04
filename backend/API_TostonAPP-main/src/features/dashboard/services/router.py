@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import datetime
 
 from src.shared.services.database import get_db
 from src.features.auth.services.dependencies import requiere_permiso
@@ -11,9 +13,11 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 @router.get("/", response_model=DashboardResponse)
 def vista_general(
-    periodo: str     = Query("hoy", description="hoy | semana | mes"),
-    db:      Session = Depends(get_db),
-    _:       dict    = Depends(requiere_permiso("ver_dashboard")),
+    periodo: str                 = Query("hoy", description="hoy | semana | mes | custom"),
+    fecha_inicio: Optional[datetime] = Query(None, description="Fecha inicial del rango ISO"),
+    fecha_fin:    Optional[datetime] = Query(None, description="Fecha final del rango ISO"),
+    db:          Session        = Depends(get_db),
+    _:           dict           = Depends(requiere_permiso("ver_dashboard")),
 ):
     """
     Retorna toda la información del dashboard en una sola llamada.
@@ -23,6 +27,11 @@ def vista_general(
     - Gráfica de ventas en el tiempo (barras/líneas)
     - Top 5 productos más vendidos (torta + ranking)
 
-    Períodos disponibles: hoy | semana | mes
+    Períodos disponibles: hoy | semana | mes | custom
     """
-    return obtener_dashboard(db, periodo)
+    if (fecha_inicio is not None) ^ (fecha_fin is not None):
+        raise HTTPException(
+            status_code=422,
+            detail="Debe proporcionar fecha_inicio y fecha_fin juntos para un rango personalizado.",
+        )
+    return obtener_dashboard(db, periodo, fecha_inicio, fecha_fin)

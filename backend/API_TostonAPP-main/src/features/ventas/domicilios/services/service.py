@@ -73,6 +73,7 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         "Departamento_entrega": dom.Departamento_entrega,
         "total":                total,
         "metodo_pago":          metodo_pago,
+        "comprobante_pago":     venta.Comprobante_Pago if venta else None,
         "productos":            productos,
         "telefono_cliente":     cliente.Telefono if cliente else "",
         "otp":                  getattr(dom, "OTP", None),
@@ -356,6 +357,15 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
     dom = db.query(Domicilio).filter(Domicilio.ID_Domicilio == id_domicilio).first()
     if not dom:
         raise HTTPException(status_code=404, detail="Domicilio no encontrado")
+
+    ESTADO_ENTREGADO_DB = 8
+    if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB) and dom.ID_Venta:
+        venta_check = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
+        if venta_check and not venta_check.Comprobante_Pago:
+            raise HTTPException(
+                status_code=400,
+                detail="Se requiere comprobante de pago para marcar el domicilio como entregado",
+            )
 
     if nuevo_estado == ESTADO_ENTREGADO_FLUTTER:
         dom.Fecha_entrega = datetime.now()

@@ -156,6 +156,20 @@ const ESTADO_CONFIG = {
   },
 };
 
+const normalizeComprobanteSrc = (c) => {
+  if (!c) return null;
+  if (typeof c !== 'string') return null;
+  const s = c.trim();
+  // already a data URI or absolute/relative URL
+  if (s.startsWith('data:') || s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/')) return s;
+  // likely a raw base64 string stored in DB (no data: prefix)
+  // try to detect base64: long string with only base64 chars and maybe padding
+  const base64Like = /^[A-Za-z0-9+/=\n\r]+$/.test(s) && s.length > 100;
+  if (base64Like) return 'data:image/jpeg;base64,' + s.replace(/\s+/g, '');
+  // fallback: return as-is
+  return s;
+};
+
 const DEVOLUCION_WINDOW_MS = 60 * 60 * 1000; // 1 hora
 
 const puedeDevolver = (pedido) => {
@@ -773,13 +787,13 @@ const PedidosClientePage = () => {
                     <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '10px 14px' }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>✅ Comprobante adjuntado</p>
                       <img
-                        src={selectedPedido.comprobante}
+                        src={normalizeComprobanteSrc(selectedPedido.comprobante)}
                         alt="Comprobante de pago"
                         style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, marginBottom: 6, background: '#fff' }}
                         onError={e => { e.target.style.display = 'none'; }}
                       />
                       <a
-                        href={selectedPedido.comprobante}
+                        href={normalizeComprobanteSrc(selectedPedido.comprobante)}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}

@@ -9,6 +9,8 @@ import ModalEliminarValidado from "../../../ModalEliminarValidado";
 import { getInsumos, crearInsumo, editarInsumo, eliminarInsumo, toggleEstadoInsumo } from "../../../services/insumosService.js";
 import { getCategorias } from "../../../services/categoriasInsumosService.js";
 import "./GestionInsumos.css";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import { getRecordDate } from "../../../utils/dateUtils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -207,6 +209,8 @@ export default function GestionInsumos() {
   const [search,           setSearch]           = useState("");
   const [filterCat,        setFilterCat]        = useState("todas");
   const [filterEst,        setFilterEst]        = useState("todos");
+  const [filterDesde,      setFilterDesde]      = useState("");
+  const [filterHasta,      setFilterHasta]      = useState("");
   const [showFilter,       setShowFilter]       = useState(false);
   const [page,             setPage]             = useState(1);
   const [modal,            setModal]            = useState(null);
@@ -258,7 +262,18 @@ export default function GestionInsumos() {
     const matchEst = filterEst === "todos" || filterEst === est ||
       (filterEst === "activo" && ins.estado) ||
       (filterEst === "inactivo" && !ins.estado);
-    return matchQ && matchCat && matchEst;
+    // Fecha range
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const val = getRecordDate(ins) || ins.ultimaActualizacion || ins.proxVencimiento;
+      if (!val) matchFecha = false;
+      else {
+        const d = new Date(String(val).split('T')[0]);
+        if (filterDesde && new Date(filterDesde) > d) matchFecha = false;
+        if (filterHasta && new Date(filterHasta) < d) matchFecha = false;
+      }
+    }
+    return matchQ && matchCat && matchEst && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
@@ -413,6 +428,15 @@ export default function GestionInsumos() {
                       </button>
                     ))}
                   </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <DateRangeFilter
+                    desde={filterDesde}
+                    hasta={filterHasta}
+                    onApply={({desde, hasta}) => { setFilterDesde(desde || ''); setFilterHasta(hasta || ''); setShowFilter(false); }}
+                    onClear={() => { setFilterDesde(''); setFilterHasta(''); setShowFilter(false); }}
+                    label="Filtrar por fecha"
+                  />
                 </div>
               </div>
             )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fmtFecha } from "../../../utils/dateUtils.js";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import {
   getOrdenes, crearOrden, editarOrden, eliminarOrden, cambiarEstadoOrden,
 } from "../../../services/ordenesProduccionService.js";
@@ -1077,6 +1078,8 @@ export default function GestionOrdenesProduccion() {
   const [loading,      setLoading]      = useState(true);
   const [search,       setSearch]       = useState(initialSearch);
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterDesde,  setFilterDesde]  = useState("");
+  const [filterHasta,  setFilterHasta]  = useState("");
   const [showFilter,   setShowFilter]   = useState(false);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
@@ -1133,14 +1136,24 @@ export default function GestionOrdenesProduccion() {
       o.nombreInsumo   ?? "",
     ].some(v => v.toLowerCase().includes(q));
     const matchE = filterEstado === "todos" || o.estado === filterEstado;
-    return matchQ && matchE;
+
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const fechaRaw = String(o.fechaInicio || "").slice(0, 10);
+      const fecha = fechaRaw ? new Date(`${fechaRaw}T00:00:00`) : null;
+      if (!fecha) matchFecha = false;
+      if (filterDesde && fecha && new Date(`${filterDesde}T00:00:00`) > fecha) matchFecha = false;
+      if (filterHasta && fecha && new Date(`${filterHasta}T00:00:00`) < fecha) matchFecha = false;
+    }
+    return matchQ && matchE && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage   = Math.min(page, totalPages);
+
   const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
-  useEffect(() => setPage(1), [search, filterEstado]);
+  useEffect(() => setPage(1), [search, filterEstado, filterDesde, filterHasta]);
 
   const handleSaveOrder = async () => {
     await cargarDatos();
@@ -1198,11 +1211,11 @@ export default function GestionOrdenesProduccion() {
 
           <div ref={filterRef} style={{ position: "relative", zIndex: 200 }}>
             <button
-              className={`filter-icon-btn${filterEstado !== "todos" ? " has-filter" : ""}`}
+              className={`filter-icon-btn${filterEstado !== "todos" || filterDesde || filterHasta ? " has-filter" : ""}`}
               onClick={() => setShowFilter(v => !v)}
             >▼</button>
             {showFilter && (
-              <div className="filter-dropdown" style={{ minWidth: 180, zIndex: 200 }}>
+              <div className="filter-dropdown" style={{ minWidth: 220, zIndex: 200 }}>
                 <p className="filter-section-title">Estado</p>
                 {["todos", ...ESTADOS_ORDEN].map(f => (
                   <button
@@ -1214,12 +1227,26 @@ export default function GestionOrdenesProduccion() {
                     {f === "todos" ? "Todos" : f}
                   </button>
                 ))}
+                <div style={{ height: 1, background: "#f0f0f0", margin: "8px 0" }} />
+                <DateRangeFilter
+                  desde={filterDesde}
+                  hasta={filterHasta}
+                  label="Fecha de inicio"
+                  onApply={({ desde, hasta }) => {
+                    setFilterDesde(desde || "");
+                    setFilterHasta(hasta || "");
+                  }}
+                  onClear={() => {
+                    setFilterDesde("");
+                    setFilterHasta("");
+                  }}
+                />
               </div>
             )}
           </div>
 
-          {(filterEstado !== "todos" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); }}>
+          {(filterEstado !== "todos" || filterDesde || filterHasta || search) && (
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}>
               ✕ Limpiar
             </button>
           )}

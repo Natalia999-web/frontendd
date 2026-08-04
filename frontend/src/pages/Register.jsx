@@ -3,9 +3,35 @@ import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { soloLetras } from '../utils/inputFilters';
 import { User, Mail, Lock, Eye, EyeOff, Check, Leaf, ChevronRight, FileText } from 'lucide-react';
+import { validatePassword } from '../features/configuracion/Usuarios/usuariosUtils.js';
 import './Auth.css';
 
 const TIPOS_DOC = ['CC', 'TI', 'CE', 'Pasaporte', 'NIT', 'PPT'];
+
+const PASS_RULES = [
+  { test: p => p.length >= 8,          label: 'Mínimo 8 caracteres' },
+  { test: p => /[A-Z]/.test(p),        label: 'Al menos una mayúscula' },
+  { test: p => /[a-z]/.test(p),        label: 'Al menos una minúscula' },
+  { test: p => /\d/.test(p),           label: 'Al menos un número' },
+  { test: p => /[^A-Za-z0-9]/.test(p), label: 'Al menos un carácter especial (!@#...)' },
+];
+
+function PasswordChecklist({ password }) {
+  if (!password) return null;
+  return (
+    <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {PASS_RULES.map(({ test, label }) => {
+        const ok = test(password);
+        return (
+          <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+            color: ok ? '#166534' : '#991b1b' }}>
+            {ok ? '✓' : '✗'} {label}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 const Register = () => {
   const navigate = useNavigate();
@@ -36,7 +62,6 @@ const Register = () => {
       const n = { ...p };
       if (!val) { delete n[k]; return n; }
       if (k === 'Correo' && val.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) n[k] = 'Formato de correo inválido';
-      else if (k === 'Contrasena' && val.length < 8) n[k] = 'Mínimo 8 caracteres';
       else if (k === 'Confirmar_contrasena' && newForm.Contrasena && val !== newForm.Contrasena) n[k] = 'Las contraseñas no coinciden';
       else delete n[k];
       if (k === 'Contrasena' && newForm.Confirmar_contrasena) {
@@ -54,8 +79,12 @@ const Register = () => {
     if (!form.Numero_documento.trim()) e.Numero_documento = 'El número de documento es obligatorio';
     if (!form.Correo.trim())           e.Correo           = 'El correo es obligatorio';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Correo)) e.Correo = 'Formato de correo inválido';
-    if (!form.Contrasena)       e.Contrasena = 'La contraseña es obligatoria';
-    else if (form.Contrasena.length < 8) e.Contrasena = 'Mínimo 8 caracteres';
+    if (!form.Contrasena) {
+      e.Contrasena = 'La contraseña es obligatoria';
+    } else {
+      const passErr = validatePassword(form.Contrasena);
+      if (passErr) e.Contrasena = passErr;
+    }
     if (form.Contrasena !== form.Confirmar_contrasena) e.Confirmar_contrasena = 'Las contraseñas no coinciden';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -239,7 +268,8 @@ const Register = () => {
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.Contrasena && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Contrasena}</p>}
+              {!form.Contrasena && errors.Contrasena && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Contrasena}</p>}
+              <PasswordChecklist password={form.Contrasena} />
             </div>
 
             {/* Confirmar contraseña */}

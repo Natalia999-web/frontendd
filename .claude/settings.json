@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push *)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('src/features/produccion/ordenes_produccion/services/service.py', doraise=True\\); print\\('OK'\\)\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(git -C \"c:/Users/isafe/OneDrive/Desktop/frontend\" log --oneline -3)",
+      "Bash(git -C \"c:/Users/isafe/OneDrive/Desktop/frontend\" add frontend/src/pages/LandingPage.jsx frontend/public/torta-platano.jpg)",
+      "Bash(grep -rn \"width: [0-9]\\\\{3,4\\\\}px\\\\|min-width: [0-9]\\\\{3,4\\\\}px\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/configuracion/Usuarios/Usuarios.css\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/compras/proveedores/Proveedores.css\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\isafe\\OneDrive\\Desktop"
+    ]
+  }
+}

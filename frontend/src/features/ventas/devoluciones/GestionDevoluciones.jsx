@@ -3,6 +3,7 @@ import CrearDevolucion from "./CrearDevolucion.jsx";
 import { getDevoluciones, crearDevolucion, resolverDevolucion } from "../../../services/devolucionesService.js";
 import { crearNotificacionCliente } from "../../../services/notificacionesService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./Devoluciones.css";
 
 function SkeletonRows({ cols = 8, rows = 5 }) {
@@ -347,6 +348,8 @@ export default function GestionDevoluciones() {
   const [actionSaving, setActionSaving] = useState(false);
   const [search,       setSearch]       = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterDesde,  setFilterDesde]  = useState("");
+  const [filterHasta,  setFilterHasta]  = useState("");
   const [showFilter,   setShowFilter]   = useState(false);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
@@ -383,15 +386,25 @@ export default function GestionDevoluciones() {
     const matchQ = [d.numero, d.numeroPedido, d.cliente?.nombre, d.motivo]
       .filter(Boolean).some((v) => v.toLowerCase().includes(q));
     const matchE = filterEstado === "todos" || d.estado === filterEstado;
-    return matchQ && matchE;
+
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const fechaRaw = String(d.fechaSolicitud || "").slice(0, 10);
+      const fecha = fechaRaw ? new Date(`${fechaRaw}T00:00:00`) : null;
+      if (!fecha) matchFecha = false;
+      if (filterDesde && fecha && new Date(`${filterDesde}T00:00:00`) > fecha) matchFecha = false;
+      if (filterHasta && fecha && new Date(`${filterHasta}T00:00:00`) < fecha) matchFecha = false;
+    }
+
+    return matchQ && matchE && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage   = Math.min(page, totalPages);
   const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
-  useEffect(() => setPage(1), [search, filterEstado]);
+  useEffect(() => setPage(1), [search, filterEstado, filterDesde, filterHasta]);
 
-  const hasFilter = filterEstado !== "todos";
+  const hasFilter = filterEstado !== "todos" || filterDesde || filterHasta;
 
   const handleCrear = async (payload) => {
     setActionSaving(true);
@@ -552,12 +565,26 @@ export default function GestionDevoluciones() {
                     <span className="filter-dot" style={{ background: f.dot }} />{f.label}
                   </button>
                 ))}
+                <div style={{ height: 1, background: "#f0f0f0", margin: "8px 0" }} />
+                <DateRangeFilter
+                  desde={filterDesde}
+                  hasta={filterHasta}
+                  label="Fecha de solicitud"
+                  onApply={({ desde, hasta }) => {
+                    setFilterDesde(desde || "");
+                    setFilterHasta(hasta || "");
+                  }}
+                  onClear={() => {
+                    setFilterDesde("");
+                    setFilterHasta("");
+                  }}
+                />
               </div>
             )}
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); }}>
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}>
               ✕ Limpiar
             </button>
           )}

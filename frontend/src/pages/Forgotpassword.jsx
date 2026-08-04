@@ -1,8 +1,34 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { recuperarContrasena, verificarCodigo, resetearContrasena } from "../services/authService";
+import { validatePassword } from "../features/configuracion/Usuarios/usuariosUtils.js";
 import { Mail, Lock, Eye, EyeOff, Key, ChevronRight, CheckCircle, ArrowLeft, ShieldCheck, Leaf } from "lucide-react";
 import "./Auth.css";
+
+const PASS_RULES = [
+  { test: p => p.length >= 8,          label: 'Mínimo 8 caracteres' },
+  { test: p => /[A-Z]/.test(p),        label: 'Al menos una mayúscula' },
+  { test: p => /[a-z]/.test(p),        label: 'Al menos una minúscula' },
+  { test: p => /\d/.test(p),           label: 'Al menos un número' },
+  { test: p => /[^A-Za-z0-9]/.test(p), label: 'Al menos un carácter especial (!@#...)' },
+];
+
+function PasswordChecklist({ password }) {
+  if (!password) return null;
+  return (
+    <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {PASS_RULES.map(({ test, label }) => {
+        const ok = test(password);
+        return (
+          <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+            color: ok ? '#166534' : '#991b1b' }}>
+            {ok ? '✓' : '✗'} {label}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 const COOLDOWN = 60; // segundos entre reenvíos
 
@@ -90,14 +116,8 @@ const ForgotPassword = () => {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
-      return;
-    }
+    const passErr = validatePassword(password, confirm);
+    if (passErr) { setError(passErr); return; }
     setLoading(true);
     try {
       await resetearContrasena(resetToken, password);
@@ -273,11 +293,7 @@ const ForgotPassword = () => {
                         {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    {password && password.length < 8 && (
-                      <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#991b1b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        ✗ Mínimo 8 caracteres ({8 - password.length} restantes)
-                      </p>
-                    )}
+                    <PasswordChecklist password={password} />
                   </div>
                   <div className="auth-field">
                     <label className="auth-label"><Lock size={11} /> Confirmar contraseña</label>

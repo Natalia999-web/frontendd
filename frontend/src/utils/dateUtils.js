@@ -24,3 +24,26 @@ export function fmtFechaHora(iso) {
     hour: "2-digit", minute: "2-digit",
   });
 }
+
+/**
+ * Intenta extraer una fecha (ISO) de un registro buscando campos comunes.
+ * Retorna el valor original o null si no encuentra nada.
+ */
+export function getRecordDate(rec) {
+  if (!rec) return null;
+  const candidates = [
+    'fecha', 'fecha_pedido', 'Fecha_pedido', 'fecha_compra', 'Fecha_compra', 'fecha_entrega', 'Fecha_entrega',
+    'fecha_creacion', 'Fecha_Creacion', 'created_at', 'createdAt', 'fecha_llegada', 'Fecha_Actualizacion', 'fecha_actualizacion',
+    'fecha_produccion', 'Fecha_produccion', 'Fecha', 'Fecha_creacion', 'proxVencimiento', 'ultimaActualizacion', 'ultima_actualizacion'
+  ];
+  for (const k of candidates) {
+    if (rec[k]) return String(rec[k]);
+  }
+  // try nested objects like cliente?.fecha
+  for (const v of Object.values(rec)) {
+    if (v && typeof v === 'object') {
+      for (const k of candidates) if (v[k]) return String(v[k]);
+    }
+  }
+  return null;
+}

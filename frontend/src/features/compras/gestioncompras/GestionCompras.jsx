@@ -3,7 +3,8 @@ import { getCompras, crearCompra as apiCrearCompra, editarCompra, completarCompr
 import { getProveedores } from "../../../services/proveedoresService.js";
 import CrearCompra from "./CrearCompra.jsx";
 import EditarCompra, { AnularCompraModal } from "./EditarCompra.jsx";
-import { fmtFecha } from "../../../utils/dateUtils";
+import { fmtFecha, getRecordDate } from "../../../utils/dateUtils";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./compras.css";
 
 const ITEMS_PER_PAGE = 10;
@@ -80,6 +81,8 @@ export default function GestionCompras() {
   const [search,        setSearch]        = useState("");
   const [filterEstado,  setFilterEstado]  = useState("todos");
   const [filterProv,    setFilterProv]    = useState("todos");
+  const [filterDesde,   setFilterDesde]   = useState("");
+  const [filterHasta,   setFilterHasta]   = useState("");
   const [showFilter,    setShowFilter]    = useState(false);
   const [page,          setPage]          = useState(1);
   const [modal,         setModal]         = useState(null);
@@ -131,7 +134,18 @@ export default function GestionCompras() {
     );
     const matchEstado = filterEstado === "todos" || c.estado === filterEstado;
     const matchProv   = filterProv   === "todos" || String(c.idProveedor) === String(filterProv);
-    return matchQ && matchEstado && matchProv;
+    // Fecha range
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const val = getRecordDate(c);
+      if (!val) matchFecha = false;
+      else {
+        const d = new Date(String(val).split('T')[0]);
+        if (filterDesde && new Date(filterDesde) > d) matchFecha = false;
+        if (filterHasta && new Date(filterHasta) < d) matchFecha = false;
+      }
+    }
+    return matchQ && matchEstado && matchProv && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
@@ -273,6 +287,16 @@ export default function GestionCompras() {
                       })}
                     </div>
                   </div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <DateRangeFilter
+                    desde={filterDesde}
+                    hasta={filterHasta}
+                    onApply={({desde, hasta}) => { setFilterDesde(desde || ''); setFilterHasta(hasta || ''); setPage(1); }}
+                    onClear={() => { setFilterDesde(''); setFilterHasta(''); setPage(1); }}
+                    label="Filtrar por fecha de compra"
+                  />
                 </div>
 
                 {hasFilter && (

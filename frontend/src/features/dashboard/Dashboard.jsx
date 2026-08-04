@@ -7,8 +7,8 @@ import {
 import "./dashboard.css";
 import { getDashboard } from "../../services/dashboardService";
 
-const PERIODOS      = ["hoy", "semana", "mes"];
-const PERIODO_LABEL = { hoy: "Hoy", semana: "Esta semana", mes: "Este mes" };
+const PERIODOS      = ["hoy", "semana", "mes", "custom"];
+const PERIODO_LABEL = { hoy: "Hoy", semana: "Esta semana", mes: "Este mes", custom: "Rango" };
 
 /* ── Custom Tooltip ─────────────────────────────────────── */
 function CustomTooltip({ active, payload, label, prefix = "" }) {
@@ -90,17 +90,19 @@ export default function Dashboard() {
   const [animated, setAnimated] = useState(false);
   const [periodo,  setPeriodo]  = useState("hoy");
   const [periodoCharts, setPeriodoCharts] = useState("hoy");
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 50);
     return () => clearTimeout(t);
   }, []);
 
-  const cargar = useCallback(async (p) => {
+  const cargar = useCallback(async (p, desde, hasta) => {
     setLoading(true);
     setError(false);
     try {
-      const d = await getDashboard(p);
+      const d = await getDashboard(p, desde, hasta);
       setDatos(d);
     } catch {
       setError(true);
@@ -109,10 +111,17 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => { cargar(periodo); }, [periodo]);
+  useEffect(() => {
+    if (periodo !== "custom" || (fechaInicio && fechaFin)) {
+      cargar(periodo, fechaInicio, fechaFin);
+    }
+  }, [periodo, fechaInicio, fechaFin]);
 
   const { kpi, graficaVentas, productosTop } = datos;
   const totalUds = productosTop.reduce((s, p) => s + p.value, 0) || 1;
+  const rangoLabel = periodo === "custom" && fechaInicio && fechaFin
+    ? `${fechaInicio} → ${fechaFin}`
+    : PERIODO_LABEL[periodo] || "Periodo";
 
   // Bar chart: ventas por hora/día/semana
   const barData = graficaVentas.map(p => ({ hora: p.etiqueta, ventas: p.actual }));
@@ -154,12 +163,64 @@ export default function Dashboard() {
 
         {/* KPI Strip */}
         <div className="kpi-strip" style={{ marginBottom: 20 }}>
-          <KpiStripInner kpi={kpi} periodo={periodo} setPeriodo={p => { setPeriodo(p); setPeriodoCharts(p); }} />
+          <KpiStripInner
+            kpi={kpi}
+            periodo={periodo}
+            setPeriodo={p => {
+              setPeriodo(p);
+              setPeriodoCharts(p);
+              if (p !== "custom") {
+                setFechaInicio("");
+                setFechaFin("");
+              }
+            }}
+          />
         </div>
 
-        <div className="charts-row" style={{ animationDelay: "0.1s" }}>
+        {periodo === "custom" && (
+          <div className="dashboard-report-toolbar">
+            <div className="dashboard-report-label">
+              <span>Rango personalizado</span>
+              <span className="dashboard-report-range">{rangoLabel}</span>
+            </div>
+            <div className="dashboard-report-fields">
+              <label className="dashboard-report-field">
+                <span>Desde</span>
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={e => setFechaInicio(e.target.value)}
+                />
+              </label>
+              <label className="dashboard-report-field">
+                <span>Hasta</span>
+                <input
+                  type="date"
+                  value={fechaFin}
+                  onChange={e => setFechaFin(e.target.value)}
+                />
+              </label>
+              <button
+                className="report-btn"
+                type="button"
+                disabled={!fechaInicio || !fechaFin}
+                onClick={() => cargar("custom", fechaInicio, fechaFin)}
+              >
+                Aplicar rango
+              </button>
+              <button
+                className="report-btn report-btn--pdf"
+                type="button"
+                disabled={!fechaInicio || !fechaFin}
+                onClick={() => window.print()}
+              >
+                Exportar PDF
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* Flujo de Ventas — Bar Chart */}
+        <div className="charts-row" style={{ animationDelay: "0.1s" }}>
           <ChartCard title="Flujo de Ventas" period={periodoCharts} onPeriod={p => { setPeriodoCharts(p); setPeriodo(p); }}>
             {barData.length === 0 || barData.every(d => d.ventas === 0) ? (
               <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#bdbdbd", fontSize: 13 }}>

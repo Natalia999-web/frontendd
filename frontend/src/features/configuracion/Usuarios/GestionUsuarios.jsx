@@ -8,6 +8,8 @@ import { Avatar, Toggle, RolBadge } from "./CrearUsuario.jsx";
 import CrearUsuario from "./CrearUsuario.jsx";
 import { ModalVerUsuario, ModalEliminarUsuario } from "./EditarUsuario.jsx";
 import "./Usuarios.css";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import { getRecordDate } from "../../../utils/dateUtils";
 
 const PER_PAGE = 5;
 
@@ -47,6 +49,8 @@ export default function GestionUsuarios() {
   const [search,     setSearch]     = useState("");
   const [filter,     setFilter]     = useState("todos");
   const [filterRol,  setFilterRol]  = useState("todos");
+  const [filterDesde, setFilterDesde] = useState("");
+  const [filterHasta, setFilterHasta] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [page,       setPage]       = useState(1);
   const [modal,      setModal]      = useState(null);
@@ -100,7 +104,18 @@ export default function GestionUsuarios() {
       .filter(Boolean).some(v => v.toLowerCase().includes(q));
     const matchE   = filter    === "todos" || (filter === "activo" ? u.estado : !u.estado);
     const matchRol = filterRol === "todos" || u.rol === filterRol;
-    return matchQ && matchE && matchRol;
+    // Fecha range (created/registered)
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const val = getRecordDate(u) || u.created_at || u.fecha_creacion;
+      if (!val) matchFecha = false;
+      else {
+        const d = new Date(String(val).split('T')[0]);
+        if (filterDesde && new Date(filterDesde) > d) matchFecha = false;
+        if (filterHasta && new Date(filterHasta) < d) matchFecha = false;
+      }
+    }
+    return matchQ && matchE && matchRol && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -203,6 +218,15 @@ export default function GestionUsuarios() {
                     <span className="filter-dot" style={{ background: "#2e7d32" }} />{r}
                   </button>
                 ))}
+                <div style={{ padding: 8 }}>
+                  <DateRangeFilter
+                    desde={filterDesde}
+                    hasta={filterHasta}
+                    onApply={({desde, hasta}) => { setFilterDesde(desde || ''); setFilterHasta(hasta || ''); setShowFilter(false); }}
+                    onClear={() => { setFilterDesde(''); setFilterHasta(''); setShowFilter(false); }}
+                    label="Filtrar por fecha de registro"
+                  />
+                </div>
               </div>
             )}
           </div>

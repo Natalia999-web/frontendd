@@ -6,12 +6,26 @@ from decimal import Decimal
 from src.shared.services.models import Venta, VentaXProducto, Producto, Usuario
 
 
-def _rango_fechas(periodo: str) -> tuple[datetime, datetime, datetime, datetime]:
+def _fecha_fin_del_dia(fecha: datetime) -> datetime:
+    return fecha.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+def _rango_fechas(periodo: str, inicio: datetime | None = None, fin: datetime | None = None) -> tuple[datetime, datetime, datetime, datetime]:
     """
     Retorna (inicio_actual, fin_actual, inicio_anterior, fin_anterior)
-    según el período solicitado.
+    según el período solicitado o el rango custom.
     """
     ahora = datetime.now()
+
+    if inicio is not None and fin is not None:
+        if fin < inicio:
+            inicio, fin = fin, inicio
+        inicio = inicio.replace(hour=0, minute=0, second=0, microsecond=0)
+        fin = _fecha_fin_del_dia(fin)
+        duracion = fin - inicio
+        inicio_ant = inicio - duracion - timedelta(microseconds=1)
+        fin_ant = inicio - timedelta(microseconds=1)
+        return inicio, fin, inicio_ant, fin_ant
 
     if periodo == "hoy":
         inicio  = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -194,12 +208,12 @@ def _productos_top(db: Session, inicio: datetime, fin: datetime) -> list:
     return productos
 
 
-def obtener_dashboard(db: Session, periodo: str = "hoy") -> dict:
+def obtener_dashboard(db: Session, periodo: str = "hoy", fecha_inicio: datetime | None = None, fecha_fin: datetime | None = None) -> dict:
     """Consolida toda la información del dashboard en una sola consulta."""
-    if periodo not in ["hoy", "semana", "mes"]:
+    if periodo not in ["hoy", "semana", "mes", "custom"]:
         periodo = "hoy"
 
-    inicio, fin, inicio_ant, fin_ant = _rango_fechas(periodo)
+    inicio, fin, inicio_ant, fin_ant = _rango_fechas(periodo, fecha_inicio, fecha_fin)
 
     # Calcula métricas actuales y anteriores
     ventas_actual   = _total_ventas(db, inicio, fin)

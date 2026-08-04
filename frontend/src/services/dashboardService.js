@@ -43,7 +43,12 @@ const adaptDashboard = (data) => {
   };
 };
 
-export const getDashboard = async (periodo = "hoy") => {
-  const data = await apiFetch(`/dashboard/?periodo=${periodo}`);
+export const getDashboard = async (periodo = "hoy", fechaInicio = "", fechaFin = "") => {
+  const params = new URLSearchParams({ periodo });
+  if (periodo === "custom" && fechaInicio && fechaFin) {
+    params.set("fecha_inicio", fechaInicio);
+    params.set("fecha_fin", fechaFin);
+  }
+  const data = await apiFetch(`/dashboard/?${params.toString()}`);
   return adaptDashboard(data);
 };

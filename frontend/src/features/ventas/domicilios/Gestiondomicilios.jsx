@@ -4,6 +4,7 @@ import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDom
 import { getUsuarios, toggleEstadoUsuario, crearEmpleado, editarUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./Domicilios.css";
 
 function SkeletonRows({ cols = 9, rows = 5 }) {
@@ -283,7 +284,7 @@ function ModalCambiarEstado({ pedido, onClose, onSave }) {
     if (!seleccion) return;
     setSaving(true);
     try {
-      await onSave(pedido.id, seleccion);
+      await onSave(pedido.id, seleccion, pedido);
       onClose();
     } catch {
       setSaving(false);
@@ -842,6 +843,8 @@ export default function GestionDomicilios() {
   const [tab,          setTab]          = useState("tabla");
   const [search,       setSearch]       = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterDesde,  setFilterDesde]  = useState("");
+  const [filterHasta,  setFilterHasta]  = useState("");
   const [showFilter,   setShowFilter]   = useState(false);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
@@ -905,15 +908,24 @@ export default function GestionDomicilios() {
     filterEstado === "sin-asignar" ? !p.idEmpleado && ![8, 5].includes(p.estadoId) :
     p.estadoId === filterEstado;
 
-    return matchQ && matchE;
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const fechaRaw = String(p.fecha_pedido || "").slice(0, 10);
+      const fecha = fechaRaw ? new Date(`${fechaRaw}T00:00:00`) : null;
+      if (!fecha) matchFecha = false;
+      if (filterDesde && fecha && new Date(`${filterDesde}T00:00:00`) > fecha) matchFecha = false;
+      if (filterHasta && fecha && new Date(`${filterHasta}T00:00:00`) < fecha) matchFecha = false;
+    }
+
+    return matchQ && matchE && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage   = Math.min(page, totalPages);
   const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
-  useEffect(() => setPage(1), [search, filterEstado]);
+  useEffect(() => setPage(1), [search, filterEstado, filterDesde, filterHasta]);
 
-  const hasFilter = filterEstado !== "todos";
+  const hasFilter = filterEstado !== "todos" || filterDesde || filterHasta;
 
   /* ── Handlers ── */
   const handleReasignar = async (domicilioId, empId) => {
@@ -945,7 +957,11 @@ export default function GestionDomicilios() {
     }
   };
 
-  const handleCambiarEstado = async (domicilioId, nuevoEstadoId) => {
+  const handleCambiarEstado = async (domicilioId, nuevoEstadoId, pedido = null) => {
+    if (nuevoEstadoId === 8 && pedido && !pedido.comprobante_pago) {
+      showToast("No se puede entregar: el domicilio no tiene comprobante de pago adjunto.", "error");
+      return;
+    }
     setActionSaving(true);
     try {
       await cambiarEstadoDomicilio(domicilioId, nuevoEstadoId);
@@ -1098,37 +1114,44 @@ export default function GestionDomicilios() {
                         {f.label}
                       </button>
                     ))}
+                    <div style={{ height: 1, background: "#f0f0f0", margin: "8px 0" }} />
+                    <DateRangeFilter
+                      desde={filterDesde}
+                      hasta={filterHasta}
+                      label="Fecha del pedido"
+                      onApply={({ desde, hasta }) => {
+                        setFilterDesde(desde || "");
+                        setFilterHasta(hasta || "");
+                      }}
+                      onClear={() => {
+                        setFilterDesde("");
+                        setFilterHasta("");
+                      }}
+                    />
                   </div>
                 )}
               </div>
-
-              {(hasFilter || search) && (
-                <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); }}>
-                  ✕ Limpiar
-                </button>
-              )}
             </div>
 
-            {/* TABLA */}
             <div className="card">
               <div className="tbl-wrapper">
                 <table className="tbl">
                   <thead>
                     <tr>
-                      <th className="col-num">Nº</th>
-                      <th className="col-pedido">Pedido</th>
-                      <th className="col-cliente">Cliente</th>
-                      <th className="col-dir">Dirección</th>
-                      <th className="col-domi">Domiciliario</th>
-                      <th className="col-fechas">Fechas</th>
-                      <th className="col-estado" style={{ whiteSpace: "nowrap" }}>Est. Pedido</th>
-                      <th className="col-estado" style={{ whiteSpace: "nowrap" }}>Est. Entrega</th>
-                      <th className="col-acciones">Acciones</th>
+                      <th style={{ width: 44 }}>Nº</th>
+                      <th>Pedido</th>
+                      <th>Cliente</th>
+                      <th>Dirección</th>
+                      <th>Domiciliario</th>
+                      <th>Fechas</th>
+                      <th>Estado venta</th>
+                      <th>Estado entrega</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <SkeletonRows cols={8} rows={5} />
+                      <SkeletonRows cols={9} rows={5} />
                     ) : paged.length === 0 ? (
                       <tr><td colSpan={9}>
                         <div className="empty-state">

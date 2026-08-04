@@ -1244,7 +1244,6 @@ export default function GestionPedidos() {
                     </div>
                   </div>
                 </div>
-                </div>
                 <div style={{ marginTop: 12 }}>
                   <DateRangeFilter
                     desde={filterDesde}
