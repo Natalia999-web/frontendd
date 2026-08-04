@@ -45,6 +45,7 @@ const Register = () => {
   const [form, setForm] = useState({
     Nombre:               '',
     Apellidos:            '',
+    RazonSocial:          '',
     Tipo_documento:       'CC',
     Numero_documento:     '',
     Correo:               '',
@@ -56,7 +57,12 @@ const Register = () => {
     let val = e.target.value;
     if (k === 'Nombre' || k === 'Apellidos') val = soloLetras(val);
     if (k === 'Numero_documento') val = val.replace(/\D/g, '');
-    const newForm = { ...form, [k]: val };
+    let newForm = { ...form, [k]: val };
+    // Al cambiar tipo de documento, limpiar los campos del tipo contrario
+    if (k === 'Tipo_documento') {
+      if (val === 'NIT') newForm = { ...newForm, Nombre: '', Apellidos: '' };
+      else               newForm = { ...newForm, RazonSocial: '' };
+    }
     setForm(newForm);
     setErrors(p => {
       const n = { ...p };
@@ -74,8 +80,13 @@ const Register = () => {
 
   const validate = () => {
     const e = {};
-    if (!form.Nombre.trim())           e.Nombre           = 'El nombre es obligatorio';
-    if (!form.Apellidos.trim())        e.Apellidos        = 'Los apellidos son obligatorios';
+    const esNIT = form.Tipo_documento === 'NIT';
+    if (esNIT) {
+      if (!form.RazonSocial.trim()) e.RazonSocial = 'La razón social es obligatoria';
+    } else {
+      if (!form.Nombre.trim())    e.Nombre    = 'El nombre es obligatorio';
+      if (!form.Apellidos.trim()) e.Apellidos = 'Los apellidos son obligatorios';
+    }
     if (!form.Numero_documento.trim()) e.Numero_documento = 'El número de documento es obligatorio';
     if (!form.Correo.trim())           e.Correo           = 'El correo es obligatorio';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Correo)) e.Correo = 'Formato de correo inválido';
@@ -98,8 +109,8 @@ const Register = () => {
       await apiFetch('/auth/registro', {
         method: 'POST',
         body: JSON.stringify({
-          Nombre:               form.Nombre,
-          Apellidos:            form.Apellidos,
+          Nombre:               form.Tipo_documento === 'NIT' ? form.RazonSocial : form.Nombre,
+          Apellidos:            form.Tipo_documento === 'NIT' ? '-' : form.Apellidos,
           Tipo_documento:       form.Tipo_documento,
           Numero_documento:     form.Numero_documento,
           Correo:               form.Correo,
@@ -196,28 +207,40 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="auth-form">
 
-            {/* Nombre + Apellidos */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {/* Razón social (NIT) o Nombre + Apellidos (persona) */}
+            {form.Tipo_documento === 'NIT' ? (
               <div className="auth-field">
-                <label className="auth-label"><User size={11} /> Nombre(s) <span className="required">*</span></label>
+                <label className="auth-label"><User size={11} /> Razón social <span className="required">*</span></label>
                 <div className="auth-input-wrap">
                   <span className="auth-input-icon"><User size={15} /></span>
-                  <input type="text" placeholder="Carlos" className="auth-input"
-                    value={form.Nombre} onChange={set('Nombre')} />
+                  <input type="text" placeholder="Ej: Tostón 2000 S.A.S." className="auth-input"
+                    value={form.RazonSocial} onChange={set('RazonSocial')} />
                 </div>
-                {errors.Nombre && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Nombre}</p>}
+                {errors.RazonSocial && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.RazonSocial}</p>}
               </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="auth-field">
+                  <label className="auth-label"><User size={11} /> Nombre(s) <span className="required">*</span></label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon"><User size={15} /></span>
+                    <input type="text" placeholder="Carlos" className="auth-input"
+                      value={form.Nombre} onChange={set('Nombre')} />
+                  </div>
+                  {errors.Nombre && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Nombre}</p>}
+                </div>
 
-              <div className="auth-field">
-                <label className="auth-label"><User size={11} /> Apellidos <span className="required">*</span></label>
-                <div className="auth-input-wrap">
-                  <span className="auth-input-icon"><User size={15} /></span>
-                  <input type="text" placeholder="Pérez García" className="auth-input"
-                    value={form.Apellidos} onChange={set('Apellidos')} />
+                <div className="auth-field">
+                  <label className="auth-label"><User size={11} /> Apellidos <span className="required">*</span></label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon"><User size={15} /></span>
+                    <input type="text" placeholder="Pérez García" className="auth-input"
+                      value={form.Apellidos} onChange={set('Apellidos')} />
+                  </div>
+                  {errors.Apellidos && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Apellidos}</p>}
                 </div>
-                {errors.Apellidos && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Apellidos}</p>}
               </div>
-            </div>
+            )}
 
             {/* Tipo y número de documento */}
             <div className="auth-field">
