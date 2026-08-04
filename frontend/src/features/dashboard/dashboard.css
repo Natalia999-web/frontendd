@@ -335,27 +335,56 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
   .dash-inner { padding: 0 12px; }
 }
 
-/* Print fixes: ensure charts SVGs and containers have explicit sizes and are visible */
+/* ─── Print / PDF export ─────────────────────────────────── */
+.print-report-header { display: none; }
+.print-report-brand  { font-family: 'Nunito', sans-serif; font-size: 22px; font-weight: 800; color: #2e7d32; margin: 0; letter-spacing: -0.3px; }
+.print-report-sub    { font-size: 12px; color: #9e9e9e; margin: 3px 0 0; font-weight: 500; }
+.print-report-label  { font-size: 10px; color: #9e9e9e; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px; font-weight: 700; text-align: right; }
+.print-report-dates  { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; color: #1a1a1a; margin: 0; text-align: right; }
+
 @media print {
-  /* Hide controls that don't make sense on print */
+  @page { margin: 1.5cm 1.2cm; size: A4 portrait; }
+
+  /* Layout chrome */
+  .sidebar, .navbar, .sidebar-overlay, .sidebar-toggle-btn { display: none !important; }
+  .app-body     { display: block !important; }
+  .main-content { background: #fff !important; }
+
+  /* Interactive controls */
+  .dashboard-report-toolbar,
   .chart-card__chevron,
   .period-select-wrap,
-  .dashboard-report-toolbar,
-  .report-btn,
-  .report-range-actions,
-  .report-range-fields { display: none !important; }
+  .report-btn { display: none !important; }
 
-  /* Ensure chart cards expand and show their content */
-  .chart-card__body, .chart-card { max-height: none !important; overflow: visible !important; page-break-inside: avoid; }
+  /* Print header — flex row with brand left, period right */
+  .print-report-header {
+    display: flex !important;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+    border-bottom: 3px solid #2e7d32;
+  }
 
-  /* Recharts responsive containers rely on JS; force explicit sizes for print */
-  .recharts-wrapper, .recharts-responsive-container, .recharts-surface, .recharts-layer, svg { width: 100% !important; height: 300px !important; max-height: none !important; }
+  /* Background */
+  .dash-wrapper { background: #fff !important; padding-bottom: 0 !important; }
+  .dash-inner   { padding: 0 !important; max-width: 100% !important; }
 
-  /* Make text/headers legible */
-  .dash-wrapper { background: #fff !important; }
-  .dash-inner { padding: 0 !important; max-width: 100% !important; }
-  .chart-card { border-color: #ddd !important; box-shadow: none !important; }
+  /* Expand all collapsible sections */
+  .kpi-strip__body  { max-height: none !important; margin-top: 16px !important; overflow: visible !important; }
+  .chart-card__body { max-height: none !important; overflow: visible !important; padding: 0 20px 18px !important; }
 
-  /* Avoid breaking charts across pages */
-  .chart-card { page-break-inside: avoid; }
+  /* Cards — clean, flat */
+  .kpi-strip, .chart-card { border: 1px solid #e0e0e0 !important; box-shadow: none !important; }
+  .kpi-card { box-shadow: none !important; }
+  .chart-card__header { cursor: default !important; }
+  .chart-card__header:hover { background: transparent !important; }
+
+  /* No page breaks inside blocks */
+  .kpi-strip, .chart-card, .charts-row { break-inside: avoid; page-break-inside: avoid; }
+  .charts-row { margin-bottom: 16px; }
+
+  /* Recharts sizing */
+  .recharts-responsive-container { width: 100% !important; height: 200px !important; }
+  .recharts-wrapper               { width: 100% !important; height: 200px !important; }
 }

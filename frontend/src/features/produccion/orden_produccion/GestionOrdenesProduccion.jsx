@@ -1050,7 +1050,21 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
           </div>
 
           {errors._api && (
-            <p className="field-error" style={{ textAlign: "center" }}>{errors._api}</p>
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: 10,
+              background: "#ffebee", border: "1.5px solid #ef9a9a",
+              borderRadius: 10, padding: "12px 14px",
+            }}>
+              <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#c62828", marginBottom: 2 }}>
+                  Error al guardar
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "#b71c1c", lineHeight: 1.4 }}>
+                  {errors._api}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

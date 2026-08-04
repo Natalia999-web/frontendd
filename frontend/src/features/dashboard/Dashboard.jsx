@@ -161,6 +161,18 @@ export default function Dashboard() {
     <div className={`dash-wrapper${animated ? " dash-wrapper--in" : ""}`}>
       <div className="dash-inner">
 
+        {/* Print-only header — invisible en pantalla, visible al imprimir */}
+        <div className="print-report-header">
+          <div>
+            <p className="print-report-brand">Tostón App</p>
+            <p className="print-report-sub">Dashboard de ventas</p>
+          </div>
+          <div>
+            <p className="print-report-label">Período del reporte</p>
+            <p className="print-report-dates">{rangoLabel}</p>
+          </div>
+        </div>
+
         {/* KPI Strip */}
         <div className="kpi-strip" style={{ marginBottom: 20 }}>
           <KpiStripInner
