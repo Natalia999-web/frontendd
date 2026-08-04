@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { fmtFecha } from "../../../utils/dateUtils.js";
+import { fmtFecha, getRecordDate } from "../../../utils/dateUtils.js";
+import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import { descargarFacturaPedido } from "../../../utils/facturaGenerator.js";
 import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crearPedido, editarPedido, eliminarPedido, cambiarEstadoVenta, proponerFechaProduccion } from "../../../services/pedidosService.js";
 import { asignarRepartidor } from "../../../services/domiciliosService.js";
@@ -31,6 +32,16 @@ const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n ?? 0);
 
 const PER_PAGE = 5;
+
+const normalizeProductoId = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  return String(value).trim();
+};
+
+const esProductoConProduccion = (producto) => {
+  const rawValue = producto?.Requiere_Produccion ?? producto?.requiereProduccion ?? producto?.requiere_produccion;
+  return rawValue === 1 || rawValue === true || rawValue === "1" || rawValue === "true";
+};
 
 // GestionPedidos solo gestiona órdenes activas (Pendiente y En producción).
 // La única acción de avance es Confirmar → Estado=4 (Confirmado), que mueve
@@ -752,7 +763,7 @@ function AccionesMenu({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const canAdvance          = ped.estado === "Pendiente";
+  const canAdvance          = ped.estado === "Pendiente" && !ped.requiereProduccion;
   const canMarcarListo      = ped.estado === "Confirmado";
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
@@ -867,6 +878,8 @@ export default function GestionPedidos() {
   const [search,       setSearch]       = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterTipo,   setFilterTipo]   = useState("todos");
+  const [filterDesde,  setFilterDesde]  = useState("");
+  const [filterHasta,  setFilterHasta]  = useState("");
   const [showFilter,   setShowFilter]   = useState(false);
   const [vista,            setVista]            = useState("activos");
   const [historial,        setHistorial]        = useState([]);
@@ -909,21 +922,34 @@ export default function GestionPedidos() {
         getPedidos({ porPagina: 100 }),
         getProductos({ porPagina: 100 }).catch(() => ({ productos: [] })),
       ]);
+
+      const productosCatalogo = Array.isArray(prodData?.productos)
+        ? prodData.productos
+        : Array.isArray(prodData)
+          ? prodData
+          : [];
+
       const produccionIds = new Set(
-        (prodData.productos || prodData || [])
-          .filter(p => p.Requiere_Produccion || p.requiereProduccion)
-          .map(p => p.ID_Producto || p.id)
+        productosCatalogo
+          .filter(esProductoConProduccion)
+          .map(producto => normalizeProductoId(producto?.ID_Producto ?? producto?.id))
+          .filter(Boolean)
       );
+
       setPedidos(prev => {
         const newIds = new Set(data.pedidos.map(p => p.id));
         const preserved = prev.filter(p =>
           ["Entregado", "Cancelado"].includes(p.estado) && !newIds.has(p.id)
         );
-        const enhanced = data.pedidos.map(p => ({
-          ...p,
-          requiereProduccion: p.requiereProduccion ||
-            (p.productosItems || []).some(i => produccionIds.has(i.idProducto)),
-        }));
+        const enhanced = data.pedidos.map(p => {
+          const requiereProduccion = Boolean(p.requiereProduccion) ||
+            (p.productosItems || []).some(i => produccionIds.has(normalizeProductoId(i.idProducto)));
+
+          return {
+            ...p,
+            requiereProduccion,
+          };
+        });
         return [...enhanced, ...preserved].sort((a, b) => b.id - a.id);
       });
     } catch (err) {
@@ -955,7 +981,18 @@ export default function GestionPedidos() {
       filterTipo === "domicilio"  ? p.domicilio :
       filterTipo === "tienda"     ? !p.domicilio :
       filterTipo === "produccion" ? p.orden_produccion : true;
-    return matchQ && matchE && matchT;
+    // Fecha range
+    let matchFecha = true;
+    if (filterDesde || filterHasta) {
+      const val = getRecordDate(p) || p.fecha_pedido || p.Fecha_pedido;
+      if (!val) matchFecha = false;
+      else {
+        const d = new Date(String(val).split('T')[0]);
+        if (filterDesde && new Date(filterDesde) > d) matchFecha = false;
+        if (filterHasta && new Date(filterHasta) < d) matchFecha = false;
+      }
+    }
+    return matchQ && matchE && matchT && matchFecha;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -975,6 +1012,10 @@ export default function GestionPedidos() {
   };
 
   const handleEntregarPedido = (ped) => {
+    if (!ped.comprobante) {
+      setModal({ type: "errorEstado", mensaje: "No se puede entregar: el pedido no tiene comprobante de pago adjunto. Adjunta el comprobante antes de marcar como entregado." });
+      return;
+    }
     setModal({ type: "confirmarEstado", pedido: ped, nuevoEstado: "Entregado" });
   };
 
@@ -1086,6 +1127,7 @@ export default function GestionPedidos() {
           Cantidad:    Number(p.cantidad),
         })),
         Fecha_entrega_esperada: formData.fecha_entrega || null,
+        creado_por_admin: true,
         domicilio: formData.domicilio
           ? {
               Direccion_entrega:    formData.direccion_entrega || "",
@@ -1201,6 +1243,16 @@ export default function GestionPedidos() {
                       ))}
                     </div>
                   </div>
+                </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <DateRangeFilter
+                    desde={filterDesde}
+                    hasta={filterHasta}
+                    onApply={({desde, hasta}) => { setFilterDesde(desde || ''); setFilterHasta(hasta || ''); setShowFilter(false); }}
+                    onClear={() => { setFilterDesde(''); setFilterHasta(''); setShowFilter(false); }}
+                    label="Filtrar por fecha del pedido"
+                  />
                 </div>
                 {hasFilter && (
                   <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f0f0f0", textAlign: "center" }}>

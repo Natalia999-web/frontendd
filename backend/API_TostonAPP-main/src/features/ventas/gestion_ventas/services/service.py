@@ -404,6 +404,27 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         SubTotal    = subtotal_bruto,
     ))
 
+    # Cuando el admin crea el pedido directamente: nace en Confirmado (4).
+    # Para pickup (sin domicilio): descuenta stock de los productos que NO requieren producción.
+    # Los productos de producción se saltan (sin stock que descontar; la orden cubre el déficit).
+    # Para domicilio: el stock se descuenta en ENTREGADO, igual que el flujo normal.
+    if datos.creado_por_admin:
+        nueva_venta.Estado = EstadoPedido.CONFIRMADO
+        if not datos.domicilio:
+            items_flush = db.query(VentaXProducto).filter(
+                VentaXProducto.ID_Venta == nueva_venta.ID_Venta
+            ).all()
+            for item in items_flush:
+                prod = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
+                if not prod or getattr(prod, "Requiere_Produccion", 0):
+                    continue
+                prod.Stock = max(0, (prod.Stock or 0) - (item.Cantidad or 0))
+                _actualizar_estado_producto(prod)
+                notificar_stock_producto(db, prod)
+        # Estas notificaciones ya no aplican: el admin las gestiona en el mismo acto
+        descartar_notificacion(db, "pedido_nuevo",        nueva_venta.ID_Venta)
+        descartar_notificacion(db, "produccion_requerida", nueva_venta.ID_Venta)
+
     if datos.domicilio:
         ESTADO_ASIGNADO = 10
         ESTADO_DOM_PENDIENTE = 3
@@ -432,6 +453,13 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
 
     db.commit()
     db.refresh(nueva_venta)
+
+    # Crear órdenes de producción cuando el admin confirma directamente
+    if datos.creado_por_admin:
+        _crear_ordenes_produccion_para_venta(
+            db, nueva_venta.ID_Venta, nueva_venta.Fecha_entrega_esperada
+        )
+        db.commit()
 
     # Push FCM a admins — sin bloqueo si Firebase no está configurado
     try:

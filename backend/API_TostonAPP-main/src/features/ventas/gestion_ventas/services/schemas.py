@@ -31,6 +31,7 @@ class VentaCreate(BaseModel):
     domicilio:              Optional[DomicilioVentaInput] = None
     comprobante_pago:       Optional[str]       = None
     Fecha_entrega_esperada: Optional[datetime]  = None      # cuándo quiere recibir/recoger el pedido
+    creado_por_admin:       bool                = False     # si True: nace en Confirmado (4) con orden de producción
 
 
 # ── Cambiar estado de venta ──

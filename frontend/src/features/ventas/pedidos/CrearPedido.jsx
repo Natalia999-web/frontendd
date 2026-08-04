@@ -210,12 +210,13 @@ export default function CrearPedido({ onClose, onSave }) {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
     getProductos({ porPagina: 100 }).then(data => {
       const lista = (data.productos || data || []).map(p => ({
-        id:          p.ID_Producto || p.id,
-        nombre:      p.Nombre      || p.nombre      || "",
-        precio:      p.Precio_venta || p.Precio_Venta || p.precio || 0,
-        stock:       p.Stock       || p.stock       || 0,
-        stockMinimo: p.Stock_Minimo|| p.stockMinimo || 0,
-        categoria:   p.nombre_categoria || p.categoria || "",
+        id:                p.ID_Producto || p.id,
+        nombre:            p.Nombre      || p.nombre      || "",
+        precio:            p.Precio_venta || p.Precio_Venta || p.precio || 0,
+        stock:             p.Stock       || p.stock       || 0,
+        stockMinimo:       p.Stock_Minimo|| p.stockMinimo || 0,
+        categoria:         p.nombre_categoria || p.categoria || "",
+        requiereProduccion: !!(p.Requiere_Produccion || 0),
       }));
       setProductos(lista);
     }).catch(() => {});
@@ -771,11 +772,11 @@ export default function CrearPedido({ onClose, onSave }) {
                   </div>
                 </div>
 
-                {hayProductosSinStock && (
-                  <div style={{ padding: "12px", background: "#fff4e5", border: "1px solid #ffe0b2", borderRadius: "10px", display: "flex", gap: 10, alignItems: "center" }}>
+                {form.productosItems.some(p => p.requiereProduccion) && (
+                  <div style={{ padding: "12px", background: "#e8eaf6", border: "1px solid #9fa8da", borderRadius: "10px", display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ fontSize: 20 }}>🏭</span>
-                    <p style={{ margin: 0, fontSize: 12, color: "#663c00", lineHeight: 1.4 }}>
-                      <strong>Nota:</strong> Algunos productos requieren producción. Se creará una <strong>Orden de Producción</strong> automáticamente.
+                    <p style={{ margin: 0, fontSize: 12, color: "#283593", lineHeight: 1.4 }}>
+                      <strong>Producción:</strong> el pedido nacerá en <strong>Confirmado</strong> y se creará la Orden de Producción automáticamente con la fecha elegida.
                     </p>
                   </div>
                 )}
