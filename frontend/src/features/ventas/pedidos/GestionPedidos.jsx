@@ -239,7 +239,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       </div>
                       <div className="ver-ped-field">
                         <span className="ver-ped-field__label">Domiciliario</span>
-                        <span className="ver-ped-field__value">{emp ? `${emp.nombre} ${emp.apellidos}` : "Sin asignar"}</span>
+                        <span className="ver-ped-field__value">{pedido.nombre_domiciliario || (emp ? `${emp.nombre} ${emp.apellidos}` : "Sin asignar")}</span>
                       </div>
                     </>
                   )}
@@ -1348,7 +1348,7 @@ export default function GestionPedidos() {
                         {ped.domicilio ? (
                           <div className="flex flex-col">
                             <div className="tipo-domicilio text-[11px] font-black text-purple-600 flex items-center gap-1">🛵 Domicilio</div>
-                            <div className="tipo-sub text-[10px] font-bold text-gray-400 italic">{emp ? `${emp.nombre} ${emp.apellidos.split(" ")[0]}` : "Sin asignar"}</div>
+                            <div className="tipo-sub text-[10px] font-bold text-gray-400 italic">{ped.nombre_domiciliario ? ped.nombre_domiciliario.split(" ").slice(0, 2).join(" ") : (emp ? `${emp.nombre} ${emp.apellidos.split(" ")[0]}` : "Sin asignar")}</div>
                           </div>
                         ) : (
                           <div className="tipo-tienda text-[11px] font-black text-blue-600 flex items-center gap-1">🏪 Tienda</div>

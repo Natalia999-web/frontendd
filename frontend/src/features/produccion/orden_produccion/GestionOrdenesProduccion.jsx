@@ -1111,8 +1111,8 @@ export default function GestionOrdenesProduccion() {
     try {
       const [ordenesData, pData, iData] = await Promise.all([
         getOrdenes(),
-        getProductos(),
-        getInsumos(),
+        getProductos().catch(() => ({ productos: [] })),
+        getInsumos().catch(() => ({ insumos: [] })),
       ]);
       setOrdenes([...(ordenesData || [])].sort((a, b) => b.id - a.id));
       setProductos(

@@ -135,6 +135,8 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
       if (k === "stockMinimo" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
       if (k === "stockMinimo" && !isNaN(v) && Number(v) > 99999) err = "Máximo 99 999 unidades";
     }
+    if (k === "nombre"      && !v.trim()) err = "El nombre es obligatorio";
+    if (k === "idCategoria" && !v)        err = "Selecciona una categoría";
     setErrors((p) => ({ ...p, [k]: err }));
   };
 
@@ -312,8 +314,12 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                 maxLength={100}
                 onChange={(e) => set("nombre", e.target.value)}
                 placeholder="Ej. Tostones de plátano verde"
-                onFocus={(e)  => (e.target.style.borderColor = "#4caf50")}
-                onBlur={(e)   => (e.target.style.borderColor = errors.nombre ? "#e53935" : "#e0e0e0")}
+                onFocus={(e) => (e.target.style.borderColor = "#4caf50")}
+                onBlur={(e) => {
+                  const empty = !e.target.value.trim();
+                  if (empty) setErrors((p) => ({ ...p, nombre: "El nombre es obligatorio" }));
+                  e.target.style.borderColor = (errors.nombre || empty) ? "#e53935" : "#e0e0e0";
+                }}
               />
               {errors.nombre && <p className="field-error">{errors.nombre}</p>}
             </div>

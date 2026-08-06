@@ -366,6 +366,16 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
     border-bottom: 3px solid #2e7d32;
   }
 
+  /* Reset animations — browsers may suspend/restart them in print, leaving elements at opacity:0 */
+  .dash-wrapper,
+  .kpi-strip,
+  .charts-row,
+  .charts-row--bottom {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   /* Background */
   .dash-wrapper { background: #fff !important; padding-bottom: 0 !important; }
   .dash-inner   { padding: 0 !important; max-width: 100% !important; }

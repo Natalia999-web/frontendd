@@ -97,7 +97,7 @@ export default function GestionCompras() {
     try {
       const [cData, pData] = await Promise.all([
         getCompras({ porPagina: 100 }),
-        getProveedores({ porPagina: 100 }),
+        getProveedores({ porPagina: 100 }).catch(() => []),
       ]);
       setCompras([...(cData.compras || [])].sort((a, b) => b.id - a.id));
       setProveedores(pData.proveedores || pData || []);

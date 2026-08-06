@@ -114,6 +114,7 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
         "municipio_entrega":            domicilio.Municipio_entrega      if domicilio else None,
         "departamento_entrega":         domicilio.Departamento_entrega   if domicilio else None,
         "nombre_domiciliario":          domiciliario,
+        "ID_Empleado":                  domicilio.ID_Empleado if domicilio else None,
         "ordenes_produccion_pendientes": ordenes_pendientes,
         "requiere_produccion":           requiere_produccion,
     }
@@ -490,6 +491,21 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
 
     # Valida que la transición esté permitida por la máquina de estados
     validar_transicion(venta.Estado, nuevo_estado, tiene_domicilio)
+
+    # Bloquear paso a LISTO si hay órdenes de producción sin completar
+    if nuevo_estado == EstadoPedido.LISTO:
+        ordenes_incompletas = db.query(OrdenProduccion).filter(
+            OrdenProduccion.ID_Venta == id_venta,
+            OrdenProduccion.Estado.notin_([11, 5]),
+        ).count()
+        if ordenes_incompletas > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No se puede marcar como Listo: la producción de este pedido aún no está "
+                    "completada. Completá la orden de producción primero."
+                ),
+            )
 
     # Comprobante obligatorio para marcar como entregado
     if nuevo_estado == EstadoPedido.ENTREGADO and not venta.Comprobante_Pago:

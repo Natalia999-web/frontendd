@@ -65,7 +65,10 @@ export default function GestionUsuarios() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [users, rolesData] = await Promise.all([getUsuarios(), getRoles()]);
+      const [users, rolesData] = await Promise.all([
+        getUsuarios(),
+        getRoles().catch(() => []),
+      ]);
       setUsuarios([...users].sort((a, b) => b.id - a.id));
       setRoles(rolesData);
     } catch (e) {

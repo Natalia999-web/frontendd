@@ -29,7 +29,8 @@ const PASOS_TIENDA = [
 
 function PedidoStepper({ estado, domicilio }) {
   const pasos = domicilio ? PASOS_DOMICILIO : PASOS_TIENDA;
-  const idx = pasos.findIndex(p => p.key === estado);
+  const estadoMapped = (domicilio && (estado === 'Listo' || estado === 'Asignado')) ? 'Confirmado' : estado;
+  const idx = pasos.findIndex(p => p.key === estadoMapped);
   const activoIdx = idx === -1 ? 0 : idx;
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, marginBottom: 16 }}>
@@ -773,7 +774,7 @@ const PedidosClientePage = () => {
                   </div>
                 </div>
               )}
-              {selectedPedido.domicilio && !selectedPedido.nombre_domiciliario && selectedPedido.estado === 'Confirmado' && (
+              {selectedPedido.domicilio && !selectedPedido.nombre_domiciliario && ['Confirmado', 'Listo'].includes(selectedPedido.estado) && (
                 <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
                   🕐 Asignando domiciliario...
                 </div>

@@ -56,7 +56,12 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
 
   useEffect(() => { if (ficha) setForm({ ...ficha, producto: ficha?.producto || productoNombre || "", fotoPreview: ficha?.fotoPreview || productoFoto || null, insumos: normalizeInsumos(ficha) }); }, [ficha, productoNombre, productoFoto]);
 
-  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: "" })); };
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }));
+    let err = "";
+    if (k === "procedimiento" && !v.trim()) err = "El procedimiento es requerido";
+    setErrors(p => ({ ...p, [k]: err }));
+  };
 
   const handleFoto = e => {
     if (isView) return;
@@ -262,7 +267,12 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                     <p className="ficha-hint">Escribe un paso por línea.</p>
                     <textarea className={`field-input ficha-textarea${errors.procedimiento ? " field-input--error" : ""}`} rows={8}
                       value={form.procedimiento || ""} onChange={e => set("procedimiento", e.target.value)}
-                      onFocus={e => e.target.style.borderColor = "#4caf50"} onBlur={e => e.target.style.borderColor = errors.procedimiento ? "#e53935" : "#e0e0e0"} />
+                      onFocus={e => e.target.style.borderColor = "#4caf50"}
+                      onBlur={e => {
+                        const empty = !e.target.value.trim();
+                        if (empty) setErrors(p => ({ ...p, procedimiento: "El procedimiento es requerido" }));
+                        e.target.style.borderColor = (errors.procedimiento || empty) ? "#e53935" : "#e0e0e0";
+                      }} />
                     {errors.procedimiento && <p className="field-error">{errors.procedimiento}</p>}
                     {form.procedimiento && (
                       <div className="ficha-preview-steps">

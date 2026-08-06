@@ -73,7 +73,12 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
   // True when launched from CrearProducto (ficha stored in local state, no API call)
   const fromCreate = Boolean(productoNombre && !productoIdProp);
 
-  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: "" })); };
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }));
+    let err = "";
+    if (k === "procedimiento" && !v.trim()) err = "Debes describir el procedimiento";
+    setErrors(p => ({ ...p, [k]: err }));
+  };
 
   const handleFoto = e => {
     const file = e.target.files[0]; if (!file) return;
@@ -207,6 +212,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                         const found = productosDisponibles.find(p => String(p.id) === String(id));
                         set("productoId", id);
                         set("producto", found?.nombre || "");
+                        if (!id) setErrors(p => ({ ...p, producto: "Selecciona un producto" }));
                       }}>
                       <option value="">— Selecciona un producto —</option>
                       {productosDisponibles.map(p => (
@@ -301,7 +307,12 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
               <textarea className={`field-input ficha-textarea${errors.procedimiento ? " field-input--error" : ""}`}
                 rows={8} placeholder={"Pelar los plátanos.\nCortar en rodajas.\nFreír a 180°C."} value={form.procedimiento}
                 onChange={e => set("procedimiento", e.target.value)}
-                onFocus={e => e.target.style.borderColor = "#4caf50"} onBlur={e => e.target.style.borderColor = errors.procedimiento ? "#e53935" : "#e0e0e0"} />
+                onFocus={e => e.target.style.borderColor = "#4caf50"}
+                onBlur={e => {
+                  const empty = !e.target.value.trim();
+                  if (empty) setErrors(p => ({ ...p, procedimiento: "Debes describir el procedimiento" }));
+                  e.target.style.borderColor = (errors.procedimiento || empty) ? "#e53935" : "#e0e0e0";
+                }} />
               {errors.procedimiento && <p className="field-error">{errors.procedimiento}</p>}
               {form.procedimiento && (
                 <div className="ficha-preview-steps">

@@ -1087,8 +1087,8 @@ export default function GestionSalidas() {
       try {
         const [sData, pData, iData] = await Promise.all([
           getSalidas(),
-          getProductos(),
-          getInsumos(),
+          getProductos().catch(() => ({ productos: [] })),
+          getInsumos().catch(() => ({ insumos: [] })),
         ]);
 
         const prodList = (pData.productos || []).filter(p => p.Estado !== 0).map(p => ({

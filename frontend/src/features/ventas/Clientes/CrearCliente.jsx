@@ -104,7 +104,7 @@ export default function CrearCliente({ onClose, onSave }) {
     getUsuarios({ porPagina: 100 }).then(list => setExisting(list)).catch(() => {});
   }, []);
   const [form, setForm] = useState({
-    tipoDoc: "CC", numDoc: "", nombre: "", apellidos: "",
+    tipoDoc: "CC", numDoc: "", nombre: "", apellidos: "", razonSocial: "",
     correo: "", telefono: "", direccion: "", departamento: "",
     municipio: "", contrasena: "", confirmar: "",
     estado: true, fotoPreview: null, fechaCreacion: "",
@@ -119,7 +119,11 @@ export default function CrearCliente({ onClose, onSave }) {
     let val = v;
     if (k === 'numDoc') val = v.replace(/\D/g, '');
     if ((k === 'nombre' || k === 'apellidos') && typeof v === 'string') val = soloLetras(v);
-    const newForm = { ...form, [k]: val };
+    let newForm = { ...form, [k]: val };
+    if (k === 'tipoDoc') {
+      if (val === 'NIT') newForm = { ...newForm, nombre: '', apellidos: '' };
+      else               newForm = { ...newForm, razonSocial: '' };
+    }
     setForm(newForm);
     let err = "";
     if (val) {
@@ -154,9 +158,14 @@ export default function CrearCliente({ onClose, onSave }) {
       else if (users.some(u => u.cedula === form.numDoc)) e.numDoc = "Este documento ya está registrado";
     }
     if (s === 2) {
-      if (!form.nombre.trim())    e.nombre    = "El nombre es obligatorio";
-      if (!form.apellidos.trim()) e.apellidos = "Los apellidos son obligatorios";
-      
+      const esNIT = form.tipoDoc === 'NIT';
+      if (esNIT) {
+        if (!form.razonSocial.trim()) e.razonSocial = "La razón social es obligatoria";
+      } else {
+        if (!form.nombre.trim())    e.nombre    = "El nombre es obligatorio";
+        if (!form.apellidos.trim()) e.apellidos = "Los apellidos son obligatorios";
+      }
+
       if (!form.correo.trim())    e.correo = "El correo es obligatorio";
       else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Formato de correo inválido";
       else if (users.some(u => u.correo.toLowerCase() === form.correo.toLowerCase())) e.correo = "Este correo ya está en uso";
@@ -191,8 +200,15 @@ export default function CrearCliente({ onClose, onSave }) {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     await new Promise(r => setTimeout(r, 500));
-    const { confirmar, ...data } = form;
-    onSave({ ...data, id: Date.now(), fechaCreacion: form.fechaCreacion || new Date().toLocaleDateString("es-CO") });
+    const { confirmar, razonSocial, ...data } = form;
+    const esNIT = form.tipoDoc === 'NIT';
+    onSave({
+      ...data,
+      nombre:    esNIT ? razonSocial : data.nombre,
+      apellidos: esNIT ? '-'         : data.apellidos,
+      id: Date.now(),
+      fechaCreacion: form.fechaCreacion || new Date().toLocaleDateString("es-CO"),
+    });
     setSaving(false);
   };
 
@@ -252,23 +268,41 @@ export default function CrearCliente({ onClose, onSave }) {
             <>
               <p className="section-label" style={{ marginTop: 0 }}>Datos personales</p>
               <div className="form-grid-2">
-                {[
-                  { k: "nombre",    label: "Nombre",    ph: "Ej. Ana",          max: 50 },
-                  { k: "apellidos", label: "Apellidos", ph: "Ej. García López", max: 50 },
-                ].map(({ k, label, ph, max }) => (
-                  <div key={k} className="form-group">
+                {form.tipoDoc === 'NIT' ? (
+                  <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                     <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>{label} <span className="required">*</span></span>
-                      <CharCount value={form[k] || ""} max={max} min={2} />
+                      <span>Razón social <span className="required">*</span></span>
+                      <CharCount value={form.razonSocial || ""} max={100} min={2} />
                     </label>
-                    <input className={"field-input" + (errors[k] ? " field-input--error" : "")}
-                      type="text" value={form[k] || ""} maxLength={max}
-                      onChange={e => set(k, e.target.value)} placeholder={ph}
+                    <input className={"field-input" + (errors.razonSocial ? " field-input--error" : "")}
+                      type="text" value={form.razonSocial || ""} maxLength={100}
+                      onChange={e => set("razonSocial", e.target.value)}
+                      placeholder="Ej. Tostón 2000 S.A.S."
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
-                      onBlur={e  => e.target.style.borderColor = errors[k] ? "#e53935" : "#e0e0e0"} />
-                    {errors[k] && <p className="field-error">{errors[k]}</p>}
+                      onBlur={e  => e.target.style.borderColor = errors.razonSocial ? "#e53935" : "#e0e0e0"} />
+                    {errors.razonSocial && <p className="field-error">{errors.razonSocial}</p>}
                   </div>
-                ))}
+                ) : (
+                  <>
+                    {[
+                      { k: "nombre",    label: "Nombre",    ph: "Ej. Ana",          max: 50 },
+                      { k: "apellidos", label: "Apellidos", ph: "Ej. García López", max: 50 },
+                    ].map(({ k, label, ph, max }) => (
+                      <div key={k} className="form-group">
+                        <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>{label} <span className="required">*</span></span>
+                          <CharCount value={form[k] || ""} max={max} min={2} />
+                        </label>
+                        <input className={"field-input" + (errors[k] ? " field-input--error" : "")}
+                          type="text" value={form[k] || ""} maxLength={max}
+                          onChange={e => set(k, e.target.value)} placeholder={ph}
+                          onFocus={e => e.target.style.borderColor = "#4caf50"}
+                          onBlur={e  => e.target.style.borderColor = errors[k] ? "#e53935" : "#e0e0e0"} />
+                        {errors[k] && <p className="field-error">{errors[k]}</p>}
+                      </div>
+                    ))}
+                  </>
+                )}
 
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                   <label className="form-label">Correo electrónico <span className="required">*</span></label>

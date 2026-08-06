@@ -224,7 +224,14 @@ export default function CrearPedido({ onClose, onSave }) {
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: "" }));
+    let err = "";
+    if (k === "idCliente"         && !v)        err = "Selecciona un cliente para continuar";
+    if (k === "direccion_entrega" && !v.trim()) err = "Ingresa la dirección de entrega";
+    if (k === "fecha_entrega") {
+      if (!v) err = form.domicilio ? "Selecciona la fecha de entrega" : "Selecciona la fecha de recogida";
+      else if (new Date(v) < new Date(new Date().toDateString())) err = "La fecha no puede ser en el pasado";
+    }
+    setErrors(e => ({ ...e, [k]: err }));
   };
 
   /* ─── Cálculos ─── */
@@ -555,6 +562,10 @@ export default function CrearPedido({ onClose, onSave }) {
                       placeholder="Calle, número, barrio, apto..."
                       value={form.direccion_entrega}
                       onChange={e => set("direccion_entrega", e.target.value)}
+                      onBlur={e => {
+                        if (!e.target.value.trim())
+                          setErrors(p => ({ ...p, direccion_entrega: "Ingresa la dirección de entrega" }));
+                      }}
                     />
                     {errors.direccion_entrega && <span className="field-error">{errors.direccion_entrega}</span>}
                   </div>
@@ -567,7 +578,7 @@ export default function CrearPedido({ onClose, onSave }) {
                           value={form.municipio}
                           onChange={e => {
                             setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
-                            setErrors(err => ({ ...err, municipio: "" }));
+                            setErrors(err => ({ ...err, municipio: e.target.value ? "" : "El municipio es obligatorio" }));
                           }}
                         >
                           <option value="">— Valle de Aburrá —</option>
@@ -588,10 +599,7 @@ export default function CrearPedido({ onClose, onSave }) {
                   className={`field-input${errors.fecha_entrega ? " error" : ""}`}
                   value={form.fecha_entrega}
                   min={new Date().toISOString().split("T")[0]}
-                  onChange={e => {
-                    set("fecha_entrega", e.target.value);
-                    setErrors(err => ({ ...err, fecha_entrega: "" }));
-                  }}
+                  onChange={e => set("fecha_entrega", e.target.value)}
                 />
                 {errors.fecha_entrega && <span className="field-error">{errors.fecha_entrega}</span>}
               </div>

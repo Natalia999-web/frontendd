@@ -319,7 +319,11 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: "" }));
+    let err = "";
+    if (k === "idCliente"         && !v)        err = "Selecciona un cliente";
+    if (k === "metodo_pago"       && !v)        err = "Selecciona método de pago";
+    if (k === "direccion_entrega" && !v.trim()) err = "Ingresa la dirección";
+    setErrors(e => ({ ...e, [k]: err }));
   };
 
   const subtotal  = form.productosItems.reduce((a, p) => a + p.precio * p.cantidad, 0);
@@ -761,6 +765,10 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                     placeholder="Ej: Cra 5 #12-34, Apto 201"
                     value={form.direccion_entrega}
                     onChange={e => set("direccion_entrega", e.target.value)}
+                    onBlur={e => {
+                      if (!e.target.value.trim())
+                        setErrors(p => ({ ...p, direccion_entrega: "Ingresa la dirección" }));
+                    }}
                   />
                   {errors.direccion_entrega && <span className="field-error">{errors.direccion_entrega}</span>}
                 </div>
@@ -774,7 +782,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                         value={form.municipio}
                         onChange={e => {
                           setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
-                          setErrors(err => ({ ...err, municipio: "" }));
+                          setErrors(err => ({ ...err, municipio: e.target.value ? "" : "Selecciona el municipio" }));
                         }}
                       >
                         <option value="">— Valle de Aburrá —</option>

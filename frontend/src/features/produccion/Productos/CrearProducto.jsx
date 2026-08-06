@@ -91,6 +91,8 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
       if (k === "stockMinimo" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
       if (k === "stockMinimo" && !isNaN(v) && Number(v) > 99999) err = "Máximo 99 999 unidades";
     }
+    if (k === "nombre"      && !v.trim()) err = "El nombre es obligatorio";
+    if (k === "idCategoria" && !v)        err = "Selecciona una categoría";
     setErrors((p) => ({ ...p, [k]: err }));
   };
 
@@ -266,6 +268,10 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
                     maxLength={100}
                     onChange={(e) => set("nombre", e.target.value)}
                     placeholder="Ej. Tostones de plátano verde"
+                    onBlur={(e) => {
+                      if (!e.target.value.trim())
+                        setErrors((p) => ({ ...p, nombre: "El nombre es obligatorio" }));
+                    }}
                   />
                   {errors.nombre && <p className="field-error">{errors.nombre}</p>}
                 </div>

@@ -823,7 +823,7 @@ export default function GestionProductos() {
     try {
       const [resProd, resCat] = await Promise.all([
         getProductos({ porPagina: 100 }),
-        getCategorias({ porPagina: 100 }),
+        getCategorias({ porPagina: 100 }).catch(() => ({ categorias: [] })),
       ]);
       setProductosRaw(resProd.productos ?? []);
       setCategorias(resCat.categorias ?? []);
