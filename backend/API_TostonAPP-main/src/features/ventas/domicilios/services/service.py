@@ -3,13 +3,32 @@ import logging
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from src.shared.services.models import Domicilio, Venta, Usuario, Estado, Producto, VentaXProducto, Rol, MensajeChat
+from src.shared.services.models import (
+    Domicilio, Venta, Usuario, Estado, Producto, ProductoImagen,
+    VentaXProducto, Rol, MensajeChat,
+)
 from src.shared.services.notificaciones_utils import notificar_stock_producto
 from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
 from .schemas import DomicilioCreate, DomicilioUpdate
 
 logger = logging.getLogger(__name__)
+
+_BOGOTA = ZoneInfo("America/Bogota")
+
+
+def _now():
+    """Hora actual en Colombia (naive), consistente con gestion_ventas."""
+    return datetime.now(_BOGOTA).replace(tzinfo=None)
+
+
+def _imagen_producto(db: Session, id_producto: int) -> str | None:
+    """URL de la primera imagen del producto (o None). Reutiliza Producto_Imagenes."""
+    img = db.query(ProductoImagen).filter(
+        ProductoImagen.ID_Producto == id_producto
+    ).first()
+    return img.imagen if img else None
 
 
 def _otp_nuevo() -> str:
@@ -54,6 +73,7 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
                 "Cantidad":        item.Cantidad,
                 "precio_unitario": precio,
                 "subtotal":        precio * (item.Cantidad or 0),
+                "imagen":          _imagen_producto(db, item.ID_Producto),
             })
 
     return {
@@ -65,6 +85,9 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         "Fecha_asignacion":     dom.Fecha_asignacion,
         "Fecha_entrega":        dom.Fecha_entrega,
         "Observaciones":        dom.Observaciones,
+        # Indicaciones de entrega tomadas del perfil del cliente (Usuarios.Indicaciones),
+        # que es donde el cliente las registra. Separado de Observaciones (nota por-entrega).
+        "indicaciones_cliente": cliente.Indicaciones if cliente else None,
         "Estado":               dom.Estado,
         "estado_label":         _label_estado(db, dom.Estado) if dom.Estado else None,
         "venta_estado":         venta.Estado if venta else None,
@@ -370,8 +393,15 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
                 detail="Se requiere comprobante de pago para marcar el domicilio como entregado",
             )
 
-    if nuevo_estado == ESTADO_ENTREGADO_FLUTTER:
-        dom.Fecha_entrega = datetime.now()
+    if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB):
+        entregado_en = _now()
+        dom.Fecha_entrega = entregado_en
+        # Espeja el timestamp de entrega en la venta (fuente única para el plazo
+        # de devoluciones, también en pedidos de recoger en tienda).
+        if dom.ID_Venta:
+            _venta_fe = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
+            if _venta_fe and not _venta_fe.Fecha_entrega:
+                _venta_fe.Fecha_entrega = entregado_en
 
     # Propagar a la Venta usando el ID correcto de la tabla global Estados
     if nuevo_estado in ESTADOS_PROPAGAR and dom.ID_Venta:

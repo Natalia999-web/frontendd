@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 
 from src.shared.services.models import (
@@ -9,6 +10,14 @@ from src.shared.services.models import (
 )
 from src.shared.services.notificaciones_utils import notificar, descartar_notificacion
 from .schemas import DevolucionCreate, DevolucionResolucion, DevolucionUpdate
+
+_BOGOTA = ZoneInfo("America/Bogota")
+
+
+def _now():
+    """Hora actual en Colombia (naive), consistente con los timestamps de entrega."""
+    return datetime.now(_BOGOTA).replace(tzinfo=None)
+
 
 # Estados globales (tabla Estados)
 ESTADO_PENDIENTE = 3
@@ -24,8 +33,8 @@ _ESTADO_LABELS = {
 # Estado de venta que permite devolución
 VENTA_ENTREGADA = 8
 
-# Plazo máximo para solicitar devolución (días desde el pedido/entrega)
-DIAS_LIMITE_DEVOLUCION = 7
+# Plazo máximo para solicitar devolución: 36 horas desde la entrega.
+HORAS_LIMITE_DEVOLUCION = 36
 
 
 def _formato_devolucion(dev: Devolucion, db: Session) -> dict:
@@ -184,33 +193,41 @@ def crear_devolucion(db: Session, datos: DevolucionCreate) -> dict:
             detail="Solo puedes solicitar una devolución para pedidos ya entregados"
         )
 
-    # 1b. Verificar plazo de devolución
+    # 1b. Verificar plazo de devolución: 36 horas desde la entrega real.
+    # Fuente del timestamp (en orden): domicilio entregado → venta.Fecha_entrega
+    # → fallback a Fecha_pedido/Fecha_Venta para pedidos antiguos sin timestamp.
     domicilio = db.query(Domicilio).filter(
         Domicilio.ID_Venta == datos.ID_Venta,
         Domicilio.Estado.in_([8, 4])  # 8=Entregado web, 4=Entregado Flutter
     ).first()
     fecha_ref = (
-        domicilio.Fecha_entrega
-        if domicilio and domicilio.Fecha_entrega
-        else venta.Fecha_Venta
+        (domicilio.Fecha_entrega if domicilio and domicilio.Fecha_entrega else None)
+        or getattr(venta, "Fecha_entrega", None)
+        or venta.Fecha_pedido
+        or venta.Fecha_Venta
     )
     if fecha_ref:
-        dias = (datetime.now() - fecha_ref).days
-        if dias > DIAS_LIMITE_DEVOLUCION:
+        transcurrido = _now() - fecha_ref
+        if transcurrido > timedelta(hours=HORAS_LIMITE_DEVOLUCION):
+            horas = int(transcurrido.total_seconds() // 3600)
             raise HTTPException(
                 status_code=400,
-                detail=f"El plazo para solicitar devoluciones es de {DIAS_LIMITE_DEVOLUCION} días desde la entrega. Han pasado {dias} días."
+                detail=(
+                    f"El plazo para solicitar una devolución ha vencido. Las devoluciones "
+                    f"pueden solicitarse hasta {HORAS_LIMITE_DEVOLUCION} horas después de la "
+                    f"entrega (han pasado {horas} horas)."
+                )
             )
 
-    # 2. No duplicar devoluciones activas para la misma venta
+    # 2. Un pedido solo puede tener UNA solicitud de devolución, sin importar su
+    #    estado (Pendiente, Aprobada o Rechazada). No se permite crear otra.
     existente = db.query(Devolucion).filter(
-        Devolucion.ID_Venta == datos.ID_Venta,
-        Devolucion.Estado.in_([ESTADO_PENDIENTE, ESTADO_APROBADA])
+        Devolucion.ID_Venta == datos.ID_Venta
     ).first()
     if existente:
         raise HTTPException(
             status_code=400,
-            detail="Este pedido ya tiene una solicitud de devolución activa"
+            detail="Ya existe una solicitud de devolución para este pedido"
         )
 
     # 3. Cliente existe

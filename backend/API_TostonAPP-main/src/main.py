@@ -169,6 +169,17 @@ def migrate_db():
             except Exception:
                 pass
 
+    # Ventas.Fecha_entrega: timestamp real de entrega (fuente para el plazo de
+    # devoluciones de 36h, también en pedidos de recoger en tienda). No se
+    # rellenan filas existentes: el cálculo usa Domicilios.Fecha_entrega para
+    # pedidos con domicilio y hace fallback a Fecha_pedido para los antiguos.
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE Ventas ADD COLUMN Fecha_entrega DATETIME NULL"))
+            conn.commit()
+        except Exception:
+            pass  # la columna ya existe
+
     # Corrección de lotes huérfanos: lotes con Estado=1 que pertenecen a compras Pendientes
     # (creados antes de que el flujo fuera corregido para usar Estado=3)
     with engine.connect() as conn:

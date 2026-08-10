@@ -368,6 +368,7 @@ class Venta(Base):
     Metodo_Pago            = Column(String(20))
     Fecha_Venta            = Column(DateTime)
     Fecha_pedido           = Column(DateTime)
+    Fecha_entrega          = Column(DateTime, nullable=True)   # timestamp real de entrega
     Fecha_entrega_esperada = Column(DateTime, nullable=True)
     Comprobante_Pago       = Column(Text, nullable=True)
 

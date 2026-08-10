@@ -44,6 +44,7 @@ class DomicilioResponse(BaseModel):
     Fecha_asignacion:     Optional[datetime] = None
     Fecha_entrega:        Optional[datetime] = None
     Observaciones:        Optional[str]      = None
+    indicaciones_cliente: Optional[str]      = None
     Estado:               Optional[int]      = None
     estado_label:         Optional[str]      = None
     Direccion_entrega:    Optional[str]      = None

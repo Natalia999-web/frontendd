@@ -51,6 +51,7 @@ class ProductoVentaResponse(BaseModel):
     Cantidad:        int
     precio_unitario: Optional[Decimal] = None
     subtotal:        Optional[Decimal] = None
+    imagen:          Optional[str]     = None
 
 
 # ── Respuesta de una venta ──
@@ -67,6 +68,7 @@ class VentaResponse(BaseModel):
     Metodo_Pago:            Optional[str]      = None
     Fecha_Venta:            Optional[datetime] = None
     Fecha_pedido:           Optional[datetime] = None
+    Fecha_entrega:          Optional[datetime] = None
     Fecha_entrega_esperada: Optional[datetime] = None
     productos:              list[ProductoVentaResponse] = []
     tiene_domicilio:        bool               = False

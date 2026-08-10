@@ -11,10 +11,18 @@ def _now():
     return datetime.now(_BOGOTA).replace(tzinfo=None)
 
 from src.shared.services.models import (
-    Venta, VentaXProducto, DetalleVenta, Producto, Usuario,
+    Venta, VentaXProducto, DetalleVenta, Producto, ProductoImagen, Usuario,
     Estado, Domicilio, CreditoCliente, MovimientoCredito,
     Descuento, DescuentoXUsuario, DescuentoXVenta, OrdenProduccion, FichaTecnica,
 )
+
+
+def _imagen_producto(db: Session, id_producto: int) -> str | None:
+    """URL de la primera imagen del producto (o None). Usa Producto_Imagenes."""
+    img = db.query(ProductoImagen).filter(
+        ProductoImagen.ID_Producto == id_producto
+    ).first()
+    return img.imagen if img else None
 from src.shared.services.notificaciones_utils import notificar, descartar_notificacion, notificar_stock_producto
 from src.features.ventas.pedidos.services.estados import (
     EstadoPedido, ESTADOS_STOCK_DESCONTADO_PICKUP, validar_transicion,
@@ -67,6 +75,7 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
             "Cantidad":        v.Cantidad,
             "precio_unitario": precio,
             "subtotal":        precio * Decimal(str(v.Cantidad)),
+            "imagen":          _imagen_producto(db, v.ID_Producto),
         })
 
     detalle            = db.query(DetalleVenta).filter(DetalleVenta.ID_Venta == venta.ID_Venta).first()
@@ -105,6 +114,7 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
         "Metodo_Pago":            venta.Metodo_Pago,
         "Fecha_Venta":            venta.Fecha_Venta,
         "Fecha_pedido":           venta.Fecha_pedido,
+        "Fecha_entrega":          getattr(venta, "Fecha_entrega", None),
         "Fecha_entrega_esperada": venta.Fecha_entrega_esperada,
         "productos":              productos,
         "comprobante_pago":             venta.Comprobante_Pago,
@@ -515,6 +525,11 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
             status_code=400,
             detail="Se requiere comprobante de pago para marcar el pedido como entregado",
         )
+
+    # Registrar el timestamp real de entrega (fuente para el plazo de devoluciones,
+    # también en pedidos de recoger en tienda que no tienen domicilio).
+    if nuevo_estado == EstadoPedido.ENTREGADO and not getattr(venta, "Fecha_entrega", None):
+        venta.Fecha_entrega = _now()
 
     # Al confirmar un pedido SIN domicilio (recoger en tienda): descontar stock
     if nuevo_estado == EstadoPedido.CONFIRMADO and not tiene_domicilio:
