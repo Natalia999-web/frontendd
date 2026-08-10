@@ -361,7 +361,10 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
     ESTADO_ENTREGADO_DB = 8
     if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB) and dom.ID_Venta:
         venta_check = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
-        if venta_check and not venta_check.Comprobante_Pago:
+        # Solo las transferencias requieren comprobante; el efectivo se cobra en
+        # mano y no tiene soporte, así que no se debe exigir para entregar.
+        _metodo = (venta_check.Metodo_Pago or "").strip().lower() if venta_check else ""
+        if venta_check and "transfer" in _metodo and not venta_check.Comprobante_Pago:
             raise HTTPException(
                 status_code=400,
                 detail="Se requiere comprobante de pago para marcar el domicilio como entregado",
