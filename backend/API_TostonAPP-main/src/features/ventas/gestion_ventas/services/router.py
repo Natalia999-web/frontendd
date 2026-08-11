@@ -70,9 +70,9 @@ def ver_venta(
 
 @router.post("/", response_model=VentaResponse, status_code=201)
 def registrar_venta(
-    datos: VentaCreate,
-    db:    Session = Depends(get_db),
-    _:     dict    = Depends(requiere_permiso("crear_ventas"))
+    datos:  VentaCreate,
+    db:     Session = Depends(get_db),
+    actual: dict    = Depends(requiere_permiso("crear_ventas"))
 ):
     """
     Crea una venta aplicando el flujo completo:
@@ -82,6 +82,12 @@ def registrar_venta(
     4. Descuenta stock automáticamente
     5. Crea domicilio si se incluye en el body
     """
+    # El cliente NO fija la fecha de entrega en el checkout: la propone el
+    # administrador después. Se ignora cualquier fecha enviada por un cliente.
+    if actual.get("tipo") == "cliente":
+        datos.Fecha_entrega_esperada = None
+        if datos.domicilio is not None:
+            datos.domicilio.Fecha_entrega = None
     return crear_venta(db, datos)
 
 

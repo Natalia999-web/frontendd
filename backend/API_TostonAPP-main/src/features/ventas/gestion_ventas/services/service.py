@@ -131,13 +131,17 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
 
 
 def _aplicar_credito(db: Session, id_usuario: int, monto_restante: Decimal, id_venta: int) -> Decimal:
+    # with_for_update() bloquea la fila de crédito hasta el commit de crear_venta:
+    # evita que dos compras simultáneas gasten el mismo saldo (condición de carrera).
     credito = db.query(CreditoCliente).filter(
         CreditoCliente.ID_Usuario == id_usuario
-    ).first()
+    ).with_for_update().first()
 
     if not credito or credito.Saldo <= 0:
         return Decimal("0")
 
+    # El monto usado se recalcula 100% en backend: min(saldo real, total real del
+    # pedido). El cliente no puede manipular cuánto crédito se descuenta.
     credito_usado        = min(credito.Saldo, monto_restante)
     credito.Saldo       -= credito_usado
     credito.Fecha_Update = _now()
@@ -676,11 +680,37 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
             status_code=400,
             detail="Solo se puede proponer fecha en ventas Pendientes o en estado Fecha propuesta",
         )
+    # La propuesta de fecha de entrega solo aplica a pedidos con DOMICILIO
+    # (los de recoger en tienda no tienen fecha de entrega a domicilio).
+    tiene_domicilio = db.query(Domicilio).filter(
+        Domicilio.ID_Venta == id_venta
+    ).first() is not None
+    if not tiene_domicilio:
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se puede proponer fecha de entrega para pedidos con domicilio",
+        )
     descartar_notificacion(db, "produccion_requerida", id_venta)
     venta.Estado = EstadoPedido.FECHA_PROPUESTA
     venta.Fecha_entrega_esperada = fecha_entrega
+    notificar(
+        db, "fecha_propuesta", "Fecha de entrega propuesta",
+        f"El administrador propuso una fecha de entrega para tu pedido #{id_venta}",
+        id_venta, "/ventas/pedidos",
+    )
     db.commit()
     db.refresh(venta)
+    # Aviso push al cliente para que la revise (aceptar/rechazar).
+    try:
+        from src.shared.services.fcm_service import notificar_cambio_pedido_push
+        notificar_cambio_pedido_push(
+            id_usuario_cliente=venta.ID_Usuario,
+            id_venta=id_venta,
+            nuevo_estado=EstadoPedido.FECHA_PROPUESTA,
+            db=db,
+        )
+    except Exception:
+        pass
     return _formato_venta(venta, db)
 
 
@@ -780,6 +810,25 @@ def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
     if venta.Estado != EstadoPedido.FECHA_PROPUESTA:
         raise HTTPException(status_code=400, detail="El pedido no está en estado 'Fecha propuesta'")
 
+    # Pedidos con DOMICILIO: el pedido sigue vivo. Vuelve a Pendiente para que el
+    # administrador pueda proponer OTRA fecha (no se cancela ni se devuelve crédito).
+    tiene_domicilio = db.query(Domicilio).filter(
+        Domicilio.ID_Venta == id_venta
+    ).first() is not None
+    if tiene_domicilio:
+        venta.Estado = EstadoPedido.PENDIENTE
+        venta.Fecha_entrega_esperada = None
+        notificar(
+            db, "fecha_rechazada", "Fecha rechazada por el cliente",
+            f"El cliente rechazó la fecha del pedido #{id_venta}. Propone una nueva fecha.",
+            id_venta, "/ventas/pedidos",
+        )
+        db.commit()
+        db.refresh(venta)
+        return _formato_venta(venta, db)
+
+    # Pedidos de producción (sin domicilio): flujo existente → se cancela y se
+    # devuelve el crédito usado.
     venta.Estado = EstadoPedido.CANCELADO
     notificar(
         db, "fecha_rechazada", "Fecha rechazada por el cliente",
