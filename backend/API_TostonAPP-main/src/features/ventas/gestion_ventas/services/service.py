@@ -616,13 +616,51 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
 
 
 def obtener_mi_credito(db: Session, usuario_actual: dict) -> dict:
-    """Retorna el saldo de crédito disponible del cliente autenticado."""
+    """
+    Retorna el saldo de crédito disponible del cliente autenticado.
+
+    El saldo se recalcula desde el libro mayor de movimientos (recargas − usos),
+    que es la fuente de verdad. Si el campo CreditoCliente.Saldo quedó
+    desincronizado (p. ej. una recarga por devolución que no se reflejó en el
+    campo), se corrige y persiste aquí para que tanto la app como el checkout
+    usen el valor correcto.
+    """
     registro   = usuario_actual.get("registro")
     id_usuario = registro.ID_Usuario if registro else None
     credito = db.query(CreditoCliente).filter(
         CreditoCliente.ID_Usuario == id_usuario
     ).first()
-    saldo = float(credito.Saldo) if credito and credito.Saldo else 0.0
+
+    if not credito:
+        return {"saldo": 0.0, "id_usuario": id_usuario}
+
+    # Balance real desde los movimientos (append-only = fuente de verdad).
+    movs = db.query(MovimientoCredito).filter(
+        MovimientoCredito.ID_Credito == credito.ID_Credito
+    ).all()
+    balance = Decimal("0")
+    for m in movs:
+        monto = Decimal(str(m.Monto or 0))
+        tipo  = (m.Tipo or "").lower()
+        if tipo == "recarga":
+            balance += monto
+        elif tipo == "uso":
+            balance -= monto
+    if balance < 0:
+        balance = Decimal("0")
+
+    saldo_guardado = credito.Saldo or Decimal("0")
+
+    # Autocorrección: si hay movimientos y el campo Saldo quedó desfasado, se
+    # alinea al balance del libro mayor y se persiste (idempotente).
+    if movs and abs(Decimal(str(saldo_guardado)) - balance) > Decimal("0.01"):
+        credito.Saldo        = balance
+        credito.Fecha_Update = _now()
+        db.commit()
+        saldo_guardado = balance
+
+    # Con movimientos usamos el balance recalculado; sin movimientos, el campo.
+    saldo = float(balance) if movs else float(saldo_guardado)
     return {"saldo": saldo, "id_usuario": id_usuario}
 
 
