@@ -464,7 +464,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                     style={{ paddingLeft: 24 }}
                     type="text"
                     inputMode="numeric"
-                    value={form.precio ? Number(form.precio).toLocaleString("es-CO") : ""}
+                    value={form.precio ? String(form.precio).replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""}
                     onChange={(e) => set("precio", e.target.value.replace(/[^\d]/g, ""))}
                     placeholder="0"
                     onFocus={(e) => (e.target.style.borderColor = "#4caf50")}

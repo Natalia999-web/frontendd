@@ -875,6 +875,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
       e.fechaEntrega = "La fecha no puede ser anterior al día de hoy";
     }
     if (form.fechaInicio && form.fechaInicio < today) e.fechaInicio = "La fecha de inicio no puede ser anterior al día de hoy";
+    if (form.fechaInicio && form.fechaEntrega && form.fechaInicio > form.fechaEntrega) e.fechaInicio = "La fecha de inicio no puede ser después de la entrega";
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setSaving(true);
@@ -1031,6 +1032,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
                 type="date"
                 className={`field-input${errors.fechaInicio ? " error" : ""}`}
                 min={new Date().toISOString().split('T')[0]}
+                max={form.fechaEntrega || undefined}
                 value={form.fechaInicio}
                 onChange={e => set("fechaInicio", e.target.value)}
               />
@@ -1041,7 +1043,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               <input
                 type="date"
                 className={`field-input${errors.fechaEntrega ? " error" : ""}`}
-                min={new Date().toISOString().split('T')[0]}
+                min={form.fechaInicio || new Date().toISOString().split('T')[0]}
                 value={form.fechaEntrega}
                 onChange={e => set("fechaEntrega", e.target.value)}
               />

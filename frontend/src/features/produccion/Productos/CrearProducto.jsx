@@ -467,7 +467,7 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
                         style={{ paddingLeft: 24 }}
                         type="text"
                         inputMode="numeric"
-                        value={form.precio ? Number(form.precio).toLocaleString("es-CO") : ""}
+                        value={form.precio ? form.precio.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""}
                         onChange={(e) => set("precio", e.target.value.replace(/[^\d]/g, ""))}
                         placeholder="0"
                       />

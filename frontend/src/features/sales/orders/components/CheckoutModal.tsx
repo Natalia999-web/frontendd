@@ -9,8 +9,8 @@ import './CheckoutModal.css';
 
 // Datos de la cuenta bancaria — actualiza en GestionPedidos.jsx también
 const CUENTA = {
-  banco:   'Nequi / Bancolombia',
-  numero:  '316 453 7890',
+  banco:   'Bancolombia',
+  numero:  '54213570938',
   tipo:    'Cuenta de ahorros',
   titular: 'TostonApp S.A.S',
 };
@@ -43,7 +43,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   const [onBehalfOf,         setOnBehalfOf]         = useState('');
   const [comprobante,        setComprobante]        = useState<File | null>(null);
   const [isConfirming,       setIsConfirming]       = useState(false);
-  const [qrOpen,             setQrOpen]             = useState(false);
   const [credito,            setCredito]            = useState(0);
   const [usarCredito,        setUsarCredito]        = useState(false);
   const [tieneDomicilio,     setTieneDomicilio]     = useState(false);
@@ -383,36 +382,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
 
             {paymentMethod === 'digital' && (
               <div className="space-y-2">
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-3">
-                  {/* QR clickable — coloca /public/qr-pago.png para que aparezca la imagen */}
-                  <button
-                    onClick={() => setQrOpen(true)}
-                    title="Ampliar QR de pago"
-                    className="w-14 h-14 shrink-0 rounded-lg border border-blue-200 bg-white overflow-hidden relative group cursor-zoom-in hover:shadow-md transition-shadow"
-                    style={{ padding: 0 }}
-                  >
-                    <img
-                      src="/qr-pago.png"
-                      alt="QR de pago"
-                      className="w-full h-full object-contain"
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-blue-400">
-                      <span style={{ fontSize: 22 }}>📱</span>
-                      <span className="text-[7px] font-black uppercase mt-0.5">Nequi</span>
-                    </div>
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <span className="text-[8px] font-black text-white bg-black/50 px-1.5 py-0.5 rounded">Ver QR</span>
-                    </div>
-                  </button>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">
-                    {[['Banco', CUENTA.banco], ['Número', CUENTA.numero], ['Titular', CUENTA.titular]].map(([l, v]) => (
+                    {[['Banco', CUENTA.banco], ['Número', CUENTA.numero], ['Tipo', CUENTA.tipo], ['Titular', CUENTA.titular]].map(([l, v]) => (
                       <div key={l} className="flex gap-2">
                         <span className="text-[9px] font-black text-blue-400 uppercase w-12 shrink-0">{l}</span>
                         <span className="text-[10px] font-black text-blue-900">{v}</span>
                       </div>
                     ))}
-                    <p className="text-[9px] text-blue-300 font-bold pt-1">Toca el QR para ampliar</p>
                   </div>
                 </div>
                 <div className="relative group">
@@ -509,39 +486,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
       `}</style>
 
-      {/* QR ampliado */}
-      {qrOpen && (
-        <div
-          className="fixed inset-0 z-[600] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
-          onClick={() => setQrOpen(false)}
-        >
-          <div
-            className="bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-xs w-full"
-            onClick={e => e.stopPropagation()}
-          >
-            <p className="font-black text-gray-800 text-base">QR de Pago</p>
-            <div className="relative w-56 h-56 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50">
-              <img src="/qr-pago.png" alt="QR de pago ampliado" className="w-full h-full object-contain relative z-10"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                <span style={{ fontSize: 40 }}>📱</span>
-                <span className="text-xs font-black text-gray-400">QR no disponible</span>
-                <span className="text-[10px] text-gray-300">Agrega /public/qr-pago.png</span>
-              </div>
-            </div>
-            <div className="text-center space-y-1">
-              <p className="text-sm font-black text-gray-700">{CUENTA.banco}</p>
-              <p className="text-lg font-black text-green-700">{CUENTA.numero}</p>
-              <p className="text-xs text-gray-400">{CUENTA.titular}</p>
-            </div>
-            <button
-              onClick={() => setQrOpen(false)}
-              className="px-8 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-black text-gray-600 transition-colors"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -18,13 +18,11 @@ import {
 import "./Pedidos.css";
 
 /* ─── Datos de transferencia ─────────────────────────────── */
-// Actualiza estos datos con la información real de la cuenta
 const CUENTA_TRANSFERENCIA = {
-  banco:   "Nequi / Bancolombia",
+  banco:   "Bancolombia",
   titular: "TostonApp S.A.S",
   tipo:    "Ahorros",
-  numero:  "300 000 0000",
-  qrUrl:   "", // Reemplaza con la URL real del QR de pago
+  numero:  "54213570938",
 };
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -343,7 +341,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   <div className="cuenta-card">
                     <div className="cuenta-card__rows">
                       {[
-                        { label: "Banco / Billetera", value: CUENTA_TRANSFERENCIA.banco },
+                        { label: "Banco",             value: CUENTA_TRANSFERENCIA.banco },
                         { label: "Titular",           value: CUENTA_TRANSFERENCIA.titular },
                         { label: "Tipo de cuenta",    value: CUENTA_TRANSFERENCIA.tipo },
                         { label: "Número",            value: CUENTA_TRANSFERENCIA.numero },
@@ -355,16 +353,6 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       ))}
                     </div>
 
-                    <div className={`cuenta-card__qr${CUENTA_TRANSFERENCIA.qrUrl ? "" : " cuenta-card__qr--empty"}`}>
-                      {CUENTA_TRANSFERENCIA.qrUrl ? (
-                        <img src={CUENTA_TRANSFERENCIA.qrUrl} alt="QR de pago" />
-                      ) : (
-                        <>
-                          <span style={{ fontSize: 26 }}>📷</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: "#9e9e9e", textAlign: "center", lineHeight: 1.3, padding: "0 6px" }}>Agrega el QR en el código</span>
-                        </>
-                      )}
-                    </div>
                   </div>
 
                   <div className="info-box info-box--warn" style={{ marginTop: 0 }}>
