@@ -2,8 +2,8 @@ import { Eye, Package, Clock, CheckCircle2, XCircle, Calendar, Hash } from 'luci
 
 const STATUS_CONFIG = {
   'Pendiente':  { icon: Clock,         color: 'amber',   bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  label: 'Pendiente'  },
-  'Aprobado':   { icon: CheckCircle2,  color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Aprobado'   },
-  'Rechazado':  { icon: XCircle,       color: 'red',     bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',    label: 'Rechazado'  },
+  'Aprobada':   { icon: CheckCircle2,  color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Aprobada'   },
+  'Rechazada':  { icon: XCircle,       color: 'red',     bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',    label: 'Rechazada'  },
 };
 
 const ReturnList = ({ returns, onViewDetails }) => {
@@ -12,7 +12,7 @@ const ReturnList = ({ returns, onViewDetails }) => {
   return (
     <div className="space-y-4">
       {returns.map((item) => {
-        const config = STATUS_CONFIG[item.status] || STATUS_CONFIG['Pendiente'];
+        const config = STATUS_CONFIG[item.estado] || STATUS_CONFIG['Pendiente'];
         const Icon = config.icon;
         
         return (

@@ -2,8 +2,8 @@ import { X, Package, Hash, FileText, Image, MessageSquare, Clock, CheckCircle2, 
 
 const STATUS_CONFIG = {
   'Pendiente': { icon: Clock,        color: '#92400e', bg: '#fef3c7', border: '#fde68a',  label: 'Pendiente'  },
-  'Aprobado':  { icon: CheckCircle2, color: '#166534', bg: '#dcfce7', border: '#bbf7d0',  label: 'Aprobado'   },
-  'Rechazado': { icon: XCircle,      color: '#991b1b', bg: '#fee2e2', border: '#fca5a5',  label: 'Rechazado'  },
+  'Aprobada':  { icon: CheckCircle2, color: '#166534', bg: '#dcfce7', border: '#bbf7d0',  label: 'Aprobada'   },
+  'Rechazada': { icon: XCircle,      color: '#991b1b', bg: '#fee2e2', border: '#fca5a5',  label: 'Rechazada'  },
 };
 
 const InfoRow = ({ icon: Icon, label, value, muted }) => {
@@ -43,7 +43,7 @@ const InfoRow = ({ icon: Icon, label, value, muted }) => {
 const ReturnDetailModal = ({ show, onClose, request }) => {
   if (!show || !request) return null;
 
-  const cfg  = STATUS_CONFIG[request.status] || STATUS_CONFIG['Pendiente'];
+  const cfg  = STATUS_CONFIG[request.estado] || STATUS_CONFIG['Pendiente'];
   const Icon = cfg.icon;
 
   return (

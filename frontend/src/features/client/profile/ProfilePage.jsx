@@ -207,6 +207,7 @@ function normalizarPerfil(data) {
     fotoPerfil:     data.Foto_perfil    || localUser?.fotoPerfil || localUser?.Foto_perfil || '',
     rol:            data.rol            || 'Cliente',
     estado:         data.Estado !== 2,
+    fechaCreacion:  data.Fecha_creacion || null,
   };
 }
 
@@ -428,9 +429,8 @@ const ProfilePage = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { label: 'Miembro desde',        value: '2024' },
+                  { label: 'Miembro desde',        value: perfilMostrar.fechaCreacion ? new Date(perfilMostrar.fechaCreacion).getFullYear() : '—' },
                   { label: 'Pedidos realizados',   value: pedidos.length || '—' },
-                  { label: 'Última sesión',         value: 'Hoy' },
                   { label: '🎁 Crédito disponible', value: credito > 0 ? COP(credito) : 'Sin crédito', highlight: credito > 0 },
                 ].map(item => (
                   <div key={item.label} style={{
