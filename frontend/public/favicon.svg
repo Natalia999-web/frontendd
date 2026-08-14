@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Fondo verde oscuro -->
+  <rect width="64" height="64" rx="12" fill="#1b5e20"/>
+  <!-- Hoja de plátano -->
+  <ellipse cx="32" cy="34" rx="20" ry="7" fill="#558b2f" transform="rotate(-30 32 34)"/>
+  <ellipse cx="32" cy="32" rx="19" ry="6" fill="#7cb342" transform="rotate(-30 32 32)"/>
+  <ellipse cx="32" cy="30" rx="14" ry="4.5" fill="#9ccc65" transform="rotate(-30 32 30)"/>
+  <!-- Nervio central de la hoja -->
+  <line x1="14" y1="50" x2="52" y2="16" stroke="#33691e" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Letra T -->
+  <rect x="22" y="10" width="20" height="4" rx="2" fill="#f9a825"/>
+  <rect x="30" y="10" width="4" height="18" rx="2" fill="#f9a825"/>
+</svg>
