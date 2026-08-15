@@ -69,6 +69,7 @@ export default function EditarLanding() {
             href="/"
             target="_blank"
             rel="noopener noreferrer"
+            data-tooltip="Abrir la landing page en una nueva pestaña"
             className="flex items-center gap-2 px-4 py-2 bg-[#e8f5e9] text-[#1b5e20] rounded-xl font-bold text-sm hover:bg-[#c8e6c9] transition-colors"
           >
             <Eye className="w-4 h-4" />
@@ -76,6 +77,7 @@ export default function EditarLanding() {
           </a>
           <button
             onClick={handleReset}
+            data-tooltip={confirm ? "Confirmar restauración de valores predeterminados" : "Restaurar textos predeterminados"}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
               confirm
                 ? "bg-red-100 text-red-700 hover:bg-red-200"
@@ -88,6 +90,7 @@ export default function EditarLanding() {
           {confirm && (
             <button
               onClick={() => setConfirm(false)}
+              data-tooltip="Cancelar restauración"
               className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
             >
               Cancelar
@@ -142,6 +145,7 @@ export default function EditarLanding() {
       <div className="sticky bottom-0 bg-white/80 backdrop-blur-md border-t border-[#e8f5e9] -mx-6 px-6 py-4 flex justify-end">
         <button
           onClick={handleSave}
+          data-tooltip="Guardar todos los cambios en la landing page"
           className="flex items-center gap-2 px-8 py-3 bg-[#1b5e20] text-white font-black rounded-2xl hover:bg-[#0d3300] transition-all shadow-lg active:scale-95"
         >
           <Save className="w-4 h-4" />

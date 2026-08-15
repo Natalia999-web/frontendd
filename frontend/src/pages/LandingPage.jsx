@@ -69,6 +69,7 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
         {/* Cerrar */}
         <button
           onClick={onClose}
+          data-tooltip="Cerrar"
           className="absolute top-4 right-4 z-20 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/35 transition-colors"
         >
           <X className="w-5 h-5" />
@@ -94,10 +95,10 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
             {/* Flechas */}
             {imgs.length > 1 && (
               <>
-                <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
+                <button onClick={(e) => { e.stopPropagation(); prev(); }} data-tooltip="Imagen anterior" className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
+                <button onClick={(e) => { e.stopPropagation(); next(); }} data-tooltip="Imagen siguiente" className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors text-[#1b5e20] z-10">
                   <ChevronRight className="w-5 h-5" />
                 </button>
                 {/* Dots */}
@@ -120,6 +121,7 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
                 <button
                   key={i}
                   onClick={() => setImgIdx(i)}
+                  data-tooltip="Ver imagen"
                   className={`flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
                     i === imgIdx ? 'border-[#1b5e20] scale-95' : 'border-transparent opacity-50 hover:opacity-80'
                   }`}
@@ -187,14 +189,15 @@ function ProductDetailModal({ product, cat, onClose, onAddToCart }) {
           <div className="mt-auto pt-2">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 bg-[#f7faf8] rounded-2xl border border-[#e8f5e9] p-1.5 flex-shrink-0">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))}
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} data-tooltip="Disminuir cantidad"
                   className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90 text-[#1b5e20] font-bold text-lg">−</button>
                 <span className="w-10 text-center font-black text-[#1b5e20] text-sm">{qty}</span>
-                <button onClick={() => setQty(q => q + 1)}
+                <button onClick={() => setQty(q => q + 1)} data-tooltip="Aumentar cantidad"
                   className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90 text-[#1b5e20] font-bold text-lg">+</button>
               </div>
               <button
                 onClick={handleAdd}
+                data-tooltip={agotado ? 'Hacer pedido programado' : parcial ? 'Agregar al carrito (stock parcial)' : 'Agregar al carrito'}
                 className={`flex-1 py-4 font-black rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 ${
                   agotado
                     ? 'bg-amber-500 hover:bg-amber-600 text-white'
@@ -231,10 +234,10 @@ function ConfirmStockModal({ product, qty, onConfirm, onCancel }) {
           Las <strong>{programado} unidades restantes</strong> se procesarán como <strong>pedido programado</strong> y se entregarán cuando haya producción disponible. Te avisaremos cuando estén listas.
         </div>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-colors text-sm">
+          <button onClick={onCancel} data-tooltip="Cancelar y volver" className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-black text-gray-500 hover:bg-gray-50 transition-colors text-sm">
             Cancelar
           </button>
-          <button onClick={onConfirm} className="flex-1 py-3 bg-[#1b5e20] text-white rounded-2xl font-black hover:bg-[#0d3300] transition-colors text-sm">
+          <button onClick={onConfirm} data-tooltip="Confirmar pedido con stock parcial" className="flex-1 py-3 bg-[#1b5e20] text-white rounded-2xl font-black hover:bg-[#0d3300] transition-colors text-sm">
             Confirmar pedido
           </button>
         </div>
@@ -561,6 +564,7 @@ const LandingPage = ({ hideNavbar = false }) => {
       {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
+          data-tooltip="Abrir carrito de compras"
           className="fixed bottom-8 right-8 z-40 flex items-center gap-3 px-6 py-4 bg-[#1b5e20] text-white font-black rounded-2xl shadow-[0_10px_40px_rgba(27,94,32,0.4)] hover:bg-[#0d3300] transition-all hover:-translate-y-1 active:scale-95 group"
         >
           <div className="relative">
@@ -594,12 +598,12 @@ const LandingPage = ({ hideNavbar = false }) => {
                 {content.heroDescription}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
-                <button onClick={() => scrollToSection('productos')} className="group relative flex items-center gap-3 px-10 py-5 bg-[#1b5e20] text-white font-black rounded-2xl hover:bg-[#0d3300] shadow-[0_10px_30px_rgba(27,94,32,0.3)] transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto justify-center overflow-hidden">
+                <button onClick={() => scrollToSection('productos')} data-tooltip="Ver nuestros productos" className="group relative flex items-center gap-3 px-10 py-5 bg-[#1b5e20] text-white font-black rounded-2xl hover:bg-[#0d3300] shadow-[0_10px_30px_rgba(27,94,32,0.3)] transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto justify-center overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   Explorar menú
                   <ShoppingBag className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                 </button>
-                <button onClick={() => scrollToSection('nosotros')} className="flex items-center gap-2 px-10 py-5 bg-white text-[#1b5e20] font-bold rounded-2xl border-2 border-[#e8f5e9] hover:border-[#1b5e20] transition-all w-full sm:w-auto justify-center">
+                <button onClick={() => scrollToSection('nosotros')} data-tooltip="Conocer más sobre nosotros" className="flex items-center gap-2 px-10 py-5 bg-white text-[#1b5e20] font-bold rounded-2xl border-2 border-[#e8f5e9] hover:border-[#1b5e20] transition-all w-full sm:w-auto justify-center">
                   Nuestra historia
                 </button>
               </div>
@@ -635,6 +639,7 @@ const LandingPage = ({ hideNavbar = false }) => {
           <div className="flex flex-wrap justify-center gap-3 mb-16">
             {categories.map(cat => (
               <button key={cat} onClick={() => { setActiveTab(cat); setProductsPage(1); }}
+                data-tooltip={cat === 'Todos' ? 'Ver todos los productos' : `Filtrar por ${cat}`}
                 className={`px-8 py-3 rounded-2xl font-bold transition-all ${activeTab === cat ? 'bg-[#1b5e20] text-white shadow-lg scale-105' : 'bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9]'}`}>
                 {cat}
               </button>
@@ -656,7 +661,7 @@ const LandingPage = ({ hideNavbar = false }) => {
                   }`}
                   style={agotado ? { filter: 'grayscale(0.65)' } : undefined}
                 >
-                  <div className="relative h-72 overflow-hidden cursor-pointer" onClick={() => setSelectedProduct(p)}>
+                  <div className="relative h-72 overflow-hidden cursor-pointer" data-tooltip="Ver detalles del producto" onClick={() => setSelectedProduct(p)}>
                     {p.imagenPreview || p.imagen
                       ? <img src={p.imagenPreview || p.imagen} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                       : <div className="w-full h-full bg-[#f7faf8] flex items-center justify-center"><span className="text-7xl group-hover:scale-125 transition-transform duration-500">{cat.icon || '🍌'}</span></div>
@@ -706,16 +711,17 @@ const LandingPage = ({ hideNavbar = false }) => {
                     )}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 bg-[#f7faf8] rounded-2xl border border-[#e8f5e9] p-1.5">
-                        <button onClick={() => setQty(p.id, qty - 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90">
+                        <button onClick={() => setQty(p.id, qty - 1)} data-tooltip="Disminuir cantidad" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90">
                           <Minus className="w-3.5 h-3.5 text-[#1b5e20]" />
                         </button>
                         <span className="w-8 text-center font-black text-[#1b5e20] text-sm">{qty}</span>
-                        <button onClick={() => setQty(p.id, qty + 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90">
+                        <button onClick={() => setQty(p.id, qty + 1)} data-tooltip="Aumentar cantidad" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#e8f5e9] transition-colors active:scale-90">
                           <Plus className="w-3.5 h-3.5 text-[#1b5e20]" />
                         </button>
                       </div>
                       <button
                         onClick={() => handleAddToCart(p)}
+                        data-tooltip={agotado ? 'Hacer pedido programado' : 'Agregar al carrito'}
                         className={`flex-1 flex items-center justify-center gap-2 py-4 font-black rounded-2xl transition-all shadow-sm active:scale-95 ${
                           agotado
                             ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
@@ -739,6 +745,7 @@ const LandingPage = ({ hideNavbar = false }) => {
               <button
                 onClick={() => handleProductsPage(safeProductsPage - 1)}
                 disabled={safeProductsPage === 1}
+                data-tooltip="Página anterior"
                 className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9] active:scale-95"
               >
                 <ChevronLeft className="w-4 h-4" /> Anterior
@@ -751,6 +758,7 @@ const LandingPage = ({ hideNavbar = false }) => {
                   <button
                     key={n}
                     onClick={() => handleProductsPage(n)}
+                    data-tooltip={`Ir a página ${n}`}
                     className={`w-10 h-10 rounded-xl font-black text-sm transition-all active:scale-95 ${
                       n === safeProductsPage
                         ? 'bg-[#1b5e20] text-white shadow-lg scale-110'
@@ -779,6 +787,7 @@ const LandingPage = ({ hideNavbar = false }) => {
               <button
                 onClick={() => handleProductsPage(safeProductsPage + 1)}
                 disabled={safeProductsPage === totalProductPages}
+                data-tooltip="Página siguiente"
                 className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-[#f1f8f1] text-[#1b5e20] hover:bg-[#e8f5e9] active:scale-95"
               >
                 Siguiente <ChevronRight className="w-4 h-4" />
@@ -816,7 +825,7 @@ const LandingPage = ({ hideNavbar = false }) => {
                 <h4 className="text-3xl font-black mb-4">{content.ctaTitle}</h4>
                 <p className="text-[#c8e6c9] mb-10">{content.ctaDescription}</p>
                 {!user && (
-                  <button onClick={() => navigate('/register')} className="w-full py-5 bg-white text-[#1b5e20] font-black rounded-3xl hover:bg-[#e8f5e9] transition-all shadow-xl">
+                  <button onClick={() => navigate('/register')} data-tooltip="Crear una cuenta para hacer pedidos" className="w-full py-5 bg-white text-[#1b5e20] font-black rounded-3xl hover:bg-[#e8f5e9] transition-all shadow-xl">
                     Crear mi cuenta gratis
                   </button>
                 )}

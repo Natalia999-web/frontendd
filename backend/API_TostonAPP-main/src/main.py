@@ -237,6 +237,7 @@ _CORS_ORIGINS = [
         "CORS_ORIGINS",
         "https://frontend-ten-xi-31.vercel.app,"
         "https://frontend-git-main-isabela-s-projects1.vercel.app,"
+        "https://tostonapp.vercel.app,"
         "http://localhost:5173",
     ).split(",")
     if o.strip()

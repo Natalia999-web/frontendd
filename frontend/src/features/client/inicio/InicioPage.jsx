@@ -169,6 +169,7 @@ const InicioPage = () => {
                     <button
                       className="btn-primary"
                       disabled={agotado}
+                      data-tooltip={agotado ? 'Producto sin stock' : 'Agregar al carrito'}
                       style={{ width: '100%', marginTop: 12, justifyContent: 'center', opacity: agotado ? 0.5 : 1, cursor: agotado ? 'not-allowed' : 'pointer' }}
                     >
                       <ShoppingCart size={14} /> {agotado ? 'Sin stock' : 'Agregar al carrito'}
@@ -218,7 +219,7 @@ const InicioPage = () => {
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-900)' }}>
                           Total: ${pedido.total.toLocaleString()}
                         </span>
-                        <button className="btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }}>
+                        <button className="btn-secondary" data-tooltip="Ver detalles del pedido" style={{ fontSize: 12, padding: '6px 12px' }}>
                           Ver detalles
                         </button>
                       </div>
