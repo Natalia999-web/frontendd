@@ -1229,6 +1229,7 @@ export default function GestionOrdenesProduccion() {
             <button
               className={`filter-icon-btn${filterEstado !== "todos" || filterDesde || filterHasta ? " has-filter" : ""}`}
               onClick={() => setShowFilter(v => !v)}
+              data-tooltip="Filtrar órdenes"
             >▼</button>
             {showFilter && (
               <div className="filter-dropdown" style={{ minWidth: 220, zIndex: 200 }}>
@@ -1267,7 +1268,7 @@ export default function GestionOrdenesProduccion() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ type: "form" })}>
+          <button className="btn-agregar" onClick={() => setModal({ type: "form" })} data-tooltip="Crear nueva orden de producción">
             Agregar Orden <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -1325,10 +1326,10 @@ export default function GestionOrdenesProduccion() {
                     <td><EstadoBadge estado={orden.estado} /></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   title="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}>👁</button>
-                        <button className="act-btn act-btn--edit"   title="Editar"         onClick={() => setModal({ type: "form",     orden })}>✎</button>
-                        <button className="act-btn act-btn--status" title="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })}>🔄</button>
-                        <button className="act-btn act-btn--delete" title="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}>🗑️</button>
+                        <button className="act-btn act-btn--view"   data-tooltip="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}>👁</button>
+                        <button className="act-btn act-btn--edit"   data-tooltip="Editar"         onClick={() => setModal({ type: "form",     orden })}>✎</button>
+                        <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })}>🔄</button>
+                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}>🗑️</button>
                       </div>
                     </td>
                   </tr>

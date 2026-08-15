@@ -91,7 +91,7 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
           <button
             className="evidencia-preview__remove"
             onClick={() => onEvidencia(null)}
-            title="Quitar evidencia"
+            data-tooltip="Quitar evidencia adjunta"
           >
             ✕
           </button>

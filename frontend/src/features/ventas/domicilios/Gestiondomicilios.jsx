@@ -1100,6 +1100,7 @@ export default function GestionDomicilios() {
                 <button
                   className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`}
                   onClick={() => setShowFilter(v => !v)}
+                  data-tooltip="Filtrar domicilios"
                 >▼</button>
                 {showFilter && (
                   <div className="filter-dropdown" style={{ minWidth: 185 }}>
@@ -1244,31 +1245,31 @@ export default function GestionDomicilios() {
                             <div className="actions-cell">
                               <button
                                 className="act-btn act-btn--view"
-                                title="Ver detalle"
+                                data-tooltip="Ver detalle del pedido"
                                 onClick={() => setModal({ type: "ver", pedido: ped })}
                               >👁</button>
                               <button
                                 className="act-btn act-btn--map"
-                                title="Abrir dirección en Google Maps"
+                                data-tooltip="Ver en Google Maps"
                                 onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega), "_blank", "noopener")}
                               >🌍</button>
                               {ESTADO_TRANSITIONS[ped.estadoId] && (
                                 <button
                                   className="act-btn"
-                                  title="Cambiar estado"
+                                  data-tooltip="Cambiar estado del pedido"
                                   onClick={() => setModal({ type: "cambiarEstado", pedido: ped })}
                                   style={{ background: "#e8f5e9", color: "#2e7d32" }}
                                 >⚡</button>
                               )}
                               <button
                                 className="act-btn act-btn--reasignar"
-                                title="Reasignar domiciliario"
+                                data-tooltip="Reasignar domiciliario"
                                 onClick={() => abrirReasignar(ped)}
                                 style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
                               >🛵</button>
                               <button
                                 className="act-btn act-btn--obs"
-                                title="Observaciones"
+                                data-tooltip="Agregar observación"
                                 onClick={() => abrirObservaciones(ped)}
                                 style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
                               >📝</button>

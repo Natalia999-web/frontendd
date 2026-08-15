@@ -236,6 +236,7 @@ export default function GestionCompras() {
             <button
               className={"filter-icon-btn" + (hasFilter ? " has-filter" : "")}
               onClick={() => setShowFilter(v => !v)}
+              data-tooltip="Filtrar compras"
             >
               ▼
             </button>
@@ -317,7 +318,7 @@ export default function GestionCompras() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })}>
+          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })} data-tooltip="Registrar nueva compra">
             Nueva compra <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -424,27 +425,27 @@ export default function GestionCompras() {
                         <div className="actions-cell">
                           <button
                             className="act-btn act-btn--view"
-                            title="Ver detalle"
+                            data-tooltip="Ver detalle de compra"
                             onClick={() => setModal({ mode: "view", compra: c })}
                           >👁</button>
 
                           {c.estado === "pendiente" && (
                             <button
                               className="act-btn act-btn--success"
-                              title="Registrar llegada"
+                              data-tooltip="Registrar llegada de mercancía"
                               onClick={() => handleCompletarRapido(c.id)}
                             >✅</button>
                           )}
                           <button
                             className="act-btn act-btn--edit"
-                            title="Editar"
+                            data-tooltip="Editar compra"
                             onClick={() => setModal({ mode: "edit", compra: c })}
                           >✎</button>
 
                           {c.estado !== "anulada" && (
                             <button
                               className="act-btn act-btn--delete"
-                              title="Anular"
+                              data-tooltip="Anular compra"
                               onClick={() => setModal({ mode: "anular", compra: c })}
                             >🚫</button>
                           )}

@@ -224,7 +224,7 @@ export default function GestionProveedores() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })}>
+          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })} data-tooltip="Agregar nuevo proveedor">
             Agregar <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -296,11 +296,11 @@ export default function GestionProveedores() {
 
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"
+                        <button className="act-btn act-btn--view" data-tooltip="Ver proveedor"
                           onClick={() => setModal({ mode: "view", proveedor: p })}>👁</button>
-                        <button className="act-btn act-btn--edit"
+                        <button className="act-btn act-btn--edit" data-tooltip="Editar proveedor"
                           onClick={() => setModal({ mode: "edit", proveedor: p })}>✎</button>
-                        <button className="act-btn act-btn--delete"
+                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar proveedor"
                           onClick={() => setModal({ mode: "delete", proveedor: p })}>🗑️</button>
                       </div>
                     </td>

@@ -193,7 +193,7 @@ const OrdersPage = () => {
         }}
         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-        title="Ver carrito"
+        data-tooltip="Ver carrito de compras"
       >
         <ShoppingBag size={26} />
         {cartCount > 0 && (
@@ -280,7 +280,7 @@ const OrdersPage = () => {
             ))}
           </div>
 
-          <button className="btn-secondary" style={{ padding: '12px 14px' }} title="Filtros">
+          <button className="btn-secondary" style={{ padding: '12px 14px' }} data-tooltip="Filtrar productos">
             <SlidersHorizontal size={16} />
           </button>
         </div>

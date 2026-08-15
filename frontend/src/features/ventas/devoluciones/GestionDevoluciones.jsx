@@ -546,6 +546,7 @@ export default function GestionDevoluciones() {
             <button
               className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`}
               onClick={() => setShowFilter((v) => !v)}
+              data-tooltip="Filtrar devoluciones"
             >▼</button>
             {showFilter && (
               <div className="filter-dropdown" style={{ minWidth: 175 }}>
@@ -589,7 +590,7 @@ export default function GestionDevoluciones() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ type: "crear" })}>
+          <button className="btn-agregar" onClick={() => setModal({ type: "crear" })} data-tooltip="Registrar nueva devolución">
             Nueva devolución <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -653,14 +654,14 @@ export default function GestionDevoluciones() {
                     <td><EstadoBadge estado={dev.estado} /></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view" title="Ver detalle"
+                        <button className="act-btn act-btn--view" data-tooltip="Ver detalle de devolución"
                           onClick={() => setModal({ type: "ver", dev })}>👁</button>
-                        <button className="act-btn act-btn--approve" title="Aprobar y Reembolsar"
+                        <button className="act-btn act-btn--approve" data-tooltip="Aprobar y reembolsar"
                           onClick={() => abrirAprobar(dev)}
                           style={{ opacity: dev.estado === "Pendiente" ? 1 : 0.35, cursor: dev.estado === "Pendiente" ? "pointer" : "default" }}>
                           ✅
                         </button>
-                        <button className="act-btn act-btn--reject" title="Rechazar"
+                        <button className="act-btn act-btn--reject" data-tooltip="Rechazar solicitud"
                           onClick={() => abrirRechazar(dev)}
                           style={{ opacity: dev.estado === "Pendiente" ? 1 : 0.35, cursor: dev.estado === "Pendiente" ? "pointer" : "default" }}>
                           🚫

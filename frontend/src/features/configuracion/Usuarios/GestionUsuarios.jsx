@@ -192,6 +192,7 @@ export default function GestionUsuarios() {
             <button
               className={"filter-icon-btn" + (hasFilter ? " has-filter" : "")}
               onClick={() => setShowFilter(v => !v)}
+              data-tooltip="Filtrar usuarios"
             >▼</button>
             {showFilter && (
               <div className="filter-dropdown" style={{ minWidth: 170 }}>
@@ -240,7 +241,7 @@ export default function GestionUsuarios() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ type: "form", user: null })}>
+          <button className="btn-agregar" onClick={() => setModal({ type: "form", user: null })} data-tooltip="Agregar nuevo usuario">
             Agregar <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -331,12 +332,12 @@ export default function GestionUsuarios() {
                     </td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"
+                        <button className="act-btn act-btn--view" data-tooltip="Ver usuario"
                           onClick={() => setModal({ type: "ver", user })}>👁</button>
-                        <button className="act-btn act-btn--edit"
+                        <button className="act-btn act-btn--edit" data-tooltip="Editar usuario"
                           onClick={() => setModal({ type: "form", user })}>✎</button>
                         {!(user.tipo === "empleado" && user.idRol === 1) && (
-                          <button className="act-btn act-btn--delete"
+                          <button className="act-btn act-btn--delete" data-tooltip="Eliminar usuario"
                             onClick={() => {
                               const advertencias = user.tipo === "empleado"
                                 ? ["Si tiene domicilios asignados, la eliminación será rechazada."]

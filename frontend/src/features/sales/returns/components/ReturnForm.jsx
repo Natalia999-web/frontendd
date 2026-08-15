@@ -133,7 +133,7 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
               type="button"
               onClick={() => { set('evidencia', null); if (fileRef.current) fileRef.current.value = ''; }}
               className="text-gray-400 hover:text-red-500 transition-colors p-1"
-              title="Quitar foto"
+              data-tooltip="Quitar foto"
             >
               <X size={16} strokeWidth={3} />
             </button>

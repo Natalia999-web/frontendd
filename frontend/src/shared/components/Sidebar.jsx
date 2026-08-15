@@ -205,6 +205,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                         <Link
                           key={label}
                           to={link}
+                          title={!isOpen ? label : undefined}
                           className={`sub-item ${location.pathname === link ? "active" : ""}`}
                         >
                           <span className="sub-icon"><SubIcon size={14} /></span>
@@ -222,6 +223,7 @@ export default function Sidebar({ isOpen, onToggle }) {
             <div
               className="avatar"
               onClick={() => navigate(user.tipo === "cliente" ? "/cliente/perfil" : "/admin/perfil")}
+              title="Ver mi perfil"
             >
               {(user?.fotoPerfil || user?.Foto_perfil)
                 ? <img src={user.fotoPerfil || user.Foto_perfil} alt={user.nombre} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} />

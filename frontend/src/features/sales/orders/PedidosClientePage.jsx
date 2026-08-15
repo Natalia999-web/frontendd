@@ -524,7 +524,7 @@ const PedidosClientePage = () => {
 
             <button
               onClick={fetchPedidos}
-              title="Actualizar pedidos"
+              data-tooltip="Actualizar pedidos"
               className="p-3 bg-white border-2 border-gray-100 rounded-2xl text-gray-400 hover:text-green-700 hover:border-green-200 transition-all shadow-sm"
             >
               <RefreshCw size={16} />

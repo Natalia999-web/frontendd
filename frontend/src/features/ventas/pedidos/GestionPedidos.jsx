@@ -765,7 +765,7 @@ function AccionesMenu({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
       <button
         className="act-btn act-btn--view bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all p-1.5 rounded-lg border border-green-100"
         onClick={() => onVer(ped)}
-        title="Ver detalle"
+        data-tooltip="Ver detalle del pedido"
       >👁</button>
 
       {hasMenu && (
@@ -774,7 +774,7 @@ function AccionesMenu({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
             className="act-btn bg-gray-100 text-gray-500 hover:bg-gray-700 hover:text-white transition-all p-1.5 rounded-lg border border-gray-200 text-xs font-black leading-none"
             onClick={() => setOpen(v => !v)}
             disabled={saving}
-            title="Acciones"
+            data-tooltip="Más acciones"
           >⋮</button>
 
           {open && (
@@ -1193,7 +1193,7 @@ export default function GestionPedidos() {
           </div>
 
           <div ref={filterRef} style={{ position: "relative" }}>
-            <button className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`} onClick={() => setShowFilter(v => !v)}>▼</button>
+            <button className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`} onClick={() => setShowFilter(v => !v)} data-tooltip="Filtrar pedidos">▼</button>
             {showFilter && (
               <div className="filter-dropdown filter-dropdown--wide" style={{ minWidth: 340 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -1259,7 +1259,7 @@ export default function GestionPedidos() {
           )}
 
           {vista === "activos" && (
-            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })}>
+            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })} data-tooltip="Crear nuevo pedido">
               Nuevo pedido <span style={{ fontSize: 18 }}>+</span>
             </button>
           )}

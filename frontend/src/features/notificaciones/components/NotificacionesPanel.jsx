@@ -103,7 +103,7 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
                 Marcar todas como leídas
               </button>
             )}
-            <button className="notif-close-btn" onClick={onClose} title="Cerrar">✕</button>
+            <button className="notif-close-btn" onClick={onClose} data-tooltip="Cerrar panel">✕</button>
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
 
           {/* CA_03_05 — limpiar */}
           {hayFiltros && (
-            <button className="notif-clear-btn" onClick={limpiarFiltros} title="Limpiar filtros">
+            <button className="notif-clear-btn" onClick={limpiarFiltros} data-tooltip="Limpiar filtros activos">
               ✕ Limpiar
             </button>
           )}
@@ -237,7 +237,7 @@ function NotifItem({ notif, onVer, onMarcarLeida, onEliminar }) {
           <button
             className="notif-item__btn notif-item__btn--read"
             onClick={e => { e.stopPropagation(); onMarcarLeida(notif.id); }}
-            title="Marcar como leída"
+            data-tooltip="Marcar como leída"
           >
             ✓
           </button>
@@ -245,14 +245,14 @@ function NotifItem({ notif, onVer, onMarcarLeida, onEliminar }) {
         <button
           className="notif-item__btn notif-item__btn--view"
           onClick={e => { e.stopPropagation(); onVer(notif); }}
-          title="Ver detalle"
+          data-tooltip="Ver detalle"
         >
           👁
         </button>
         <button
           className="notif-item__btn notif-item__btn--del"
           onClick={e => { e.stopPropagation(); onEliminar(notif.id); }}
-          title="Eliminar"
+          data-tooltip="Eliminar notificación"
         >
           🗑
         </button>

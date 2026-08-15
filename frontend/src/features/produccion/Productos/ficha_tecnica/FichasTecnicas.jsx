@@ -170,7 +170,7 @@ export default function FichaTecnica() {
 
           <div ref={filterRef} style={{ position: "relative" }}>
             <button className={`filter-icon-btn${filterCat !== "Todas" ? " has-filter" : ""}`}
-              onClick={() => setShowFilter(v => !v)} title="Filtrar">▼</button>
+              onClick={() => setShowFilter(v => !v)} data-tooltip="Filtrar fichas técnicas">▼</button>
             {showFilter && (
               <div className="filter-dropdown">
                 {CATEGORIAS.map(c => (

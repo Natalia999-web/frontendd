@@ -509,7 +509,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
           </button>
         )}
 
-        <button className="btn-agregar" onClick={onAgregarClick}>
+        <button className="btn-agregar" onClick={onAgregarClick} data-tooltip="Registrar nueva salida">
           Registrar Salida <span style={{ fontSize: 18 }}>+</span>
         </button>
       </div>
@@ -561,11 +561,11 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
                     <td><span style={{ fontSize: 12, color: "#9e9e9e" }}>{s.fecha || "—"}</span></td>
                     <td>
                       <div className="sl-table-actions">
-                        <button className="sl-action-btn" title="Ver detalles" onClick={() => setSalidaAVer(s)}
+                        <button className="sl-action-btn" data-tooltip="Ver detalles" onClick={() => setSalidaAVer(s)}
                           style={{ background: "#e3f2fd", color: "#1565c0", border: "1.5px solid #90caf9" }}>👁</button>
                         {s.anulada
                           ? <span className="sl-action-locked" title="Salida anulada">🚫</span>
-                          : <button className="sl-action-btn sl-action-btn--delete" title="Anular salida" onClick={() => setSalidaAAnular(s)}>🚫</button>
+                          : <button className="sl-action-btn sl-action-btn--delete" data-tooltip="Anular salida" onClick={() => setSalidaAAnular(s)}>🚫</button>
                         }
                       </div>
                     </td>

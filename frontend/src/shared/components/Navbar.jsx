@@ -179,7 +179,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
               <button
                 className="bell-btn"
                 onClick={() => setNotifOpen(true)}
-                title="Notificaciones"
+                data-tooltip="Notificaciones"
                 aria-label={`${noLeidas} notificaciones sin leer`}
               >
                 <Bell size={22} />
@@ -193,7 +193,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
 
             {/* Carrito */}
             {(user?.tipo === "cliente" || (!user && isLanding)) && (
-              <button className="cart-btn" onClick={() => setIsCartOpen(true)} title="Ver carrito">
+              <button className="cart-btn" onClick={() => setIsCartOpen(true)} data-tooltip="Ver carrito">
                 <ShoppingCart size={22} />
                 {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
               </button>
@@ -204,7 +204,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
               <button
                 className="credito-chip"
                 onClick={() => navigate('/cliente/perfil')}
-                title="Ver mi crédito disponible"
+                data-tooltip="Ver mi crédito disponible"
               >
                 🎁 {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(credito)}
               </button>
@@ -240,7 +240,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
 
             {/* Logout */}
             {user && (
-              <button className="logout-btn" title="Cerrar sesión" onClick={handleLogout}><LogOut size={20} /></button>
+              <button className="logout-btn" data-tooltip="Cerrar sesión" onClick={handleLogout}><LogOut size={20} /></button>
             )}
           </div>
         </div>

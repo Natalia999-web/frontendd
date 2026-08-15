@@ -94,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           <button
             onClick={() => onAddToCart(product)}
             className="ml-auto flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group/btn hover:scale-110 active:scale-95"
-            title="Añadir al carrito"
+            data-tooltip="Añadir al carrito"
           >
             <div className="relative">
               <ShoppingCart

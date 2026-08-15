@@ -335,7 +335,7 @@ export default function CategoriaInsumos() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ type: "crear" })}>
+          <button className="btn-agregar" onClick={() => setModal({ type: "crear" })} data-tooltip="Agregar nueva categoría de insumo">
             Agregar <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -389,11 +389,11 @@ export default function CategoriaInsumos() {
                     </td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"
+                        <button className="act-btn act-btn--view" data-tooltip="Ver categoría"
                           onClick={() => setModal({ type: "ver", cat })}>👁</button>
-                        <button className="act-btn act-btn--edit"
+                        <button className="act-btn act-btn--edit" data-tooltip="Editar categoría"
                           onClick={() => setModal({ type: "editar", cat })}>✎</button>
-                        <button className="act-btn act-btn--delete"
+                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar categoría"
                           onClick={() => setModal({ type: "eliminar", cat })}>🗑️</button>
                       </div>
                     </td>

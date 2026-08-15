@@ -382,7 +382,7 @@ export default function GestionInsumos() {
                 {bajoStock.length > 4 && ` · y ${bajoStock.length - 4} más`}
               </span>
             </div>
-            <button className="ins-stock-alert__close" onClick={() => setAlertaDismissed(true)} title="Cerrar">✕</button>
+            <button className="ins-stock-alert__close" onClick={() => setAlertaDismissed(true)} data-tooltip="Cerrar alerta">✕</button>
           </div>
         );
       })()}
@@ -398,7 +398,7 @@ export default function GestionInsumos() {
 
           <div ref={filterRef} style={{ position: "relative" }}>
             <button className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`}
-              onClick={() => setShowFilter(v => !v)}>▼</button>
+              onClick={() => setShowFilter(v => !v)} data-tooltip="Filtrar insumos">▼</button>
             {showFilter && (
               <div className="filter-dropdown filter-dropdown--wide">
                 <div className="filter-dropdown__section">
@@ -449,7 +449,7 @@ export default function GestionInsumos() {
           )}
 
           {puedeCrear && (
-            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })}>
+            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })} data-tooltip="Agregar nuevo insumo">
               Agregar <span style={{ fontSize: 18 }}>+</span>
             </button>
           )}
@@ -526,10 +526,10 @@ export default function GestionInsumos() {
                       </td>
                       <td>
                         <div className="actions-cell">
-                          {puedeVer      && <button className="act-btn act-btn--view"   title="Ver detalle"      onClick={() => setModal({ type: "ver",      ins })}>👁</button>}
-                          {puedeEditar   && <button className="act-btn act-btn--edit"   title="Editar"           onClick={() => setModal({ type: "editar",   ins })}>✎</button>}
-                          {puedeEditar   && <button className="act-btn act-btn--salida" title="Registrar salida" onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
-                          {puedeEliminar && <button className="act-btn act-btn--delete" title="Eliminar"         onClick={() => setModal({ type: "eliminar", ins })}>🗑️</button>}
+                          {puedeVer      && <button className="act-btn act-btn--view"   data-tooltip="Ver detalle del insumo"   onClick={() => setModal({ type: "ver",      ins })}>👁</button>}
+                          {puedeEditar   && <button className="act-btn act-btn--edit"   data-tooltip="Editar insumo"            onClick={() => setModal({ type: "editar",   ins })}>✎</button>}
+                          {puedeEditar   && <button className="act-btn act-btn--salida" data-tooltip="Registrar salida"         onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
+                          {puedeEliminar && <button className="act-btn act-btn--delete" data-tooltip="Eliminar insumo"          onClick={() => setModal({ type: "eliminar", ins })}>🗑️</button>}
                         </div>
                       </td>
                     </tr>

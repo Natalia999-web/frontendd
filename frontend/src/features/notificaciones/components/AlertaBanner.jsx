@@ -53,7 +53,7 @@ export default function AlertaBanner({ onVerTodas }) {
             </p>
             <p className="alerta-banner__sub">Revisa los insumos o lotes con problemas urgentes</p>
           </div>
-          <button className="alerta-banner__close" onClick={cerrar} title="Cerrar">✕</button>
+          <button className="alerta-banner__close" onClick={cerrar} data-tooltip="Cerrar alerta">✕</button>
         </div>
 
         {/* Lista de alertas */}
@@ -70,7 +70,7 @@ export default function AlertaBanner({ onVerTodas }) {
                 <button
                   className="alerta-banner__item-read"
                   onClick={() => marcarLeida(n.id)}
-                  title="Marcar como leída"
+                  data-tooltip="Marcar como leída"
                 >
                   ✓
                 </button>

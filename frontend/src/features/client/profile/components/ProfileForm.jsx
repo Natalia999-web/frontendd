@@ -248,6 +248,7 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
           readOnly
           style={disabledStyle}
           title="El correo no puede modificarse desde aquí"
+          data-tooltip="El correo no puede modificarse desde aquí"
         />
       </Field>
 
@@ -259,7 +260,7 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
         error={errors.cedula}
       >
         {cedulaYaEstablecida ? (
-          <input value={form.cedula} readOnly style={disabledStyle} title="El número de documento no puede modificarse una vez establecido" />
+          <input value={form.cedula} readOnly style={disabledStyle} title="El número de documento no puede modificarse una vez establecido" data-tooltip="El documento no puede modificarse una vez establecido" />
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10, marginBottom: errors.tipo_documento ? 0 : 0 }}>

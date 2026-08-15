@@ -1029,6 +1029,7 @@ export default function GestionProductos() {
               type="button"
               className={`filter-icon-btn${hasFilter ? " has-filter" : ""}`}
               onClick={() => setShowFilter((v) => !v)}
+              data-tooltip="Filtrar productos"
             >
               ▼
             </button>
@@ -1107,7 +1108,7 @@ export default function GestionProductos() {
           )}
 
           {puedeCrear && (
-            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })}>
+            <button className="btn-agregar" onClick={() => setModal({ type: "crear" })} data-tooltip="Agregar nuevo producto">
               Agregar <span style={{ fontSize: 18 }}>+</span>
             </button>
           )}
@@ -1193,30 +1194,30 @@ export default function GestionProductos() {
                             <div className="actions-cell">
                               <button
                                 className="act-btn act-btn--view"
-                                title="Ver detalle"
+                                data-tooltip="Ver detalle del producto"
                                 onClick={() => setModal({ type: "ver", product: p })}
                               >👁</button>
                               {puedeEditar && (
                                 <button
                                   className="act-btn act-btn--edit"
-                                  title="Editar"
+                                  data-tooltip="Editar producto"
                                   onClick={() => setModal({ type: "editar", product: p })}
                                 >✎</button>
                               )}
                               <button
                                 className="act-btn act-btn--ficha"
-                                title="Ficha técnica"
+                                data-tooltip="Ver ficha técnica"
                                 onClick={() => setModal({ type: "ficha", product: p })}
                               >📋</button>
                               <button
                                 className="act-btn act-btn--salida"
-                                title="Registrar salida"
+                                data-tooltip="Registrar salida de producto"
                                 onClick={() => setModal({ type: "salida", product: p })}
                               >🚚</button>
                               {puedeEliminar && (
                                 <button
                                   className="act-btn act-btn--delete"
-                                  title="Eliminar"
+                                  data-tooltip="Eliminar producto"
                                   onClick={() => handleOpenDelete(p)}
                                 >🗑️</button>
                               )}

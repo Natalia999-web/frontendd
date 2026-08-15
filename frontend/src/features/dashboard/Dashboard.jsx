@@ -217,6 +217,7 @@ export default function Dashboard() {
                 type="button"
                 disabled={!fechaInicio || !fechaFin}
                 onClick={() => cargar("custom", fechaInicio, fechaFin)}
+                data-tooltip="Aplicar el rango de fechas seleccionado"
               >
                 Aplicar rango
               </button>
@@ -225,6 +226,7 @@ export default function Dashboard() {
                 type="button"
                 disabled={!fechaInicio || !fechaFin}
                 onClick={() => window.print()}
+                data-tooltip="Exportar dashboard como PDF"
               >
                 Exportar PDF
               </button>

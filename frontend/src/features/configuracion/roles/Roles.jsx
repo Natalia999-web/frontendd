@@ -227,7 +227,7 @@ export default function GestionRoles() {
           )}
 
           {puedeCrear && (
-            <button className="btn-agregar" onClick={() => setModal({ mode: "new" })}>
+            <button className="btn-agregar" onClick={() => setModal({ mode: "new" })} data-tooltip="Crear nuevo rol">
               Agregar <span style={{ fontSize: 18 }}>+</span>
             </button>
           )}
@@ -300,6 +300,7 @@ export default function GestionRoles() {
                       <div className="actions-cell">
                         <button
                           className="act-btn act-btn--view"
+                          data-tooltip="Ver rol"
                           onClick={() => setModal({ mode: "view", rol })}
                         >👁</button>
                         {!rol.esAdmin && (
@@ -307,12 +308,14 @@ export default function GestionRoles() {
                             {puedeEditar && (
                               <button
                                 className="act-btn act-btn--edit"
+                                data-tooltip="Editar rol"
                                 onClick={() => setModal({ mode: "edit", rol })}
                               >✎</button>
                             )}
                             {puedeEliminar && (
                               <button
                                 className="act-btn act-btn--delete"
+                                data-tooltip="Eliminar rol"
                                 onClick={() => setModal({ mode: "delete", rol })}
                               >🗑️</button>
                             )}

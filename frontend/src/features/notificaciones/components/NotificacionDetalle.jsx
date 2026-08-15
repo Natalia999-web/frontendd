@@ -188,7 +188,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
           <button
             className="btn-save"
             onClick={handleListo}
-            title="Marcar como completado y eliminar de la lista"
+            data-tooltip="Marcar como completado y eliminar de la lista"
           >
             ✓ Listo
           </button>
