@@ -10,6 +10,94 @@ import { getCompras } from "./services/comprasService.js";
 import { updateActivity, isInactive, isNearlyInactive, clearSession } from "./utils/api.js";
 import "./shared/index.css";
 
+/* ── Tooltip global con position:fixed ───────────────────────
+   Escapa cualquier overflow:hidden/auto, funciona dentro de
+   tarjetas, tablas, modales y paneles laterales.
+──────────────────────────────────────────────────────────── */
+;(function initTooltips() {
+  let tip = null;
+  let raf = null;
+
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "g-tooltip";
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+
+  function show(target) {
+    const text = target.getAttribute("data-tooltip");
+    if (!text || target.disabled) return;
+
+    const t = getTip();
+    t.textContent = text;
+    t.style.display = "block";
+    t.style.opacity = "0";
+
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const r  = target.getBoundingClientRect();
+      const tr = t.getBoundingClientRect();
+      const pos = target.getAttribute("data-tooltip-pos") || "top";
+      const gap = 8;
+      let top, left;
+
+      if (pos === "bottom") {
+        top  = r.bottom + gap;
+        left = r.left + r.width / 2 - tr.width / 2;
+      } else if (pos === "right") {
+        top  = r.top + r.height / 2 - tr.height / 2;
+        left = r.right + gap;
+      } else if (pos === "left") {
+        top  = r.top + r.height / 2 - tr.height / 2;
+        left = r.left - tr.width - gap;
+      } else {
+        /* top — si no cabe arriba, aparece abajo */
+        top  = r.top - tr.height - gap;
+        if (top < 6) top = r.bottom + gap;
+        left = r.left + r.width / 2 - tr.width / 2;
+      }
+
+      /* mantener dentro del viewport */
+      const vw = window.innerWidth, vh = window.innerHeight;
+      if (left < 6)                  left = 6;
+      if (left + tr.width > vw - 6)  left = vw - tr.width - 6;
+      if (top  < 6)                  top  = 6;
+      if (top  + tr.height > vh - 6) top  = vh - tr.height - 6;
+
+      t.style.top  = top  + "px";
+      t.style.left = left + "px";
+      t.style.opacity = "1";
+    });
+  }
+
+  function hide() {
+    if (!tip) return;
+    tip.style.opacity = "0";
+    if (raf) cancelAnimationFrame(raf);
+    /* ocultar completamente tras la transición */
+    clearTimeout(tip._hideTimer);
+    tip._hideTimer = setTimeout(() => {
+      if (tip && tip.style.opacity === "0") tip.style.display = "none";
+    }, 160);
+  }
+
+  document.addEventListener("mouseenter", e => {
+    const el = e.target.closest("[data-tooltip]");
+    if (el) show(el);
+  }, true);
+
+  document.addEventListener("mouseleave", e => {
+    if (e.target.closest("[data-tooltip]")) hide();
+  }, true);
+
+  /* ocultar al hacer scroll o cambiar tamaño de ventana */
+  document.addEventListener("scroll", hide, { capture: true, passive: true });
+  window.addEventListener("resize", hide, { passive: true });
+})();
+
 function ModalSesionExpira({ onContinuar }) {
   return (
     <div style={{
