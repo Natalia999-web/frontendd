@@ -106,6 +106,13 @@ def migrate_db():
             # OTP seguro para confirmar entrega de domicilios (reemplaza hash predecible)
             "ALTER TABLE Domicilios ADD COLUMN OTP VARCHAR(10) NULL",
             "ALTER TABLE Domicilios ADD COLUMN OTP_Expira DATETIME NULL",
+            # Pedidos por encima del stock (preorden): marca, anticipo del 50%
+            # exigido y anticipo efectivamente cubierto. Los calcula el backend.
+            "ALTER TABLE Ventas ADD COLUMN Sobre_Stock TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Requerido DECIMAL(30,2) NULL",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Pagado DECIMAL(30,2) NULL",
+            # Unidades de cada línea que van por encima del stock (preorden)
+            "ALTER TABLE Venta_x_Producto ADD COLUMN Cantidad_Preorden INT NOT NULL DEFAULT 0",
             # Chat de domicilios persistido en BD (antes se perdía en cada reinicio)
             """CREATE TABLE IF NOT EXISTS MensajesChat (
                 ID_Mensaje       INT AUTO_INCREMENT PRIMARY KEY,

@@ -30,6 +30,10 @@ class PedidoResponse(BaseModel):
     nombre_domiciliario:          Optional[str]     = None
     ordenes_produccion_pendientes: int              = 0
     requiere_produccion:          bool              = False
+    # Pedido especial por encima del stock: bandera y anticipo del 50%
+    sobre_stock:                  bool              = False
+    anticipo_requerido:           Optional[Decimal] = None
+    anticipo_pagado:              Optional[Decimal] = None
 
     class Config:
         from_attributes = True

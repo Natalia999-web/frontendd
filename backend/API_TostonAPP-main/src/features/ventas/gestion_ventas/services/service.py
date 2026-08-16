@@ -32,6 +32,60 @@ from .schemas import VentaCreate, DomicilioVentaInput
 # Costo fijo de domicilio (COP)
 COSTO_DOMICILIO = Decimal("5000")
 
+# Porcentaje del pedido que el cliente debe anticipar cuando pide MÁS unidades de
+# las que hay en stock (pedido especial / preorden). Regla de negocio del backend:
+# nunca se toma del request, el cliente no puede alterarla.
+PORCENTAJE_ANTICIPO_SOBRE_STOCK = Decimal("0.50")
+
+
+def _es_transferencia(metodo: str | None) -> bool:
+    return "transfer" in (metodo or "").strip().lower()
+
+
+def _evaluar_lineas_pedido(db: Session, productos_input) -> tuple[list[dict], Decimal]:
+    """Valida los productos contra el stock REAL y calcula el subtotal.
+
+    Bloquea la fila de cada producto con with_for_update(): dos pedidos
+    simultáneos del mismo producto se serializan, así no pueden leer el mismo
+    stock y creer ambos que les alcanza (condición de carrera del punto 9).
+
+    Cada línea devuelve cuántas unidades caben en stock y cuántas van por encima
+    (preorden). El stock NO se toca aquí: el descuento real sigue ocurriendo al
+    confirmar (tienda) o entregar (domicilio), como en el flujo actual.
+    """
+    lineas: list[dict] = []
+    subtotal = Decimal("0")
+
+    for p in productos_input:
+        producto = (
+            db.query(Producto)
+            .filter(Producto.ID_Producto == p.ID_Producto)
+            .with_for_update()
+            .first()
+        )
+        if not producto:
+            raise HTTPException(status_code=404, detail=f"Producto {p.ID_Producto} no encontrado")
+
+        stock    = producto.Stock or 0
+        cantidad = p.Cantidad
+        # Los productos por encargo (Requiere_Produccion) ya tienen su propio
+        # flujo: el déficit se cubre con una orden de producción, no es preorden.
+        requiere_produccion = bool(getattr(producto, "Requiere_Produccion", 0))
+        preorden = 0 if requiere_produccion else max(0, cantidad - stock)
+
+        precio    = producto.Precio_venta or Decimal("0")
+        subtotal += precio * Decimal(str(cantidad))
+
+        lineas.append({
+            "ID_Producto": p.ID_Producto,
+            "nombre":      producto.nombre,
+            "cantidad":    cantidad,
+            "stock":       stock,
+            "preorden":    preorden,
+        })
+
+    return lineas, subtotal
+
 
 _ESTADO_VENTA_LABEL = {
     1: "Pendiente", 4: "Confirmado", 5: "Cancelado",
@@ -44,6 +98,29 @@ def _label_estado(db: Session, id_estado: int) -> str:
         return _ESTADO_VENTA_LABEL[id_estado]
     estado = db.query(Estado).filter(Estado.ID_Estados == id_estado).first()
     return estado.Estado if estado else None
+
+
+def _descontar_stock_venta(db: Session, id_venta: int) -> None:
+    """Descuenta del stock lo vendido en la venta, bloqueando cada producto.
+
+    with_for_update() evita que dos pedidos que se confirman/entregan a la vez
+    lean el mismo stock y lo descuenten dos veces sobre el mismo valor. El stock
+    nunca baja de 0: lo que se pidió por encima quedó registrado como preorden en
+    Venta_x_Producto.Cantidad_Preorden.
+    """
+    items = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
+    for item in items:
+        producto = (
+            db.query(Producto)
+            .filter(Producto.ID_Producto == item.ID_Producto)
+            .with_for_update()
+            .first()
+        )
+        if not producto:
+            continue
+        producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
+        _actualizar_estado_producto(producto)
+        notificar_stock_producto(db, producto)
 
 
 def _actualizar_estado_producto(producto: Producto) -> None:
@@ -76,6 +153,10 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
             "precio_unitario": precio,
             "subtotal":        precio * Decimal(str(v.Cantidad)),
             "imagen":          _imagen_producto(db, v.ID_Producto),
+            # Unidades pedidas por encima del stock al crear el pedido y stock
+            # disponible ahora mismo (para que el panel y la app los muestren).
+            "cantidad_preorden": getattr(v, "Cantidad_Preorden", 0) or 0,
+            "stock_disponible":  (producto.Stock or 0) if producto else 0,
         })
 
     detalle            = db.query(DetalleVenta).filter(DetalleVenta.ID_Venta == venta.ID_Venta).first()
@@ -127,6 +208,11 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
         "ID_Empleado":                  domicilio.ID_Empleado if domicilio else None,
         "ordenes_produccion_pendientes": ordenes_pendientes,
         "requiere_produccion":           requiere_produccion,
+        # Pedido especial por encima del stock + anticipo del 50% (calculado y
+        # verificado en backend al crear la venta).
+        "sobre_stock":        bool(getattr(venta, "Sobre_Stock", 0)),
+        "anticipo_requerido": getattr(venta, "Anticipo_Requerido", None),
+        "anticipo_pagado":    getattr(venta, "Anticipo_Pagado", None),
     }
 
 
@@ -335,18 +421,12 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             detail="Debes registrar tu número de teléfono en tu perfil antes de solicitar un domicilio"
         )
 
-    # Valida productos, stock (para los que NO requieren producción) y calcula subtotal
-    subtotal_bruto = Decimal("0")
-    for p in datos.productos:
-        producto = db.query(Producto).filter(Producto.ID_Producto == p.ID_Producto).first()
-        if not producto:
-            raise HTTPException(status_code=404, detail=f"Producto {p.ID_Producto} no encontrado")
-        if not getattr(producto, "Requiere_Produccion", 0) and (producto.Stock or 0) < p.Cantidad:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Stock insuficiente para '{producto.nombre}' (disponible: {producto.Stock or 0})",
-            )
-        subtotal_bruto += producto.Precio_venta * Decimal(str(p.Cantidad))
+    # Valida productos contra el stock real (con bloqueo de fila) y calcula subtotal.
+    # Pedir por encima del stock ya no se rechaza: se marca como preorden y más
+    # abajo se le exige el anticipo del 50%.
+    lineas, subtotal_bruto = _evaluar_lineas_pedido(db, datos.productos)
+    preorden_por_producto = {l["ID_Producto"]: l["preorden"] for l in lineas}
+    sobre_stock = any(l["preorden"] > 0 for l in lineas)
 
     ESTADO_PENDIENTE = 1
 
@@ -371,9 +451,10 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
 
     for p in datos.productos:
         db.add(VentaXProducto(
-            ID_Venta    = nueva_venta.ID_Venta,
-            ID_Producto = p.ID_Producto,
-            Cantidad    = p.Cantidad,
+            ID_Venta          = nueva_venta.ID_Venta,
+            ID_Producto       = p.ID_Producto,
+            Cantidad          = p.Cantidad,
+            Cantidad_Preorden = preorden_por_producto.get(p.ID_Producto, 0),
         ))
 
     # Detectar productos de producción con déficit (la orden se crea cuando el cliente acepta la fecha)
@@ -408,8 +489,55 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     nueva_venta.Total = max(monto_restante, Decimal("0"))
 
     # Costo fijo de domicilio: se suma al total cuando el pedido es a domicilio
-    if datos.domicilio:
-        nueva_venta.Total += COSTO_DOMICILIO
+    costo_domicilio = COSTO_DOMICILIO if datos.domicilio else Decimal("0")
+    nueva_venta.Total += costo_domicilio
+
+    # ── Pedido por encima del stock: anticipo obligatorio del 50% ──────────────
+    # TODO lo que se evalúa aquí sale de la BD (stock real, precios reales, crédito
+    # realmente descontado). El request del cliente no puede declarar que ya pagó.
+    if sobre_stock:
+        # Valor real del pedido antes de aplicar créditos (lo que cuesta).
+        total_pedido       = subtotal_bruto - descuento_aplicado + costo_domicilio
+        anticipo_requerido = (total_pedido * PORCENTAJE_ANTICIPO_SOBRE_STOCK).quantize(Decimal("0.01"))
+        # Solo cuenta como pagado lo verificable en el servidor: el crédito
+        # efectivamente descontado del libro mayor del cliente.
+        anticipo_pagado    = credito_aplicado
+        # La transferencia no se puede verificar automáticamente, pero exige un
+        # comprobante adjunto que el administrador valida antes de confirmar.
+        tiene_soporte      = _es_transferencia(datos.Metodo_Pago) and bool(
+            (datos.comprobante_pago or "").strip()
+        )
+
+        # El pedido creado por el personal en el mostrador se cobra en el acto:
+        # queda marcado como sobre stock, pero no se le exige el anticipo online.
+        if not datos.creado_por_admin and anticipo_pagado < anticipo_requerido and not tiene_soporte:
+            faltante = anticipo_requerido - anticipo_pagado
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Este pedido supera el stock disponible, por lo que requiere un anticipo "
+                    f"del 50% (${anticipo_requerido:,.0f}). Te faltan ${faltante:,.0f}: págalo "
+                    f"con tus créditos o por transferencia adjuntando el comprobante."
+                ),
+            )
+
+        nueva_venta.Sobre_Stock        = 1
+        nueva_venta.Anticipo_Requerido = anticipo_requerido
+        nueva_venta.Anticipo_Pagado    = anticipo_pagado
+
+        detalle_preorden = ", ".join(
+            f"{l['nombre']}: {l['cantidad']} pedidas / {l['stock']} en stock"
+            for l in lineas if l["preorden"] > 0
+        )
+        notificar(
+            db, "pedido_sobre_stock", "Pedido por encima del stock",
+            f"El pedido #{nueva_venta.ID_Venta} supera el stock ({detalle_preorden}). "
+            f"Anticipo requerido: ${anticipo_requerido:,.0f}. Revisá y proponé una fecha de entrega.",
+            nueva_venta.ID_Venta, "/ventas/pedidos",
+        )
+    else:
+        nueva_venta.Sobre_Stock = 0
 
     db.add(DetalleVenta(
         ID_Venta    = nueva_venta.ID_Venta,
@@ -537,25 +665,11 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
 
     # Al confirmar un pedido SIN domicilio (recoger en tienda): descontar stock
     if nuevo_estado == EstadoPedido.CONFIRMADO and not tiene_domicilio:
-        items = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
-        for item in items:
-            producto = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
-            if not producto:
-                continue
-            producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
-            _actualizar_estado_producto(producto)
-            notificar_stock_producto(db, producto)
+        _descontar_stock_venta(db, id_venta)
 
     # Al entregar un pedido CON domicilio: descontar stock
     if nuevo_estado == EstadoPedido.ENTREGADO and tiene_domicilio:
-        items = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
-        for item in items:
-            producto = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
-            if not producto:
-                continue
-            producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
-            _actualizar_estado_producto(producto)
-            notificar_stock_producto(db, producto)
+        _descontar_stock_venta(db, id_venta)
 
     # Al cancelar: restaurar stock si ya fue descontado
     # - pickup: stock se descuenta en CONFIRMADO; se restaura desde confirmado/preparando/listo
@@ -567,7 +681,12 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
         if stock_descontado:
             items = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
             for item in items:
-                producto = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
+                producto = (
+                    db.query(Producto)
+                    .filter(Producto.ID_Producto == item.ID_Producto)
+                    .with_for_update()
+                    .first()
+                )
                 if producto:
                     producto.Stock = (producto.Stock or 0) + (item.Cantidad or 0)
                     _actualizar_estado_producto(producto)
@@ -680,17 +799,23 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
             status_code=400,
             detail="Solo se puede proponer fecha en ventas Pendientes o en estado Fecha propuesta",
         )
-    # La propuesta de fecha de entrega solo aplica a pedidos con DOMICILIO
-    # (los de recoger en tienda no tienen fecha de entrega a domicilio).
+    # La propuesta de fecha aplica a pedidos con DOMICILIO y a los pedidos por
+    # encima del stock (preorden), que necesitan una fecha aunque se recojan en
+    # tienda. Un pedido normal de recoger en tienda no la necesita.
     tiene_domicilio = db.query(Domicilio).filter(
         Domicilio.ID_Venta == id_venta
     ).first() is not None
-    if not tiene_domicilio:
+    es_sobre_stock = bool(getattr(venta, "Sobre_Stock", 0))
+    if not tiene_domicilio and not es_sobre_stock:
         raise HTTPException(
             status_code=400,
-            detail="Solo se puede proponer fecha de entrega para pedidos con domicilio",
+            detail=(
+                "Solo se puede proponer fecha de entrega para pedidos con domicilio "
+                "o pedidos por encima del stock"
+            ),
         )
     descartar_notificacion(db, "produccion_requerida", id_venta)
+    descartar_notificacion(db, "pedido_sobre_stock",   id_venta)
     venta.Estado = EstadoPedido.FECHA_PROPUESTA
     venta.Fecha_entrega_esperada = fecha_entrega
     notificar(

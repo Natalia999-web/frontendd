@@ -52,6 +52,9 @@ class ProductoVentaResponse(BaseModel):
     precio_unitario: Optional[Decimal] = None
     subtotal:        Optional[Decimal] = None
     imagen:          Optional[str]     = None
+    # Unidades pedidas por encima del stock (preorden) y stock actual del producto
+    cantidad_preorden: int = 0
+    stock_disponible:  int = 0
 
 
 # ── Respuesta de una venta ──
@@ -74,6 +77,10 @@ class VentaResponse(BaseModel):
     tiene_domicilio:        bool               = False
     ID_Domicilio:           Optional[int]      = None
     comprobante_pago:       Optional[str]      = None
+    # Pedido especial por encima del stock: bandera y anticipo del 50%
+    sobre_stock:            bool               = False
+    anticipo_requerido:     Optional[Decimal]  = None
+    anticipo_pagado:        Optional[Decimal]  = None
 
     class Config:
         from_attributes = True

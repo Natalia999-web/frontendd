@@ -371,6 +371,13 @@ class Venta(Base):
     Fecha_entrega          = Column(DateTime, nullable=True)   # timestamp real de entrega
     Fecha_entrega_esperada = Column(DateTime, nullable=True)
     Comprobante_Pago       = Column(Text, nullable=True)
+    # Pedido especial: alguna línea supera el stock disponible. Lo calcula el
+    # backend al crear la venta; el cliente no puede enviarlo.
+    Sobre_Stock            = Column(Integer, default=0, nullable=True)
+    # Anticipo del 50% exigido por superar el stock y lo efectivamente cubierto
+    # (créditos verificados en el libro mayor + transferencia con comprobante).
+    Anticipo_Requerido     = Column(Numeric(30, 2), nullable=True)
+    Anticipo_Pagado        = Column(Numeric(30, 2), nullable=True)
 
     usuario            = relationship("Usuario", back_populates="ventas")
     productos          = relationship("VentaXProducto", back_populates="venta")
@@ -386,6 +393,9 @@ class VentaXProducto(Base):
     ID_Venta    = Column(Integer, ForeignKey("Ventas.ID_Venta"), primary_key=True)
     ID_Producto = Column(Integer, ForeignKey("Productos.ID_Producto"), primary_key=True)
     Cantidad    = Column(Integer)
+    # Unidades pedidas por encima del stock disponible al crear la venta
+    # (preorden). No altera el stock real: solo identifica la parte especial.
+    Cantidad_Preorden = Column(Integer, default=0, nullable=True)
 
     venta    = relationship("Venta", back_populates="productos")
     producto = relationship("Producto", back_populates="ventas")

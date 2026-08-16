@@ -267,11 +267,17 @@ def eliminar_mi_cuenta(
 # PUSH NOTIFICATIONS — FCM token
 # ─────────────────────────────────────────
 
+from typing import Optional
+
 from pydantic import BaseModel as _BaseModel
 
 
 class _FCMTokenInput(_BaseModel):
     token: str
+
+
+class _FCMTokenBaja(_BaseModel):
+    token: Optional[str] = None
 
 
 @router.post("/fcm-token")
@@ -280,7 +286,30 @@ def registrar_token_fcm(
     db:     Session = Depends(get_db),
     actual: dict    = Depends(obtener_usuario_actual),
 ):
-    """Guarda el FCM device token del usuario en BD para enviar push notifications."""
+    """Guarda el FCM device token del usuario en BD para enviar push notifications.
+
+    El token pertenece al dispositivo: al asignarlo se desvincula de cualquier
+    otra cuenta que lo tuviera registrado."""
     from src.shared.services.fcm_service import guardar_token_fcm
     guardar_token_fcm(actual["registro"].ID_Usuario, datos.token, db=db)
+    return {"ok": True}
+
+
+@router.delete("/fcm-token")
+def desregistrar_token_fcm(
+    datos:  Optional[_FCMTokenBaja] = None,
+    db:     Session = Depends(get_db),
+    actual: dict    = Depends(obtener_usuario_actual),
+):
+    """Desvincula el token de push del usuario autenticado (cierre de sesión).
+
+    A partir de aquí el backend NO tiene a dónde enviar las notificaciones
+    privadas de esta cuenta, así que el dispositivo deja de recibirlas aunque la
+    app siga instalada o el borrado local del token falle."""
+    from src.shared.services.fcm_service import eliminar_token_fcm
+    eliminar_token_fcm(
+        actual["registro"].ID_Usuario,
+        datos.token if datos else None,
+        db=db,
+    )
     return {"ok": True}

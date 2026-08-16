@@ -11,18 +11,53 @@ _fcm_tokens: dict = {}
 
 def guardar_token_fcm(id_usuario: int, token: str, db=None) -> None:
     """Guarda el FCM token en BD (fuente de verdad) y en memoria (fallback).
+
+    Un token identifica un DISPOSITIVO, no una cuenta: por eso antes de asignarlo
+    se borra de cualquier otro usuario que lo tuviera. Así, si el usuario A cerró
+    sesión sin conexión (o la app se desinstaló) y el usuario B inicia sesión en
+    el mismo dispositivo, los push privados de A dejan de llegar a ese teléfono.
+
     Silencioso ante cualquier error para no bloquear el login."""
+    # El fallback en memoria también es por dispositivo: quitar el token de otros.
+    for uid, tok in list(_fcm_tokens.items()):
+        if tok == token and uid != id_usuario:
+            _fcm_tokens.pop(uid, None)
     _fcm_tokens[id_usuario] = token
     if db is None:
         return
     try:
         from src.shared.services.models import Usuario
+        db.query(Usuario).filter(
+            Usuario.FCM_Token == token,
+            Usuario.ID_Usuario != id_usuario,
+        ).update({"FCM_Token": None}, synchronize_session=False)
         u = db.query(Usuario).filter(Usuario.ID_Usuario == id_usuario).first()
         if u:
             u.FCM_Token = token
             db.commit()
     except Exception as e:
         logger.error(f"FCM: no se pudo guardar token en BD para usuario {id_usuario}: {e}")
+
+
+def eliminar_token_fcm(id_usuario: int, token: str | None = None, db=None) -> None:
+    """Desvincula el token de push del usuario al cerrar sesión.
+
+    Si se indica [token] solo se borra cuando coincide con el guardado (evita que
+    una sesión vieja borre el token de un dispositivo distinto del mismo usuario).
+    Sin [token] se borra el que tenga registrado."""
+    guardado = _fcm_tokens.get(id_usuario)
+    if token is None or guardado is None or guardado == token:
+        _fcm_tokens.pop(id_usuario, None)
+    if db is None:
+        return
+    try:
+        from src.shared.services.models import Usuario
+        u = db.query(Usuario).filter(Usuario.ID_Usuario == id_usuario).first()
+        if u and (token is None or not u.FCM_Token or u.FCM_Token == token):
+            u.FCM_Token = None
+            db.commit()
+    except Exception as e:
+        logger.error(f"FCM: no se pudo borrar token en BD para usuario {id_usuario}: {e}")
 
 
 def _token_usuario(id_usuario: int, db=None) -> str | None:
