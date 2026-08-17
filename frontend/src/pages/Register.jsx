@@ -66,12 +66,53 @@ const Register = () => {
     setForm(newForm);
     setErrors(p => {
       const n = { ...p };
-      if (!val) { delete n[k]; return n; }
-      if (k === 'Correo' && val.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) n[k] = 'Formato de correo inválido';
-      else if (k === 'Confirmar_contrasena' && newForm.Contrasena && val !== newForm.Contrasena) n[k] = 'Las contraseñas no coinciden';
-      else delete n[k];
-      if (k === 'Contrasena' && newForm.Confirmar_contrasena) {
-        if (val !== newForm.Confirmar_contrasena) n.Confirmar_contrasena = 'Las contraseñas no coinciden';
+      if (k === 'Nombre') {
+        if (!val.trim()) n.Nombre = 'El nombre es obligatorio';
+        else delete n.Nombre;
+      }
+      if (k === 'Apellidos') {
+        if (!val.trim()) n.Apellidos = 'Los apellidos son obligatorios';
+        else delete n.Apellidos;
+      }
+      if (k === 'RazonSocial') {
+        if (!val.trim()) n.RazonSocial = 'La razón social es obligatoria';
+        else delete n.RazonSocial;
+      }
+      if (k === 'Tipo_documento') {
+        if (val === 'NIT') {
+          delete n.Nombre;
+          delete n.Apellidos;
+          if (!newForm.RazonSocial.trim()) n.RazonSocial = 'La razón social es obligatoria';
+        } else {
+          delete n.RazonSocial;
+          if (!newForm.Nombre.trim()) n.Nombre = 'El nombre es obligatorio';
+          if (!newForm.Apellidos.trim()) n.Apellidos = 'Los apellidos son obligatorios';
+        }
+      }
+      if (k === 'Numero_documento') {
+        if (!val.trim()) n.Numero_documento = 'El número de documento es obligatorio';
+        else delete n.Numero_documento;
+      }
+      if (k === 'Correo') {
+        if (!val.trim()) n.Correo = 'El correo es obligatorio';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) n.Correo = 'Formato de correo inválido';
+        else delete n.Correo;
+      }
+      if (k === 'Contrasena') {
+        if (!val) n.Contrasena = 'La contraseña es obligatoria';
+        else {
+          const pe = validatePassword(val);
+          if (pe) n.Contrasena = pe;
+          else delete n.Contrasena;
+        }
+        if (newForm.Confirmar_contrasena) {
+          if (val !== newForm.Confirmar_contrasena) n.Confirmar_contrasena = 'Las contraseñas no coinciden';
+          else delete n.Confirmar_contrasena;
+        }
+      }
+      if (k === 'Confirmar_contrasena') {
+        if (!val) n.Confirmar_contrasena = 'Confirma tu contraseña';
+        else if (newForm.Contrasena && val !== newForm.Contrasena) n.Confirmar_contrasena = 'Las contraseñas no coinciden';
         else delete n.Confirmar_contrasena;
       }
       return n;

@@ -76,6 +76,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
     let err = "";
+    if (k === "productoId" && !fromCreate && !v) err = "Selecciona un producto";
     if (k === "procedimiento" && !v.trim()) err = "Debes describir el procedimiento";
     setErrors(p => ({ ...p, [k]: err }));
   };

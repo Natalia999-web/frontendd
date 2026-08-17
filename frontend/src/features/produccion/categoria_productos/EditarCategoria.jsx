@@ -42,7 +42,21 @@ export default function EditarCategoria({ category, onClose, onSave, existingCat
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
     let err = "";
-    if (v && k === "descripcion" && !tieneLetras(v)) err = "La descripción debe contener letras";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t)                   err = "Campo requerido";
+      else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === t.toLowerCase() && c.id !== category?.id))
+        err = "Ya existe una categoría con este nombre";
+    }
+    if (k === "descripcion") {
+      const t = v.trim();
+      if (!t)                   err = "Campo requerido";
+      else if (!tieneLetras(v)) err = "La descripción debe contener letras";
+    }
+    if (k === "icon") {
+      if (existingCategories.some(c => c.icon === v && c.id !== category?.id))
+        err = "Este icono ya está en uso por otra categoría";
+    }
     setErrors(p => ({ ...p, [k]: err }));
   };
 

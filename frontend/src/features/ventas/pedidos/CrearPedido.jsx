@@ -226,9 +226,15 @@ export default function CrearPedido({ onClose, onSave }) {
     let err = "";
     if (k === "idCliente"         && !v)        err = "Selecciona un cliente para continuar";
     if (k === "direccion_entrega" && !v.trim()) err = "Ingresa la dirección de entrega";
+    if (k === "departamento"      && !v.trim()) err = "El departamento es obligatorio";
+    if (k === "municipio"         && !v.trim()) err = "El municipio es obligatorio";
+    if (k === "metodo_pago"       && !v)        err = "Selecciona un método de pago";
     if (k === "fecha_entrega") {
       if (!v) err = form.domicilio ? "Selecciona la fecha de entrega" : "Selecciona la fecha de recogida";
       else if (new Date(v) < new Date(new Date().toDateString())) err = "La fecha no puede ser en el pasado";
+    }
+    if (k === "descuento" && Number(v) < 0) {
+      err = "El descuento no puede ser negativo";
     }
     setErrors(e => ({ ...e, [k]: err }));
   };

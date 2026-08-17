@@ -23,7 +23,13 @@ export default function CrearRol({ onClose, onSave }) {
 
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
-    setErrors(p => ({ ...p, [k]: "" }));
+    let err = "";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t) err = "El nombre del rol es obligatorio";
+      else if (t.length < 2) err = "Mínimo 2 caracteres";
+    }
+    setErrors(p => ({ ...p, [k]: err }));
   };
 
   const handleIconFile = e => {

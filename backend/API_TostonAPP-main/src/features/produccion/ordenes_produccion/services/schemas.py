@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional, Any, List
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from decimal import Decimal
 
 
@@ -15,7 +15,7 @@ class OrdenCreate(BaseModel):
 
     @model_validator(mode="after")
     def validar_fechas(self):
-        hoy = date.today()
+        hoy = datetime.now(timezone(timedelta(hours=-5))).date()
         if self.Fecha_inicio.date() < hoy:
             raise ValueError("La Fecha_inicio no puede ser anterior a hoy")
         if self.Fecha_Entrega < self.Fecha_inicio:
@@ -34,9 +34,6 @@ class OrdenUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validar_fechas_update(self):
-        hoy = date.today()
-        if self.Fecha_inicio is not None and self.Fecha_inicio.date() < hoy:
-            raise ValueError("La Fecha_inicio no puede ser anterior a hoy")
         if self.Fecha_inicio is not None and self.Fecha_Entrega is not None:
             if self.Fecha_Entrega < self.Fecha_inicio:
                 raise ValueError("La Fecha_Entrega no puede ser anterior a la Fecha_inicio")

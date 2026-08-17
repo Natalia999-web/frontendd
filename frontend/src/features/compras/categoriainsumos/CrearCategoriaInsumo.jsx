@@ -3,7 +3,7 @@ import { ModalOverlay } from "./ui.jsx";
 import EmojiPicker from "../../../shared/components/EmojiPicker";
 import CharCount from "../../../shared/components/CharCount";
 import "./CategoriaInsumos.css";
-import { soloLetras, tieneLetras } from "../../../utils/inputFilters";
+import { soloLetras, tieneLetras, esRepetitivo } from "../../../utils/inputFilters";
 
 export default function CrearCategoriaInsumo({ onClose, onSave, existingCategories = [] }) {
   const [form, setForm]   = useState({ nombre: "", descripcion: "", icon: "🥬" });
@@ -13,18 +13,40 @@ export default function CrearCategoriaInsumo({ onClose, onSave, existingCategori
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
     let err = "";
-    if (v && k === "descripcion" && !tieneLetras(v)) err = "La descripción debe contener letras";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t)                             err = "Campo requerido";
+      else if (t.length < 2)              err = "Mínimo 2 caracteres";
+      else if (esRepetitivo(v))           err = "El nombre no puede ser texto repetitivo";
+      else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === t.toLowerCase()))
+        err = "Ya existe una categoría con este nombre";
+    }
+    if (k === "descripcion") {
+      const t = v.trim();
+      if (!t)                             err = "Campo requerido";
+      else if (t.length < 5)              err = "Mínimo 5 caracteres";
+      else if (!tieneLetras(v))           err = "La descripción debe contener letras";
+      else if (esRepetitivo(v))           err = "La descripción no puede ser texto repetitivo";
+    }
+    if (k === "icon") {
+      if (existingCategories.some(c => c.icon === v))
+        err = "Este icono ya está en uso por otra categoría";
+    }
     setErrors(p => ({ ...p, [k]: err }));
   };
 
   const validate = () => {
     const e = {};
     const nom = form.nombre.trim().toLowerCase();
-    if (!form.nombre.trim())                 e.nombre = "Campo requerido";
+    if (!form.nombre.trim())                        e.nombre = "Campo requerido";
+    else if (form.nombre.trim().length < 2)         e.nombre = "Mínimo 2 caracteres";
+    else if (esRepetitivo(form.nombre))             e.nombre = "El nombre no puede ser texto repetitivo";
     else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === nom))
       e.nombre = "Ya existe una categoría con este nombre";
-    if (!form.descripcion.trim())            e.descripcion = "Campo requerido";
-    else if (!tieneLetras(form.descripcion)) e.descripcion = "La descripción debe contener letras";
+    if (!form.descripcion.trim())                   e.descripcion = "Campo requerido";
+    else if (form.descripcion.trim().length < 5)    e.descripcion = "Mínimo 5 caracteres";
+    else if (!tieneLetras(form.descripcion))        e.descripcion = "La descripción debe contener letras";
+    else if (esRepetitivo(form.descripcion))        e.descripcion = "La descripción no puede ser texto repetitivo";
     if (existingCategories.some(c => c.icon === form.icon))
       e.icon = "Este icono ya está en uso por otra categoría";
     return e;

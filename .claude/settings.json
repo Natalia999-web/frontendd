@@ -7,7 +7,8 @@
       "Skill(run:*)",
       "Bash(git -C \"c:/Users/isafe/OneDrive/Desktop/frontend\" log --oneline -3)",
       "Bash(git -C \"c:/Users/isafe/OneDrive/Desktop/frontend\" add frontend/src/pages/LandingPage.jsx frontend/public/torta-platano.jpg)",
-      "Bash(grep -rn \"width: [0-9]\\\\{3,4\\\\}px\\\\|min-width: [0-9]\\\\{3,4\\\\}px\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/configuracion/Usuarios/Usuarios.css\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/compras/proveedores/Proveedores.css\")"
+      "Bash(grep -rn \"width: [0-9]\\\\{3,4\\\\}px\\\\|min-width: [0-9]\\\\{3,4\\\\}px\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/configuracion/Usuarios/Usuarios.css\" \"c:/Users/isafe/OneDrive/Desktop/frontend/frontend/src/features/compras/proveedores/Proveedores.css\")",
+      "Read(//c/Users/isafe/.claude/projects/c--Users-isafe-OneDrive-Desktop-frontend/d4f8b7de-b1cf-416e-a4b6-fb4a4e106418/tool-results/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\isafe\\OneDrive\\Desktop"

@@ -125,18 +125,29 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
     ? sugerirPrecioConGanancia(costoProduccion)
     : 0;
 
-  /* ── Setter genérico ──────────────────────────────────── */
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
     let err = "";
-    if (v !== "" && v !== null) {
-      if ((k === "descripcion_corta" || k === "descripcion_larga") && !tieneLetras(v)) err = "La descripción debe contener letras";
-      if (k === "precio" && (isNaN(v) || Number(v) <= 0)) err = "Precio válido requerido";
-      if (k === "stockMinimo" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
-      if (k === "stockMinimo" && !isNaN(v) && Number(v) > 99999) err = "Máximo 99 999 unidades";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t) err = "El nombre es obligatorio";
+      else if (t.length < 2) err = "Mínimo 2 caracteres";
+      else if (existingProducts.some(p => p.nombre.trim().toLowerCase() === t.toLowerCase() && p.id !== product?.id))
+        err = "Ya existe un producto con este nombre";
     }
-    if (k === "nombre"      && !v.trim()) err = "El nombre es obligatorio";
-    if (k === "idCategoria" && !v)        err = "Selecciona una categoría";
+    if (k === "idCategoria" && !v) err = "Selecciona una categoría";
+    if (k === "precio") {
+      if (v === "" || v === null) err = "El precio es obligatorio";
+      else if (isNaN(v) || Number(v) <= 0) err = "Precio válido requerido";
+    }
+    if (k === "stockMinimo") {
+      if (v === "" || v === null) err = "El stock mínimo es obligatorio";
+      else if (isNaN(v) || Number(v) < 0) err = "Valor válido requerido";
+      else if (Number(v) > 99999) err = "Máximo 99 999 unidades";
+    }
+    if ((k === "descripcion_corta" || k === "descripcion_larga") && v.trim() && !tieneLetras(v)) {
+      err = "La descripción debe contener letras";
+    }
     setErrors((p) => ({ ...p, [k]: err }));
   };
 

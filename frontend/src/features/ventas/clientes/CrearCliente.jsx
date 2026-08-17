@@ -125,12 +125,35 @@ export default function CrearCliente({ onClose, onSave }) {
       else               newForm = { ...newForm, razonSocial: '' };
     }
     setForm(newForm);
+    const users = existing || [];
     let err = "";
-    if (val) {
-      if (k === 'correo' && val.includes('@') && !/\S+@\S+\.\S+/.test(val)) err = "Formato de correo inválido";
-      if (k === 'contrasena' && val.length < 8) err = "Mínimo 8 caracteres";
-      if (k === 'contrasena' && val.length >= 8 && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(val)) err = "Debe incluir mayúsculas, minúsculas y números";
-      if (k === 'confirmar' && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    if (k === 'tipoDoc' && !val) err = "Requerido";
+    if (k === 'numDoc') {
+      if (!val.trim()) err = "El número de documento es obligatorio";
+      else if (users.some(u => u.cedula === val)) err = "Este documento ya está registrado";
+    }
+    if (k === 'nombre' && !val.trim()) err = "El nombre es obligatorio";
+    if (k === 'apellidos' && !val.trim()) err = "Los apellidos son obligatorios";
+    if (k === 'razonSocial' && !val.trim()) err = "La razón social es obligatoria";
+    if (k === 'correo') {
+      if (!val.trim()) err = "El correo es obligatorio";
+      else if (!/\S+@\S+\.\S+/.test(val)) err = "Formato de correo inválido";
+      else if (users.some(u => u.correo.toLowerCase() === val.toLowerCase())) err = "Este correo ya está en uso";
+    }
+    if (k === 'telefono') {
+      if (!val.trim()) err = "El teléfono es obligatorio";
+      else if (val.replace(/\D/g, "").length !== 10) err = "El teléfono debe tener 10 dígitos";
+    }
+    if (k === 'fechaCreacion' && !val) err = "La fecha de registro es obligatoria";
+    if (k === 'departamento' && !val) err = "Selecciona un departamento";
+    if (k === 'municipio' && !val) err = "Selecciona un municipio";
+    if (k === 'contrasena') {
+      if (!val) err = "La contraseña es obligatoria";
+      else if (val.length < 8) err = "Mínimo 8 caracteres";
+      else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(val)) err = "Debe incluir mayúsculas, minúsculas y números";
+    }
+    if (k === 'confirmar') {
+      if (newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
     }
     setErrors(p => {
       const n = { ...p, [k]: err };

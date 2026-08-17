@@ -13,7 +13,21 @@ export default function CrearCategoria({ onClose, onSave, existingCategories = [
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
     let err = "";
-    if (v && k === "descripcion" && !tieneLetras(v)) err = "La descripción debe contener letras";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t)                   err = "Campo requerido";
+      else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === t.toLowerCase()))
+        err = "Ya existe una categoría con este nombre";
+    }
+    if (k === "descripcion") {
+      const t = v.trim();
+      if (!t)                   err = "Campo requerido";
+      else if (!tieneLetras(v)) err = "La descripción debe contener letras";
+    }
+    if (k === "icon") {
+      if (existingCategories.some(c => c.icon === v))
+        err = "Este icono ya está en uso por otra categoría";
+    }
     setErrors(p => ({ ...p, [k]: err }));
   };
 

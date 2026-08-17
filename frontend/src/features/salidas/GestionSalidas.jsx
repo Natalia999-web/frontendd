@@ -186,9 +186,10 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
 
   const validate = () => {
     const e = {};
-    if (!seleccionado)                                          e.seleccionado = "Selecciona un producto o insumo";
-    if (!cantidad || isNaN(cantidad) || Number(cantidad) <= 0) e.cantidad     = "Ingresa una cantidad válida";
-    else if (Number(cantidad) > stockActual)                   e.cantidad     = `Máximo: ${stockActual} ${unidadLabel}`;
+    if (!seleccionado)                                           e.seleccionado = "Selecciona un producto o insumo";
+    if (stockActual === 0)                                       e.cantidad     = "No hay stock disponible de este insumo.";
+    else if (!cantidad || isNaN(cantidad) || Number(cantidad) <= 0) e.cantidad = "Ingresa una cantidad mayor a 0.";
+    else if (Number(cantidad) > stockActual)                    e.cantidad     = `Solo hay ${stockActual} ${unidadLabel} disponibles`;
     return e;
   };
 
@@ -254,7 +255,14 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                       return (
                         <button key={`${item._tipo}-${item.id}`}
                           className={`sl-lista__item${seleccionado?.id === item.id && seleccionado?._tipo === item._tipo ? " selected" : ""}`}
-                          onClick={() => { setSeleccionado(item); setErrors(p => ({ ...p, seleccionado: "" })); }}
+                          onClick={() => {
+                            setSeleccionado(item);
+                            setErrors(p => ({
+                              ...p,
+                              seleccionado: "",
+                              cantidad: agot ? "No hay stock disponible de este insumo." : "",
+                            }));
+                          }}
                           style={agot ? { borderColor: "#ef9a9a", background: "#fff8f8" } : undefined}>
                           <div className="sl-lista__item-name" style={agot ? { color: "#c62828" } : undefined}>
                             {item.nombre}
@@ -317,13 +325,14 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                     onKeyDown={e => { if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") e.preventDefault(); }}
                     onChange={e => {
                       const v = e.target.value;
-                      if (v === "" || Number(v) > 0) {
-                        setCantidad(v);
-                        setErrors(p => ({ ...p, cantidad: "" }));
-                      }
+                      setCantidad(v);
+                      let err = "";
+                      if (v !== "" && (isNaN(v) || Number(v) <= 0)) err = "Ingresa una cantidad mayor a 0.";
+                      else if (v !== "" && Number(v) > stockActual) err = `Solo hay ${stockActual} ${unidadLabel} disponibles`;
+                      setErrors(p => ({ ...p, cantidad: err }));
                     }}
                     placeholder={seleccionado ? `Máx. ${stockActual}` : "—"}
-                    disabled={!seleccionado} />
+                    disabled={!seleccionado || stockActual === 0} />
                   <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#9e9e9e", pointerEvents: "none" }}>
                     {unidadLabel}
                   </span>
@@ -351,7 +360,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
               </div>
 
               <button className="sl-btn-registrar" onClick={handleRegistrar}
-                disabled={saving || !seleccionado}
+                disabled={saving || !seleccionado || stockActual === 0}
                 style={{ background: tipoActual.color }}>
                 {saving ? "Registrando…" : `${tipoActual.icon} Registrar ${tipoActual.label.toLowerCase()}`}
               </button>

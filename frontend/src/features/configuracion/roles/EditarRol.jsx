@@ -30,7 +30,13 @@ export default function EditarRol({ rol, mode = "edit", onClose, onSave }) {
 
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
-    setErrors(p => ({ ...p, [k]: "" }));
+    let err = "";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t) err = "Campo requerido";
+      else if (t.length < 2) err = "Mínimo 2 caracteres";
+    }
+    setErrors(p => ({ ...p, [k]: err }));
   };
 
   const handleIconFile = e => {

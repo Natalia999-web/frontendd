@@ -68,7 +68,9 @@ export async function apiFetch(endpoint, options = {}) {
       } else if (Array.isArray(error.detail)) {
         mensaje = error.detail.map(e => e.msg).join(", ");
       }
-      throw new Error(mensaje);
+      const apiErr = new Error(mensaje);
+      apiErr.statusCode = res.status;
+      throw apiErr;
     }
 
     return res.json();

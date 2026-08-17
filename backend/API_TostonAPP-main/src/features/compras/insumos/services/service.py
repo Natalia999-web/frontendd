@@ -1,28 +1,39 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, func, case
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from datetime import datetime
-
-from sqlalchemy import or_, and_, func, case
 from src.shared.services.models import Insumo, CategoriaInsumo, UnidadMedida, LoteCompra, FichaTecnicaInsumo, OrdenProduccion, DetalleCompra
 from .schemas import InsumoCreate, InsumoUpdate
 
 
-def _formato_insumo(insumo: Insumo, db: Session) -> dict:
-    """Construye el dict de respuesta con categoria, unidad y lote."""
-    categoria = db.query(CategoriaInsumo).filter(
-        CategoriaInsumo.ID_Categoria == insumo.ID_Categoria
-    ).first()
+def _formato_insumo(
+    insumo: Insumo,
+    db: Session,
+    *,
+    detalle_map=None,
+    ficha_set=None,
+    orden_set=None,
+) -> dict:
+    """Construye el dict de respuesta con categoria, unidad y lote.
 
-    unidad = db.query(UnidadMedida).filter(
-        UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-    ).first()
+    Los kwargs opcionales aceptan datos pre-cargados en el caso de listado;
+    cuando son None usa db.query() igual que antes (op. individual sin cambio).
+    """
+    # categoria y unidad_medida: lazy-load en op. individuales, eager en listado
+    categoria = insumo.categoria
+    unidad    = insumo.unidad_medida
 
     hoy = datetime.utcnow()
-    proximo_lote = (
-        db.query(LoteCompra)
-        .filter(LoteCompra.ID_Insumo == insumo.ID_Insumo)
-        .first()
-    )
+
+    # proximo_lote: usa el relationship ya cargado en listado, db.query en individual
+    if detalle_map is not None:
+        proximo_lote = insumo.lotes_compra[0] if insumo.lotes_compra else None
+    else:
+        proximo_lote = (
+            db.query(LoteCompra)
+            .filter(LoteCompra.ID_Insumo == insumo.ID_Insumo)
+            .first()
+        )
 
     proximo_venc = None
     dias_para_vencer = None
@@ -30,31 +41,39 @@ def _formato_insumo(insumo: Insumo, db: Session) -> dict:
         proximo_venc = proximo_lote.Fecha_Vencimiento.strftime("%Y-%m-%d")
         dias_para_vencer = (proximo_lote.Fecha_Vencimiento - hoy).days
 
-    ultimo_detalle = (
-        db.query(DetalleCompra)
-        .filter(DetalleCompra.ID_Insumo == insumo.ID_Insumo)
-        .order_by(DetalleCompra.ID_Detalle_Compra.desc())
-        .first()
-    )
+    if detalle_map is not None:
+        ultimo_detalle = detalle_map.get(insumo.ID_Insumo)
+    else:
+        ultimo_detalle = (
+            db.query(DetalleCompra)
+            .filter(DetalleCompra.ID_Insumo == insumo.ID_Insumo)
+            .order_by(DetalleCompra.ID_Detalle_Compra.desc())
+            .first()
+        )
     precio_unitario = float(ultimo_detalle.Precio_Und) if ultimo_detalle and ultimo_detalle.Precio_Und else 0.0
 
-    en_ficha = db.query(FichaTecnicaInsumo).filter(
-        FichaTecnicaInsumo.ID_Insumo == insumo.ID_Insumo
-    ).first() is not None
+    if ficha_set is not None:
+        en_ficha = insumo.ID_Insumo in ficha_set
+    else:
+        en_ficha = db.query(FichaTecnicaInsumo).filter(
+            FichaTecnicaInsumo.ID_Insumo == insumo.ID_Insumo
+        ).first() is not None
 
-    # Insumo en orden activa (directa o via ficha)
-    fichas_con_insumo = (
-        db.query(FichaTecnicaInsumo.ID_Ficha)
-        .filter(FichaTecnicaInsumo.ID_Insumo == insumo.ID_Insumo)
-        .subquery()
-    )
-    en_orden = db.query(OrdenProduccion).filter(
-        or_(
-            OrdenProduccion.ID_Insumo == insumo.ID_Insumo,
-            OrdenProduccion.ID_Ficha.in_(fichas_con_insumo),
-        ),
-        OrdenProduccion.Estado.in_([1, 13]),  # Pendiente o En proceso
-    ).first() is not None
+    if orden_set is not None:
+        en_orden = insumo.ID_Insumo in orden_set
+    else:
+        fichas_con_insumo = (
+            db.query(FichaTecnicaInsumo.ID_Ficha)
+            .filter(FichaTecnicaInsumo.ID_Insumo == insumo.ID_Insumo)
+            .subquery()
+        )
+        en_orden = db.query(OrdenProduccion).filter(
+            or_(
+                OrdenProduccion.ID_Insumo == insumo.ID_Insumo,
+                OrdenProduccion.ID_Ficha.in_(fichas_con_insumo),
+            ),
+            OrdenProduccion.Estado.in_([1, 13]),
+        ).first() is not None
 
     return {
         "ID_Insumo":                insumo.ID_Insumo,
@@ -119,7 +138,75 @@ def obtener_insumos(
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina
-    insumos = query.offset(offset).limit(por_pagina).all()
+    insumos = (
+        query
+        .options(
+            selectinload(Insumo.categoria),
+            selectinload(Insumo.unidad_medida),
+            selectinload(Insumo.lotes_compra),
+        )
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    insumo_ids = [i.ID_Insumo for i in insumos]
+
+    # Pre-batch: último DetalleCompra por insumo
+    detalle_map = {}
+    if insumo_ids:
+        subq = (
+            db.query(
+                DetalleCompra.ID_Insumo,
+                func.max(DetalleCompra.ID_Detalle_Compra).label("max_id"),
+            )
+            .filter(DetalleCompra.ID_Insumo.in_(insumo_ids))
+            .group_by(DetalleCompra.ID_Insumo)
+            .subquery()
+        )
+        detalles = (
+            db.query(DetalleCompra)
+            .join(subq, DetalleCompra.ID_Detalle_Compra == subq.c.max_id)
+            .all()
+        )
+        detalle_map = {d.ID_Insumo: d for d in detalles}
+
+    # Pre-batch: qué insumos tienen ficha técnica + map ficha→insumos para órdenes
+    ficha_set = set()
+    ficha_to_insumos = {}
+    all_ficha_ids = set()
+    if insumo_ids:
+        ficha_rows = (
+            db.query(FichaTecnicaInsumo.ID_Insumo, FichaTecnicaInsumo.ID_Ficha)
+            .filter(FichaTecnicaInsumo.ID_Insumo.in_(insumo_ids))
+            .all()
+        )
+        for id_ins, id_ficha in ficha_rows:
+            ficha_set.add(id_ins)
+            ficha_to_insumos.setdefault(id_ficha, set()).add(id_ins)
+            all_ficha_ids.add(id_ficha)
+
+    # Pre-batch: qué insumos tienen orden de producción activa
+    orden_set = set()
+    if insumo_ids:
+        filters_ord = [OrdenProduccion.ID_Insumo.in_(insumo_ids)]
+        if all_ficha_ids:
+            filters_ord.append(OrdenProduccion.ID_Ficha.in_(all_ficha_ids))
+        orden_rows = (
+            db.query(OrdenProduccion.ID_Insumo, OrdenProduccion.ID_Ficha)
+            .filter(
+                or_(*filters_ord),
+                OrdenProduccion.Estado.in_([1, 13]),
+            )
+            .all()
+        )
+        insumo_ids_set = set(insumo_ids)
+        for id_ins_ord, id_ficha_ord in orden_rows:
+            if id_ins_ord is not None and id_ins_ord in insumo_ids_set:
+                orden_set.add(id_ins_ord)
+            if id_ficha_ord is not None:
+                for id_ins in ficha_to_insumos.get(id_ficha_ord, set()):
+                    orden_set.add(id_ins)
 
     if not insumos:
         return {

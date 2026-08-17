@@ -216,10 +216,37 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    let err = "";
+    if (k === "idProveedor" && !v) err = "Selecciona un proveedor";
+    if (k === "fecha" && !v) err = "Ingresa la fecha";
+    if (k === "metodoPago" && !v) err = "Selecciona el método de pago";
+    setErrors(e => ({ ...e, [k]: err }));
+  };
 
-  const setDetalle   = (key, field, value) =>
-    setDetalles(ds => ds.map(d => d._key === key ? { ...d, [field]: value } : d));
+  const setDetalle = (key, field, value) =>
+    setDetalles(ds => ds.map((d, i) => {
+      if (d._key !== key) return d;
+      const updated = { ...d, [field]: value };
+      let err = "";
+      if (field === "idInsumo" && !value) err = "Selecciona un insumo";
+      if (field === "cantidad") {
+        if (!value || Number(value) <= 0) err = "Cantidad inválida";
+        else if (Number(value) > 99999) err = "Máximo 99 999 por línea";
+      }
+      if (field === "precioUnd") {
+        if (!value || Number(value) <= 0) err = "Precio inválido";
+      }
+      const errKey = field === "idInsumo" ? `ins_${i}`
+        : field === "cantidad" ? `cant_${i}`
+        : field === "precioUnd" ? `precio_${i}`
+        : null;
+      if (errKey) {
+        setErrors(prev => ({ ...prev, [errKey]: err }));
+      }
+      return updated;
+    }));
   const toggleExpand = (key) =>
     setDetalles(ds => ds.map(d => d._key === key ? { ...d, isExpanded: !d.isExpanded } : d));
   const addDetalle   = () =>

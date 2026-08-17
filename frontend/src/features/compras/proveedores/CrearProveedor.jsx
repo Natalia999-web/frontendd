@@ -121,10 +121,19 @@ export default function CrearProveedor({ onClose, onSave }) {
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     let err = "";
-    if (v) {
-      if (k === "correo" && v.includes("@") && !/\S+@\S+\.\S+/.test(v)) err = "Formato de correo inválido";
-      if (k === "direccion" && !esUbicacionValida(v)) err = "La dirección debe tener letras y números (mín. 5 caracteres)";
+    if (k === "responsable" && !v.trim()) err = "El nombre/razón social es obligatorio";
+    if (k === "celular") {
+      if (!v.trim()) err = "El celular es obligatorio";
+      else if (v.replace(/\D/g, "").length !== 10) err = "El celular debe tener 10 dígitos";
     }
+    if (k === "correo") {
+      if (!v.trim()) err = "El correo es obligatorio";
+      else if (!/\S+@\S+\.\S+/.test(v)) err = "Formato de correo inválido";
+    }
+    if (k === "departamento" && !v) err = "Selecciona un departamento";
+    if (k === "ciudad" && !v) err = "Selecciona una ciudad";
+    if (k === "direccion" && v.trim() && !esUbicacionValida(v))
+      err = "La dirección debe tener letras y números (mín. 5 caracteres)";
     setErrors(e => ({ ...e, [k]: err }));
   };
 

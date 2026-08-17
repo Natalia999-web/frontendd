@@ -9,12 +9,22 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error,    setError]    = useState("");
+  const [errors,   setErrors]   = useState({});
   const [loading,  setLoading]  = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    const newErrors = {};
+    if (!email.trim()) newErrors.email = "El correo es obligatorio";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = "Formato de correo inválido";
+    if (!password) newErrors.password = "La contraseña es obligatoria";
+    else if (password.length < 6) newErrors.password = "Mínimo 6 caracteres";
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     setLoading(true);
     try {
       const data = await login(email, password);
@@ -93,9 +103,18 @@ const Login = () => {
                   placeholder="tu@correo.com"
                   className="auth-input"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmail(val);
+                    setError("");
+                    let err = "";
+                    if (!val.trim()) err = "El correo es obligatorio";
+                    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = "Formato de correo inválido";
+                    setErrors(p => ({ ...p, email: err }));
+                  }}
                 />
               </div>
+              {errors.email && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.email}</p>}
             </div>
 
             <div className="auth-field">
@@ -115,7 +134,15 @@ const Login = () => {
                   placeholder="Mínimo 6 caracteres"
                   className="auth-input"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPassword(val);
+                    setError("");
+                    let err = "";
+                    if (!val) err = "La contraseña es obligatoria";
+                    else if (val.length < 6) err = "Mínimo 6 caracteres";
+                    setErrors(p => ({ ...p, password: err }));
+                  }}
                 />
                 <button
                   type="button"
@@ -126,6 +153,7 @@ const Login = () => {
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {errors.password && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.password}</p>}
             </div>
 
             <button type="submit" className="auth-submit" disabled={loading}>

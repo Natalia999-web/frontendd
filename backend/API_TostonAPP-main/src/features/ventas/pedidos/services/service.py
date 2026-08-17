@@ -1,8 +1,11 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 
-from src.shared.services.models import Venta, Estado, DetalleVenta, Domicilio
-from src.features.ventas.gestion_ventas.services.service import _formato_venta, _batch_ventas, cambiar_estado as _gv_cambiar_estado
+from src.shared.services.models import (
+    Venta, Estado, DetalleVenta, Domicilio,
+    VentaXProducto, Producto, DescuentoXVenta,
+)
+from src.features.ventas.gestion_ventas.services.service import _formato_venta, cambiar_estado as _gv_cambiar_estado
 from src.features.ventas.pedidos.services.estados import EstadoPedido, ESTADOS_ACTIVOS
 
 
@@ -37,13 +40,37 @@ def obtener_pedidos(
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina
-    pedidos = query.order_by(Venta.Fecha_pedido.desc()).offset(offset).limit(por_pagina).all()
+    pedidos = (
+        query
+        .options(
+            selectinload(Venta.usuario),
+            selectinload(Venta.productos)
+                .selectinload(VentaXProducto.producto)
+                .selectinload(Producto.imagenes),
+            selectinload(Venta.detalle),
+            selectinload(Venta.domicilios)
+                .selectinload(Domicilio.empleado),
+            selectinload(Venta.ordenes_produccion),
+        )
+        .order_by(Venta.Fecha_pedido.desc())
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    venta_ids = [p.ID_Venta for p in pedidos]
+    dxv_map = {}
+    if venta_ids:
+        for row in db.query(DescuentoXVenta).filter(
+            DescuentoXVenta.ID_Venta.in_(venta_ids)
+        ).all():
+            dxv_map.setdefault(row.ID_Venta, row)
 
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "pedidos":    _batch_ventas(pedidos, db),
+        "pedidos":    [_formato_venta(p, db, dxv_map=dxv_map) for p in pedidos],
     }
 
 

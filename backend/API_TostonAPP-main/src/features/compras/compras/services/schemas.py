@@ -59,8 +59,17 @@ class CompraCreate(BaseModel):
         for d in self.detalles:
             if d.Cantidad <= 0:
                 raise ValueError(f"La cantidad del insumo {d.ID_Insumo} debe ser mayor a cero")
+            # Techo 100 000 unidades: una mipyme no compra más que esto en un pedido
+            if d.Cantidad > 100_000:
+                raise ValueError(f"La cantidad del insumo {d.ID_Insumo} supera el máximo permitido (100 000)")
             if d.Precio_Und <= 0:
                 raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} debe ser mayor a cero")
+            # Piso $50 COP: cualquier insumo cuesta al menos esto en Colombia
+            if d.Precio_Und < Decimal("50"):
+                raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} debe ser al menos $50 COP")
+            # Techo $10 000 000 COP/unit: superar esto es un error de digitación
+            if d.Precio_Und > Decimal("10000000"):
+                raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} supera el máximo permitido ($10 000 000 COP)")
         return self
 
 

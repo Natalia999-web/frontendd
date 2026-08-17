@@ -186,7 +186,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
 
   const handleSelectPedido = (val) => {
     setIdPedido(val);
-    setErrors((e) => ({ ...e, idPedido: "" }));
+    setErrors((e) => ({ ...e, idPedido: val ? "" : "Debes seleccionar un pedido para registrar la devolución" }));
     const ped = pedidosEntregados.find((p) => String(p.id) === String(val));
     if (ped) {
       setItems(
@@ -208,9 +208,10 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
     setItems((prev) => {
       const arr = [...prev];
       arr[idx] = { ...arr[idx], cantidad: n };
+      const hasAny = arr.some(i => i.cantidad > 0);
+      setErrors((e) => ({ ...e, items: hasAny ? "" : "Selecciona al menos un producto y la cantidad a devolver" }));
       return arr;
     });
-    setErrors((e) => ({ ...e, items: "" }));
   };
 
   const itemsSeleccionados = items.filter((i) => i.cantidad > 0);
@@ -376,7 +377,11 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
                     <select
                       className={`field-select${errors.motivo ? " error" : ""}`}
                       value={motivo}
-                      onChange={(e) => setMotivo(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMotivo(val);
+                        setErrors((prev) => ({ ...prev, motivo: val ? "" : "Selecciona el motivo de la devolución" }));
+                      }}
                     >
                       <option value="">Seleccione…</option>
                       {MOTIVOS.map((m) => (

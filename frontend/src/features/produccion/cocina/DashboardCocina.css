@@ -1,291 +1,513 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,600;0,700;0,800;1,700;1,800&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Tokens locales alineados con el sistema de diseño de TostonApp ── */
+:root {
+  --g:    #2e7d32;
+  --gd:   #1b5e20;
+  --gl:   #e8f5e9;
+  --gb:   #4caf50;
+  --gc:   #c8e6c9;  /* borde verde pálido */
+
+  /* Estados — mismos tokens que Pedidos.css / OrdenesProduccion.css */
+  --pendiente-bg:    #fff8e1; --pendiente-color:   #f9a825; --pendiente-border:  #ffe082;
+  --confirmado-bg:   #e8f5e9; --confirmado-color:  #2e7d32; --confirmado-border: #a5d6a7;
+  --produccion-bg:   #e3f2fd; --produccion-color:  #1565c0; --produccion-border: #90caf9;
+  --listo-bg:        #e8f5e9; --listo-color:       #2e7d32; --listo-border:      #a5d6a7;
+  --cancelado-bg:    #ffebee; --cancelado-color:   #c62828; --cancelado-border:  #ef9a9a;
+  --proceso-bg:      #e3f2fd; --proceso-color:     #1565c0; --proceso-border:    #90caf9;
+}
+
+/* ─── Wrapper ──────────────────────────────────────── */
 .cocina-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   padding: 24px;
+  font-family: 'DM Sans', sans-serif;
 }
 
+/* ─── Header ───────────────────────────────────────── */
 .cocina-header {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
   align-items: flex-start;
+  gap: 16px;
 }
 
 .cocina-eyebrow {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #616161;
-  margin-bottom: 4px;
+  letter-spacing: 0.12em;
+  color: var(--g);
+  font-weight: 700;
+  margin: 0 0 4px;
 }
 
 .cocina-title {
-  font-size: 28px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #1a1a1a;
   margin: 0;
-  color: #1f2937;
 }
 
-.cocina-top-notes {
+.cocina-top-badge {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--gl);
+  border: 1.5px solid var(--gc);
+}
+
+.cocina-top-badge__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--g);
   font-weight: 700;
 }
 
+.cocina-top-badge__num {
+  font-family: 'Nunito', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--g);
+  line-height: 1;
+}
+
+/* ─── Banner de error de acción ────────────────────── */
+.cocina-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--cancelado-bg);
+  border: 1.5px solid var(--cancelado-border);
+  color: var(--cancelado-color);
+  font-size: 13px;
+  font-weight: 600;
+  animation: ck-fadein 0.2s ease;
+}
+
+.cocina-error-close {
+  background: none;
+  border: none;
+  color: var(--cancelado-color);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+@keyframes ck-fadein {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Stat Cards ────────────────────────────────────── */
 .cocina-stats-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ck-stat {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1.5px solid var(--gc);
+  border-left-width: 4px;
+  box-shadow: 0 2px 10px rgba(46, 125, 50, 0.05);
+}
+
+.ck-stat__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ck-stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ck-stat__num {
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.ck-stat__num--empty {
+  font-size: 17px;
+  color: #9e9e9e;
+}
+
+.ck-stat__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9e9e9e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Acento por tipo usando colores del sistema */
+.ck-stat--pending    { border-left-color: var(--pendiente-color); }
+.ck-stat--confirmed  { border-left-color: var(--g); }
+.ck-stat--progress   { border-left-color: var(--produccion-color); }
+.ck-stat--ready      { border-left-color: var(--g); }
+.ck-stat--avg-time   { border-left-color: #bdbdbd; }
+
+.ck-stat--pending   .ck-stat__icon { background: var(--pendiente-bg); }
+.ck-stat--confirmed .ck-stat__icon { background: var(--gl); }
+.ck-stat--progress  .ck-stat__icon { background: var(--produccion-bg); }
+.ck-stat--ready     .ck-stat__icon { background: var(--listo-bg); }
+.ck-stat--avg-time  .ck-stat__icon { background: #f5f5f5; }
+
+/* ─── Secciones ─────────────────────────────────────── */
+.ck-section {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1.5px solid var(--gc);
+  box-shadow: 0 2px 16px rgba(46, 125, 50, 0.07);
+}
+
+.ck-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ck-section__title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.ck-section__sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: #757575;
+}
+
+.ck-tag {
+  border-radius: 999px;
+  background: var(--gl);
+  color: var(--g);
+  border: 1px solid var(--gc);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Grilla de dos columnas (usada dos veces: órdenes+alertas e historial+notificaciones) */
+.cocina-two-col {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
   gap: 16px;
 }
 
-.stat-card {
-  border-radius: 20px;
-  padding: 18px;
-  min-height: 108px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+/* ─── Botones ───────────────────────────────────────── */
+.ck-btn {
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  transition: opacity 0.15s, box-shadow 0.15s;
 }
 
-.stat-card span:first-child {
-  text-transform: uppercase;
-  font-size: 11px;
-  color: #6b7280;
-  letter-spacing: 0.08em;
+.ck-btn--primary {
+  background: var(--g);
+  color: #fff;
+  padding: 9px 16px;
 }
 
-.stat-card strong {
-  font-size: 28px;
-  color: #111827;
+.ck-btn--primary:hover {
+  background: var(--gd);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
 }
 
-.stat-card--pending { background: #fff7ed; }
-.stat-card--progress { background: #eff6ff; }
-.stat-card--ready { background: #f0fdf4; }
-.stat-card--production { background: #f8fafc; }
-.stat-card--avg-time { background: #fdf2f8; }
-
-.cocina-section {
-  background: #fff;
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+.ck-btn--danger {
+  background: var(--cancelado-bg);
+  color: var(--cancelado-color);
+  border: 1.5px solid var(--cancelado-border);
+  padding: 9px 16px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: center;
-  margin-bottom: 18px;
-}
+.ck-btn--danger:hover { opacity: 0.85; }
 
-.section-header h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #111827;
-}
-
-.section-header p {
-  margin: 4px 0 0;
-  color: #4b5563;
-  font-size: 14px;
-}
-
-.section-tag {
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #2563eb;
-  padding: 8px 14px;
-  font-size: 12px;
+.ck-btn--link {
+  background: transparent;
+  color: var(--g);
+  padding: 6px 10px;
   font-weight: 700;
 }
 
+.ck-btn--link:hover { text-decoration: underline; }
+
+/* Etiqueta de "esperando confirmación" (Pendiente sin botón de acción) */
+.ck-await-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--pendiente-bg);
+  border: 1px solid var(--pendiente-border);
+  color: var(--pendiente-color);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ─── Estado Badges ─────────────────────────────────── */
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e0e0e0;
+  background: #f5f5f5;
+  color: #616161;
+  width: fit-content;
+}
+
+.state--pendiente     { background: var(--pendiente-bg);  color: var(--pendiente-color);  border-color: var(--pendiente-border); }
+.state--confirmado    { background: var(--confirmado-bg); color: var(--confirmado-color); border-color: var(--confirmado-border); }
+.state--en-produccion { background: var(--produccion-bg); color: var(--produccion-color); border-color: var(--produccion-border); }
+.state--listo         { background: var(--listo-bg);      color: var(--listo-color);      border-color: var(--listo-border); }
+.state--cancelado     { background: var(--cancelado-bg);  color: var(--cancelado-color);  border-color: var(--cancelado-border); }
+.state--en-proceso    { background: var(--proceso-bg);    color: var(--proceso-color);    border-color: var(--proceso-border); }
+
+/* ─── Pedido Cards ──────────────────────────────────── */
 .pedido-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.pedido-card,
-.orden-card,
-.detalle-pedido-card,
-.history-item,
-.empty-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 20px;
-  padding: 18px;
+  gap: 12px;
 }
 
 .pedido-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  background: #fff;
+  border: 1.5px solid var(--gc);
+  border-left: 4px solid var(--gc);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 6px rgba(46, 125, 50, 0.05);
 }
 
-.pedido-card__header,
-.orden-card__header,
-.detalle-pedido-row {
+.pedido-card--pendiente     { border-left-color: var(--pendiente-color); }
+.pedido-card--confirmado    { border-left-color: var(--g); }
+.pedido-card--en-produccion { border-left-color: var(--produccion-color); }
+.pedido-card--listo         { border-left-color: var(--listo-color); }
+.pedido-card--cancelado     { border-left-color: var(--cancelado-color); }
+
+.pedido-card__header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+}
+
+.pedido-card__header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pedido-number {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1565c0;
+}
+
+.pedido-card__body p {
+  margin: 0;
+  font-size: 13px;
+  color: #616161;
+}
+
+.pedido-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   align-items: center;
 }
 
-.pedido-card__header > div,
+/* ─── Orden Card ────────────────────────────────────── */
+.ordenes-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.orden-card {
+  background: #fff;
+  border: 1.5px solid var(--gc);
+  border-left: 4px solid var(--produccion-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orden-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
 .orden-card__header > div {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.pedido-number,
 .orden-id {
-  display: inline-flex;
   font-weight: 700;
-  color: #111827;
+  font-size: 13px;
+  color: #1565c0;
 }
 
-.pedido-state,
-.orden-state {
-  display: inline-flex;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  font-size: 12px;
-  font-weight: 700;
-  color: #374151;
-}
-
-.pedido-card__body p,
-.detalle-block p,
 .orden-card p {
   margin: 0;
-  color: #4b5563;
-  font-size: 14px;
+  font-size: 13px;
+  color: #616161;
 }
 
-.pedido-card__actions,
-.detalle-pedido-actions {
+.orden-card__footer {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: #9e9e9e;
+  border-top: 1px solid #f1f8f1;
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+/* ─── Alertas de inventario ─────────────────────────── */
+.alerts-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.alerts-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f9fdf9;
+  border: 1px solid #f0f7f0;
 }
 
-.primary-button,
-.danger-button,
-.link-button {
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
+.alerts-list strong {
+  font-size: 13px;
+  color: #1a1a1a;
+  font-weight: 600;
 }
 
-.primary-button {
-  background: #2563eb;
-  color: #fff;
-  padding: 12px 18px;
+.alerts-list span {
+  font-size: 12px;
+  color: #9e9e9e;
+  white-space: nowrap;
 }
 
-.danger-button {
-  background: #ef4444;
-  color: #fff;
-  padding: 12px 18px;
-}
-
-.link-button {
-  background: transparent;
-  color: #2563eb;
-  padding: 8px 10px;
-}
-
-.pedido-card--pendiente { border-color: #fbbf24; }
-.pedido-card--en-preparación,
-.pedido-card--en-producción { border-color: #fb923c; }
-.pedido-card--listo { border-color: #22c55e; }
-.pedido-card--cancelado { border-color: #ef4444; }
-
-.cocina-layout-two {
+/* ─── Detalle del pedido ────────────────────────────── */
+.detalle-pedido-card {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
-.ordenes-grid,
-.alerts-list,
-.notifications-list,
-.history-list {
-  display: grid;
+.detalle-pedido-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
 }
 
-.orden-card__footer,
-.history-item > div,
-.alerts-list li,
-.notifications-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-}
-
-.alerts-list li,
-.notifications-list li {
-  padding: 14px;
-  border-radius: 16px;
-  background: #f8fafc;
-}
-
-.alerts-list strong,
-.notif-title {
-  font-size: 14px;
-  color: #111827;
-}
-
-.notif-message,
-.history-item span {
-  font-size: 13px;
-  color: #4b5563;
-}
-
-.detalle-pedido-card {
-  display: grid;
-  gap: 18px;
+.detalle-pedido-num {
+  font-family: 'Nunito', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
 }
 
 .detalle-pedido-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .detalle-block {
-  background: #f9fafb;
-  border-radius: 18px;
-  padding: 14px;
+  background: #f9fdf9;
+  border: 1px solid #f0f7f0;
+  border-radius: 10px;
+  padding: 12px;
 }
 
 .detalle-label {
-  margin: 0 0 6px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: #9e9e9e;
+  font-weight: 700;
+}
+
+.detalle-block p {
+  margin: 0;
+  font-size: 13px;
+  color: #1a1a1a;
+}
+
+.detalle-small {
+  font-size: 12px;
+  color: #9e9e9e;
+  margin: 2px 0 0;
 }
 
 .detalle-pedido-table-wrap {
   overflow-x: auto;
+  border-radius: 10px;
+  border: 1.5px solid var(--gc);
 }
 
 .detalle-pedido-table {
@@ -293,59 +515,126 @@
   border-collapse: collapse;
 }
 
-.detalle-pedido-table th,
-.detalle-pedido-table td {
+.detalle-pedido-table th {
   text-align: left;
-  padding: 12px 14px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: var(--g);
 }
 
-.badge {
-  display: inline-flex;
-  gap: 6px;
+.detalle-pedido-table td {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #f1f8f1;
+}
+
+.detalle-pedido-table tbody tr:last-child td { border-bottom: none; }
+.detalle-pedido-table tbody tr:hover td { background: #f9fdf9; }
+
+.detalle-pedido-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #374151;
-  font-weight: 700;
+}
+
+/* ─── Historial ─────────────────────────────────────── */
+.history-list {
+  display: grid;
+  gap: 8px;
 }
 
 .history-item {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f9fdf9;
+  border: 1px solid #f0f7f0;
+  border-radius: 10px;
 }
 
 .history-item > div {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 10px;
 }
 
-.cocina-dual-row {
-  grid-template-columns: 1fr 1fr;
+.history-item strong {
+  font-size: 13px;
+  color: #1a1a1a;
+  font-weight: 700;
 }
 
-.empty-card {
-  border: 1px dashed #d1d5db;
-  color: #6b7280;
-  min-height: 120px;
+.history-item span {
+  font-size: 12px;
+  color: #9e9e9e;
+}
+
+/* ─── Notificaciones ────────────────────────────────── */
+.notifications-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notifications-list li {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f9fdf9;
+  border: 1px solid #f0f7f0;
+}
+
+.notif-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.notif-message {
+  margin: 0;
+  font-size: 12px;
+  color: #757575;
+}
+
+/* ─── Estado vacío ──────────────────────────────────── */
+.cocina-empty-state {
+  border: 1.5px dashed var(--gc);
+  border-radius: 12px;
+  color: #9e9e9e;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  font-size: 13px;
+  background: #f9fdf9;
+  padding: 16px;
+  gap: 8px;
 }
 
-@media (max-width: 1240px) {
-  .cocina-stats-grid,
-  .cocina-layout-two {
-    grid-template-columns: 1fr;
-  }
+/* ─── Responsive ────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .cocina-stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .cocina-two-col    { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 860px) {
-  .pedido-cards-grid {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 900px) {
+  .cocina-stats-grid   { grid-template-columns: repeat(2, 1fr); }
+  .pedido-cards-grid   { grid-template-columns: 1fr; }
+  .detalle-pedido-grid { grid-template-columns: 1fr; }
 }

@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import func, case
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from decimal import Decimal
 
@@ -110,39 +111,58 @@ def _costo_un_insumo(
     return cantidad_base * valor_base, None
 
 
-def _calcular_costo_detalle(db: Session, id_ficha: int, cantidad_orden: int) -> list[dict]:
+def _calcular_costo_detalle(
+    db: Session,
+    id_ficha: int,
+    cantidad_orden: int,
+    *,
+    insumos_ficha=None,
+    insumo_map=None,
+    detalle_map=None,
+    unidad_map=None,
+) -> list[dict]:
     """
     Desglose de costo por insumo de la ficha.
     Cada entrada: { nombre, costo, error }
+    Los kwargs opcionales aceptan datos pre-cargados (caso listado);
+    cuando son None, usa db.query() exactamente como antes (caso op. individual).
     """
-    insumos_ficha = db.query(FichaTecnicaInsumo).filter(
-        FichaTecnicaInsumo.ID_Ficha == id_ficha
-    ).all()
+    if insumos_ficha is None:
+        insumos_ficha = db.query(FichaTecnicaInsumo).filter(
+            FichaTecnicaInsumo.ID_Ficha == id_ficha
+        ).all()
 
     resultado = []
     for fi in insumos_ficha:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
+        if insumo_map is not None:
+            insumo = insumo_map.get(fi.ID_Insumo)
+        else:
+            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
         nombre = insumo.Nombre if insumo else f"Insumo #{fi.ID_Insumo}"
 
-        # Precio de la compra más reciente
-        detalle_compra = (
-            db.query(DetalleCompra)
-            .filter(DetalleCompra.ID_Insumo == fi.ID_Insumo)
-            .order_by(DetalleCompra.ID_Detalle_Compra.desc())
-            .first()
-        )
+        if detalle_map is not None:
+            detalle_compra = detalle_map.get(fi.ID_Insumo)
+        else:
+            detalle_compra = (
+                db.query(DetalleCompra)
+                .filter(DetalleCompra.ID_Insumo == fi.ID_Insumo)
+                .order_by(DetalleCompra.ID_Detalle_Compra.desc())
+                .first()
+            )
         if not detalle_compra or not detalle_compra.Precio_Und:
             resultado.append({"nombre": nombre, "costo": Decimal("0"), "error": "Sin precio de compra registrado"})
             continue
 
         precio = Decimal(str(detalle_compra.Precio_Und))
 
-        # Unidad con que se compra el insumo (según su ficha de insumo)
         unidad_medida = None
         if insumo and insumo.Unidad_Medida:
-            unidad_medida = db.query(UnidadMedida).filter(
-                UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-            ).first()
+            if unidad_map is not None:
+                unidad_medida = unidad_map.get(fi.ID_Insumo)
+            else:
+                unidad_medida = db.query(UnidadMedida).filter(
+                    UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
+                ).first()
         unidad_insumo = unidad_medida.Simbolo if unidad_medida else ""
 
         cantidad_total = Decimal(str(fi.Cantidad or 0)) * Decimal(str(cantidad_orden))
@@ -162,7 +182,10 @@ def _descontar_fefo(db: Session, id_insumo: int, cantidad: float) -> None:
             LoteCompra.Cantidad_Actual > 0,
             LoteCompra.Estado == 1,
         )
-        .order_by(LoteCompra.Fecha_Vencimiento.asc().nullslast())
+        .order_by(
+            case((LoteCompra.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteCompra.Fecha_Vencimiento.asc(),
+        )
         .all()
     )
     restante = float(cantidad)
@@ -183,7 +206,10 @@ def _restaurar_fefo(db: Session, id_insumo: int, cantidad: float) -> None:
             LoteCompra.ID_Insumo == id_insumo,
             LoteCompra.Estado == 1,
         )
-        .order_by(LoteCompra.Fecha_Vencimiento.desc().nullsfirst())
+        .order_by(
+            case((LoteCompra.Fecha_Vencimiento.is_(None), 0), else_=1),
+            LoteCompra.Fecha_Vencimiento.desc(),
+        )
         .all()
     )
     restante = float(cantidad)
@@ -300,27 +326,52 @@ def _calcular_costo(db: Session, id_ficha, id_insumo, cantidad: int) -> Decimal:
     return Decimal("0")
 
 
-def _formato_orden(orden: OrdenProduccion, db: Session) -> dict:
-    """Construye el dict de respuesta con nombres legibles."""
-    producto = db.query(Producto).filter(
-        Producto.ID_Producto == orden.ID_Producto
-    ).first()
+def _formato_orden(
+    orden: OrdenProduccion,
+    db: Session,
+    *,
+    estados_map=None,
+    detalle_compra_map=None,
+) -> dict:
+    """Construye el dict de respuesta con nombres legibles.
 
-    insumo = db.query(Insumo).filter(
-        Insumo.ID_Insumo == orden.ID_Insumo
-    ).first()
+    estados_map y detalle_compra_map son opcionales: cuando se pasan (desde
+    obtener_ordenes) se usan datos pre-cargados en memoria sin queries adicionales.
+    Cuando son None (cambiar_estado, crear_orden, editar_orden, obtener_orden)
+    el comportamiento es IDÉNTICO al original: lazy-load de relationships + db.query().
+    """
+    # Relationship attributes: lazy-load en op. individuales, eager-load en listado
+    producto = orden.producto
+    insumo   = orden.insumo
+    ficha    = orden.ficha if orden.ID_Ficha else None
+    lote     = orden.lote
 
-    ficha = db.query(FichaTecnica).filter(
-        FichaTecnica.ID_Ficha == orden.ID_Ficha
-    ).first() if orden.ID_Ficha else None
+    # Estado label
+    if estados_map is not None:
+        estado_label = estados_map.get(orden.Estado) if orden.Estado else None
+    else:
+        estado_label = _label_estado(db, orden.Estado) if orden.Estado else None
 
-    lote = db.query(LoteProducto).filter(
-        LoteProducto.ID_Orden_Produccion == orden.ID_Orden_Produccion
-    ).first()
-
-    # Recalcular con conversión de unidades; conservar stored si no hay datos de compra
+    # Cálculo de costo
     if orden.ID_Ficha:
-        desglose = _calcular_costo_detalle(db, orden.ID_Ficha, orden.Cantidad)
+        if detalle_compra_map is not None and ficha:
+            insumos_ficha_lista = ficha.insumos_ficha
+            insumo_map_local = {fi.ID_Insumo: fi.insumo for fi in insumos_ficha_lista}
+            unidad_map_local = {
+                fi.ID_Insumo: fi.insumo.unidad_medida
+                for fi in insumos_ficha_lista
+                if fi.insumo and fi.insumo.Unidad_Medida
+            }
+            desglose = _calcular_costo_detalle(
+                db, orden.ID_Ficha, orden.Cantidad,
+                insumos_ficha=insumos_ficha_lista,
+                insumo_map=insumo_map_local,
+                detalle_map=detalle_compra_map,
+                unidad_map=unidad_map_local,
+            )
+        else:
+            desglose = _calcular_costo_detalle(db, orden.ID_Ficha, orden.Cantidad)
+
         costo_calculado = sum((d["costo"] for d in desglose if d["error"] is None), Decimal("0"))
         costo_detalle = [
             {"nombre": d["nombre"], "costo": float(d["costo"]), "error": d["error"]}
@@ -346,7 +397,7 @@ def _formato_orden(orden: OrdenProduccion, db: Session) -> dict:
         "Fecha_inicio":        orden.Fecha_inicio,
         "Fecha_Entrega":       orden.Fecha_Entrega,
         "Estado":              orden.Estado,
-        "estado_label":        _label_estado(db, orden.Estado) if orden.Estado else None,
+        "estado_label":        estado_label,
         "Costo":               float(costo),
         "costo_detalle":       costo_detalle,
         "lote": {
@@ -377,9 +428,51 @@ def obtener_ordenes(
         )
         query = query.filter(OrdenProduccion.ID_Producto.in_(productos_ids))
 
-    total   = query.count()
-    offset  = (pagina - 1) * por_pagina
-    ordenes = query.offset(offset).limit(por_pagina).all()
+    total  = query.count()
+    offset = (pagina - 1) * por_pagina
+    ordenes = (
+        query
+        .options(
+            selectinload(OrdenProduccion.producto),
+            selectinload(OrdenProduccion.insumo),
+            selectinload(OrdenProduccion.ficha)
+                .selectinload(FichaTecnica.insumos_ficha)
+                .selectinload(FichaTecnicaInsumo.insumo)
+                .selectinload(Insumo.unidad_medida),
+            selectinload(OrdenProduccion.lote),
+        )
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    # Pre-batch: todos los estados en una sola query (label → string)
+    estados_map = {e.ID_Estados: e.Estado for e in db.query(Estado).all()}
+
+    # Pre-batch: DetalleCompra más reciente por insumo (para cálculo de costo)
+    all_insumo_ids = set()
+    for o in ordenes:
+        if o.ficha:
+            for fi in o.ficha.insumos_ficha:
+                all_insumo_ids.add(fi.ID_Insumo)
+
+    detalle_compra_map = {}
+    if all_insumo_ids:
+        subq = (
+            db.query(
+                DetalleCompra.ID_Insumo,
+                func.max(DetalleCompra.ID_Detalle_Compra).label("max_id"),
+            )
+            .filter(DetalleCompra.ID_Insumo.in_(all_insumo_ids))
+            .group_by(DetalleCompra.ID_Insumo)
+            .subquery()
+        )
+        detalles = (
+            db.query(DetalleCompra)
+            .join(subq, DetalleCompra.ID_Detalle_Compra == subq.c.max_id)
+            .all()
+        )
+        detalle_compra_map = {d.ID_Insumo: d for d in detalles}
 
     if not ordenes:
         return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "ordenes": []}
@@ -397,8 +490,8 @@ def obtener_ordenes(
                      db.query(Insumo).filter(Insumo.ID_Insumo.in_(insumo_ids)).all()} if insumo_ids else {}
     fichas_map    = {f.ID_Ficha: f for f in
                      db.query(FichaTecnica).filter(FichaTecnica.ID_Ficha.in_(ficha_ids)).all()} if ficha_ids else {}
-    estados_map   = {e.ID_Estados: e for e in
-                     db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
+    _estados_obj_map   = {e.ID_Estados: e for e in
+                          db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
     lotes_map     = {l.ID_Orden_Produccion: l for l in
                      db.query(LoteProducto)
                        .filter(LoteProducto.ID_Orden_Produccion.in_(orden_ids)).all()}
@@ -408,7 +501,7 @@ def obtener_ordenes(
         insumo   = insumos_map.get(orden.ID_Insumo)
         ficha    = fichas_map.get(orden.ID_Ficha) if orden.ID_Ficha else None
         lote     = lotes_map.get(orden.ID_Orden_Produccion)
-        estado   = estados_map.get(orden.Estado)
+        estado   = _estados_obj_map.get(orden.Estado)
 
         if orden.ID_Ficha and ficha:
             desglose        = _calcular_costo_detalle(db, ficha.ID_Ficha, orden.Cantidad)
@@ -450,7 +543,10 @@ def obtener_ordenes(
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ordenes":    [_build(o) for o in ordenes],
+        "ordenes":    [
+            _formato_orden(o, db, estados_map=estados_map, detalle_compra_map=detalle_compra_map)
+            for o in ordenes
+        ],
     }
 
 
@@ -501,6 +597,13 @@ def editar_orden(db: Session, id_orden: int, datos: OrdenUpdate) -> dict:
     if not orden:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
 
+    if datos.Fecha_inicio is not None and orden.Fecha_inicio is not None:
+        if datos.Fecha_inicio.date() < orden.Fecha_inicio.date():
+            raise HTTPException(
+                status_code=400,
+                detail="La fecha de inicio no puede ser anterior a la fecha de inicio original de la orden"
+            )
+
     for campo, valor in datos.model_dump(exclude_none=True).items():
         setattr(orden, campo, valor)
 
@@ -515,6 +618,8 @@ def editar_orden(db: Session, id_orden: int, datos: OrdenUpdate) -> dict:
 
 def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
     """datos puede ser int o un objeto con atributos: Estado, Numero_Lote, Fecha_Vencimiento"""
+    import time, traceback as _tb
+    _t0 = time.time()
     # compat: si pasaron solo un int
     if isinstance(datos, int):
         nuevo_estado = datos
@@ -522,152 +627,188 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
     else:
         nuevo_estado = datos.Estado
         lote_info = { 'Numero_Lote': getattr(datos, 'Numero_Lote', None), 'Fecha_Vencimiento': getattr(datos, 'Fecha_Vencimiento', None) }
-    orden = db.query(OrdenProduccion).filter(
-        OrdenProduccion.ID_Orden_Produccion == id_orden
-    ).first()
-    if not orden:
-        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    print(f"[1] cambiar_estado START id={id_orden} nuevo_estado={nuevo_estado}", flush=True)
+    try:
+        print(f"[2] query OrdenProduccion | +{time.time()-_t0:.3f}s", flush=True)
+        orden = db.query(OrdenProduccion).filter(
+            OrdenProduccion.ID_Orden_Produccion == id_orden
+        ).first()
+        print(f"[3] orden found={orden is not None} estado_actual={getattr(orden,'Estado',None)} | +{time.time()-_t0:.3f}s", flush=True)
+        if not orden:
+            raise HTTPException(status_code=404, detail="Orden no encontrada")
 
-    # Al iniciar (13=En proceso): validar ficha, descontar todos los insumos de la receta
-    if nuevo_estado == ESTADO_EN_PROCESO and orden.Estado == ESTADO_PENDIENTE:
-        # Si la orden se creó sin ficha (p.ej. auto-generada), resolver la ficha actual del producto
-        if not orden.ID_Ficha and orden.ID_Producto:
-            ficha_auto = (
-                db.query(FichaTecnica)
-                .filter(FichaTecnica.ID_Producto == orden.ID_Producto)
-                .order_by(FichaTecnica.ID_Ficha.desc())
-                .first()
-            )
-            if ficha_auto:
-                orden.ID_Ficha = ficha_auto.ID_Ficha
+        if orden.Estado == nuevo_estado:
+            return _formato_orden(orden, db)
 
-        if not orden.ID_Ficha:
-            raise HTTPException(
-                status_code=400,
-                detail="El producto debe tener una ficha técnica asignada antes de iniciar la producción"
-            )
-        insumos_ficha = db.query(FichaTecnicaInsumo).filter(
-            FichaTecnicaInsumo.ID_Ficha == orden.ID_Ficha
-        ).all()
-        if not insumos_ficha:
-            raise HTTPException(
-                status_code=400,
-                detail="La ficha técnica no tiene insumos registrados. Agrégalos antes de iniciar producción."
-            )
-        # Validar stock con conversión de unidades
-        for fi in insumos_ficha:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
-            if not insumo:
-                raise HTTPException(status_code=404, detail=f"Insumo ID {fi.ID_Insumo} no encontrado")
-            unidad_ins = db.query(UnidadMedida).filter(
-                UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-            ).first()
-            simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
-            necesario = _convertir(
-                float(fi.Cantidad or 0) * orden.Cantidad,
-                fi.Unidad or simbolo_ins,
-                simbolo_ins,
-            )
-            if float(insumo.Stock_Actual or 0) < necesario:
+        # Al iniciar (13=En proceso): validar ficha, descontar todos los insumos de la receta
+        if nuevo_estado == ESTADO_EN_PROCESO and orden.Estado == ESTADO_PENDIENTE:
+            # Si la orden se creó sin ficha (p.ej. auto-generada), resolver la ficha actual del producto
+            if not orden.ID_Ficha and orden.ID_Producto:
+                ficha_auto = (
+                    db.query(FichaTecnica)
+                    .filter(FichaTecnica.ID_Producto == orden.ID_Producto)
+                    .order_by(FichaTecnica.ID_Ficha.desc())
+                    .first()
+                )
+                if ficha_auto:
+                    orden.ID_Ficha = ficha_auto.ID_Ficha
+
+            if not orden.ID_Ficha:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Stock insuficiente de '{insumo.Nombre}': necesario {necesario:.4g} {simbolo_ins}, disponible {float(insumo.Stock_Actual or 0):.4g} {simbolo_ins}"
+                    detail="El producto debe tener una ficha técnica asignada antes de iniciar la producción"
                 )
-
-        # Descontar usando FEFO lote a lote
-        for fi in insumos_ficha:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
-            unidad_ins = db.query(UnidadMedida).filter(
-                UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-            ).first()
-            simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
-            necesario = _convertir(
-                float(fi.Cantidad or 0) * orden.Cantidad,
-                fi.Unidad or simbolo_ins,
-                simbolo_ins,
-            )
-            _descontar_fefo(db, insumo.ID_Insumo, necesario)
-            insumo.Stock_Actual = round(max(0.0, float(insumo.Stock_Actual or 0) - necesario), 4)
-            _actualizar_estado_insumo(insumo)
-            notificar_stock_insumo(db, insumo)
-
-        if orden.ID_Venta:
-            _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_EN_PROCESO)
-
-    # Al completar (11=Completada): incrementar stock del producto y crear lote
-    elif nuevo_estado == ESTADO_COMPLETADA and orden.Estado == ESTADO_EN_PROCESO:
-        from datetime import datetime, timedelta
-
-        producto = db.query(Producto).filter(Producto.ID_Producto == orden.ID_Producto).first()
-        if not producto:
-            raise HTTPException(status_code=404, detail="Producto no encontrado")
-        producto.Stock = (producto.Stock or 0) + orden.Cantidad
-        _actualizar_estado_producto(producto)
-        notificar_stock_producto(db, producto)
-
-        # Crear lote de producto
-        hoy = datetime.now()
-        ficha = db.query(FichaTecnica).filter(
-            FichaTecnica.ID_Ficha == orden.ID_Ficha
-        ).first() if orden.ID_Ficha else None
-
-        dias_vida = (ficha.Dias_Vida_Util if ficha and ficha.Dias_Vida_Util else None)
-        fecha_vencimiento = hoy + timedelta(days=dias_vida) if dias_vida else None
-
-        numero_lote = lote_info.get('Numero_Lote') or f"LP-{orden.ID_Orden_Produccion}-{hoy.strftime('%Y%m%d')}"
-        fecha_venc = lote_info.get('Fecha_Vencimiento') or fecha_vencimiento
-
-        db.add(LoteProducto(
-            ID_Orden_Produccion = orden.ID_Orden_Produccion,
-            ID_Producto         = orden.ID_Producto,
-            Numero_Lote         = numero_lote,
-            Fecha_Produccion    = hoy,
-            Fecha_Vencimiento   = fecha_venc,
-            Cantidad            = orden.Cantidad,
-            Estado              = 1,
-        ))
-
-        if orden.ID_Venta:
-            _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_COMPLETADA)
-
-    # Al cancelar (5): restaurar insumos si la orden estaba en proceso
-    elif nuevo_estado == ESTADO_CANCELADA and orden.Estado == ESTADO_EN_PROCESO:
-        if orden.ID_Ficha:
+            print(f"[4] query FichaTecnicaInsumo id_ficha={orden.ID_Ficha} | +{time.time()-_t0:.3f}s", flush=True)
             insumos_ficha = db.query(FichaTecnicaInsumo).filter(
                 FichaTecnicaInsumo.ID_Ficha == orden.ID_Ficha
             ).all()
+            print(f"[5] insumos_ficha count={len(insumos_ficha)} | +{time.time()-_t0:.3f}s", flush=True)
+            if not insumos_ficha:
+                raise HTTPException(
+                    status_code=400,
+                    detail="La ficha técnica no tiene insumos registrados. Agrégalos antes de iniciar producción."
+                )
+            # Batch-load: 2 queries en lugar de 4N (N insumos × 2 loops × 2 tablas)
+            ids_insumo = [fi.ID_Insumo for fi in insumos_ficha]
+            print(f"[6] batch query Insumo IN {ids_insumo} | +{time.time()-_t0:.3f}s", flush=True)
+            insumos_map = {
+                i.ID_Insumo: i
+                for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(ids_insumo)).all()
+            }
+            unidad_ids = {i.Unidad_Medida for i in insumos_map.values() if i.Unidad_Medida}
+            print(f"[7] batch query UnidadMedida IN {unidad_ids} | +{time.time()-_t0:.3f}s", flush=True)
+            unidades_map = (
+                {
+                    u.ID_Unidad_Medida: u
+                    for u in db.query(UnidadMedida).filter(
+                        UnidadMedida.ID_Unidad_Medida.in_(unidad_ids)
+                    ).all()
+                }
+                if unidad_ids else {}
+            )
+            print(f"[8] batch done, validando stock | +{time.time()-_t0:.3f}s", flush=True)
+
+            # Validar stock (en memoria, sin queries adicionales a BD)
+            ficha_plan = []
             for fi in insumos_ficha:
-                insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
-                if insumo:
-                    unidad_ins = db.query(UnidadMedida).filter(
-                        UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-                    ).first()
-                    simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
-                    devolver = _convertir(
-                        float(fi.Cantidad or 0) * orden.Cantidad,
-                        fi.Unidad or simbolo_ins,
-                        simbolo_ins,
+                insumo = insumos_map.get(fi.ID_Insumo)
+                if not insumo:
+                    raise HTTPException(status_code=404, detail=f"Insumo ID {fi.ID_Insumo} no encontrado")
+                unidad_ins = unidades_map.get(insumo.Unidad_Medida)
+                simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
+                necesario = _convertir(
+                    float(fi.Cantidad or 0) * orden.Cantidad,
+                    fi.Unidad or simbolo_ins,
+                    simbolo_ins,
+                )
+                if float(insumo.Stock_Actual or 0) < necesario:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stock insuficiente de '{insumo.Nombre}': necesario {necesario:.4g} {simbolo_ins}, disponible {float(insumo.Stock_Actual or 0):.4g} {simbolo_ins}"
                     )
+                ficha_plan.append((insumo, necesario))
+
+            print(f"[9] validacion OK {len(ficha_plan)} insumos, iniciando FEFO | +{time.time()-_t0:.3f}s", flush=True)
+            # Descontar FEFO (todos los stocks validados → descuento atómico)
+            for _i, (insumo, necesario) in enumerate(ficha_plan):
+                print(f"[10a] _descontar_fefo insumo={insumo.ID_Insumo} necesario={necesario} | +{time.time()-_t0:.3f}s", flush=True)
+                _descontar_fefo(db, insumo.ID_Insumo, necesario)
+                insumo.Stock_Actual = round(max(0.0, float(insumo.Stock_Actual or 0) - necesario), 4)
+                _actualizar_estado_insumo(insumo)
+                print(f"[10b] notificar_stock_insumo insumo={insumo.ID_Insumo} | +{time.time()-_t0:.3f}s", flush=True)
+                notificar_stock_insumo(db, insumo)
+                print(f"[10c] insumo {_i+1}/{len(ficha_plan)} completo | +{time.time()-_t0:.3f}s", flush=True)
+
+            print(f"[11] FEFO done, ID_Venta={orden.ID_Venta} | +{time.time()-_t0:.3f}s", flush=True)
+            if orden.ID_Venta:
+                print(f"[11a] _sync_venta START | +{time.time()-_t0:.3f}s", flush=True)
+                _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_EN_PROCESO)
+                print(f"[11b] _sync_venta END | +{time.time()-_t0:.3f}s", flush=True)
+
+        # Al completar (11=Completada): incrementar stock del producto y crear lote
+        elif nuevo_estado == ESTADO_COMPLETADA and orden.Estado == ESTADO_EN_PROCESO:
+            from datetime import datetime, timedelta
+
+            producto = db.query(Producto).filter(Producto.ID_Producto == orden.ID_Producto).first()
+            if not producto:
+                raise HTTPException(status_code=404, detail="Producto no encontrado")
+            producto.Stock = (producto.Stock or 0) + orden.Cantidad
+            _actualizar_estado_producto(producto)
+            notificar_stock_producto(db, producto)
+
+            # Crear lote de producto
+            hoy = datetime.now()
+            ficha = db.query(FichaTecnica).filter(
+                FichaTecnica.ID_Ficha == orden.ID_Ficha
+            ).first() if orden.ID_Ficha else None
+
+            dias_vida = (ficha.Dias_Vida_Util if ficha and ficha.Dias_Vida_Util else None)
+            fecha_vencimiento = hoy + timedelta(days=dias_vida) if dias_vida else None
+
+            numero_lote = lote_info.get('Numero_Lote') or f"LP-{orden.ID_Orden_Produccion}-{hoy.strftime('%Y%m%d')}"
+            fecha_venc = lote_info.get('Fecha_Vencimiento') or fecha_vencimiento
+
+            db.add(LoteProducto(
+                ID_Orden_Produccion = orden.ID_Orden_Produccion,
+                ID_Producto         = orden.ID_Producto,
+                Numero_Lote         = numero_lote,
+                Fecha_Produccion    = hoy,
+                Fecha_Vencimiento   = fecha_venc,
+                Cantidad            = orden.Cantidad,
+                Estado              = 1,
+            ))
+
+            if orden.ID_Venta:
+                _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_COMPLETADA)
+
+        # Al cancelar (5): restaurar insumos si la orden estaba en proceso
+        elif nuevo_estado == ESTADO_CANCELADA and orden.Estado == ESTADO_EN_PROCESO:
+            if orden.ID_Ficha:
+                insumos_ficha = db.query(FichaTecnicaInsumo).filter(
+                    FichaTecnicaInsumo.ID_Ficha == orden.ID_Ficha
+                ).all()
+                for fi in insumos_ficha:
+                    insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
+                    if insumo:
+                        unidad_ins = db.query(UnidadMedida).filter(
+                            UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
+                        ).first()
+                        simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
+                        devolver = _convertir(
+                            float(fi.Cantidad or 0) * orden.Cantidad,
+                            fi.Unidad or simbolo_ins,
+                            simbolo_ins,
+                        )
+                        _restaurar_fefo(db, insumo.ID_Insumo, devolver)
+                        insumo.Stock_Actual = round(float(insumo.Stock_Actual or 0) + devolver, 4)
+                        _actualizar_estado_insumo(insumo)
+                        notificar_stock_insumo(db, insumo)
+            elif orden.ID_Insumo:
+                insumo = db.query(Insumo).filter(Insumo.ID_Insumo == orden.ID_Insumo).first()
+                if insumo:
+                    devolver = float(orden.Cantidad)
                     _restaurar_fefo(db, insumo.ID_Insumo, devolver)
                     insumo.Stock_Actual = round(float(insumo.Stock_Actual or 0) + devolver, 4)
                     _actualizar_estado_insumo(insumo)
                     notificar_stock_insumo(db, insumo)
-        elif orden.ID_Insumo:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == orden.ID_Insumo).first()
-            if insumo:
-                devolver = float(orden.Cantidad)
-                _restaurar_fefo(db, insumo.ID_Insumo, devolver)
-                insumo.Stock_Actual = round(float(insumo.Stock_Actual or 0) + devolver, 4)
-                _actualizar_estado_insumo(insumo)
-                notificar_stock_insumo(db, insumo)
 
-        if orden.ID_Venta:
-            _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_CANCELADA)
+            if orden.ID_Venta:
+                _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_CANCELADA)
 
-    orden.Estado = nuevo_estado
-    db.commit()
-    db.refresh(orden)
-    return _formato_orden(orden, db)
+        print(f"[12] SET estado={nuevo_estado}, COMMIT | +{time.time()-_t0:.3f}s", flush=True)
+        orden.Estado = nuevo_estado
+        db.commit()
+        print(f"[13] COMMIT done | +{time.time()-_t0:.3f}s", flush=True)
+        db.refresh(orden)
+        print(f"[14] _formato_orden START | +{time.time()-_t0:.3f}s", flush=True)
+        result = _formato_orden(orden, db)
+        print(f"[15] _formato_orden DONE, total={time.time()-_t0:.3f}s", flush=True)
+        return result
+
+    except Exception as e:
+        print(f"=== ERROR EN cambiar_estado | +{time.time()-_t0:.3f}s ===", flush=True)
+        _tb.print_exc()
+        raise
 
 
 def eliminar_orden(db: Session, id_orden: int) -> dict:

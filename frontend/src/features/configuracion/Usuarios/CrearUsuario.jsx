@@ -226,15 +226,47 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
     const newForm = { ...form, [k]: val };
     setForm(newForm);
     let err = "";
-    if (val) {
-      if (k === "correo" && val.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = "Formato de correo inválido";
-      if (k === "contrasena") err = validatePassword(val, newForm.confirmar || undefined) || "";
-      if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    if (k === "nombre" && !val.trim()) err = "El nombre es obligatorio";
+    if (k === "apellidos" && !val.trim()) err = "Los apellidos son obligatorios";
+    if (k === "correo") {
+      if (!val.trim()) err = "El correo es obligatorio";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = "Formato de correo inválido";
+    }
+    if (k === "cedula") {
+      if (!isEdit || val.trim()) {
+        err = validateCedula(val || "", newForm.tipoDocumento) || "";
+      }
+    }
+    if (k === "tipoDocumento") {
+      if (newForm.cedula) {
+        setErrors(e => ({ ...e, cedula: validateCedula(newForm.cedula || "", val) || "" }));
+      }
+    }
+    if (k === "telefono") {
+      if (!isEdit || val.trim()) {
+        err = validateTelefono(val || "") || "";
+      }
+    }
+    if (k === "departamento" && !isEdit && !val) err = "Selecciona un departamento";
+    if (k === "municipio" && !isEdit && !val) err = "Selecciona un municipio";
+    if (k === "direccion") {
+      if (!isEdit && !val.trim()) err = "La dirección es obligatoria";
+      else if (val.trim() && !esUbicacionValida(val)) err = "La dirección debe tener letras y números (mín. 5 caracteres)";
+    }
+    if (k === "rol" && !val) err = "Seleccione un rol";
+    if (k === "contrasena") {
+      if (!isEdit && !val) err = "La contraseña es obligatoria";
+      else if (val) err = validatePassword(val, newForm.confirmar || undefined) || "";
+    }
+    if (k === "confirmar") {
+      if (!isEdit && !val) err = "Confirma tu contraseña";
+      else if (newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
     }
     setErrors(e => {
       const n = { ...e, [k]: err };
       if (k === "contrasena" && newForm.confirmar) {
-        n.confirmar = val !== newForm.confirmar ? "Las contraseñas no coinciden" : "";
+        const pe = val ? validatePassword(val, newForm.confirmar) : null;
+        n.confirmar = pe ? "Las contraseñas no coinciden" : "";
       }
       return n;
     });

@@ -258,6 +258,8 @@ class ProductoImagen(Base):
     ID_Producto     = Column(Integer, ForeignKey("Productos.ID_Producto"))
     imagen          = Column(String(500), nullable=True)
 
+    producto = relationship("Producto", back_populates="imagenes", foreign_keys=[ID_Producto])
+
 
 class Producto(Base):
     __tablename__ = "Productos"
@@ -279,6 +281,8 @@ class Producto(Base):
 
     categoria       = relationship("CategoriaProducto", back_populates="productos")
     fichas_tecnicas = relationship("FichaTecnica", back_populates="producto")
+    imagenes        = relationship("ProductoImagen", back_populates="producto", foreign_keys="[ProductoImagen.ID_Producto]")
+    lotes_producto  = relationship("LoteProducto",   back_populates="producto")
     ventas          = relationship("VentaXProducto", back_populates="producto")
     devoluciones    = relationship("DevolucionDetalle", back_populates="producto")
 
@@ -333,6 +337,7 @@ class OrdenProduccion(Base):
     Estado              = Column(Integer, ForeignKey("Estados.ID_Estados"))
     Costo               = Column(Numeric(30, 2))
 
+    producto = relationship("Producto", foreign_keys=[ID_Producto])
     insumo = relationship("Insumo", back_populates="ordenes")
     ficha  = relationship("FichaTecnica", back_populates="ordenes")
     venta  = relationship("Venta", back_populates="ordenes_produccion")
@@ -351,7 +356,8 @@ class LoteProducto(Base):
     Cantidad            = Column(Integer)
     Estado              = Column(Integer, ForeignKey("Estados.ID_Estados"), default=1)
 
-    orden = relationship("OrdenProduccion", back_populates="lote")
+    orden    = relationship("OrdenProduccion", back_populates="lote")
+    producto = relationship("Producto", back_populates="lotes_producto")
 
 
 # ─────────────────────────────────────────

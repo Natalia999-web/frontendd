@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from datetime import datetime
 from decimal import Decimal
@@ -35,10 +35,10 @@ def _actualizar_estado_insumo(insumo: Insumo) -> None:
 # FORMATO DE RESPUESTA
 # ─────────────────────────────────────────
 
-def _formato_detalle(detalle: DetalleCompra, db: Session) -> dict:
-    insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
-    lote   = db.query(LoteCompra).filter(LoteCompra.ID_Lote_Compra == detalle.ID_Lote_Compra).first() \
-             if detalle.ID_Lote_Compra else None
+def _formato_detalle(detalle: DetalleCompra) -> dict:
+    # Usa los relationships: lazy-load en op. individual, eager en listado
+    insumo = detalle.insumo
+    lote   = detalle.lote_compra
     fecha_venc = lote.Fecha_Vencimiento.strftime("%Y-%m-%d") if lote and lote.Fecha_Vencimiento else None
     return {
         "ID_Detalle_Compra": detalle.ID_Detalle_Compra,
@@ -52,14 +52,16 @@ def _formato_detalle(detalle: DetalleCompra, db: Session) -> dict:
     }
 
 
-def _formato_compra(compra: Compra, db: Session) -> dict:
-    proveedor = db.query(Proveedor).filter(
-        Proveedor.ID_Proveedor == compra.ID_Proveedor
-    ).first()
-    estado = db.query(Estado).filter(Estado.ID_Estados == compra.Estado).first()
-    detalles = db.query(DetalleCompra).filter(
-        DetalleCompra.ID_Compra == compra.ID_Compra
-    ).all()
+def _formato_compra(compra: Compra, db: Session, *, estados_map=None) -> dict:
+    # Usa relationships: lazy-load en op. individual, eager en listado
+    proveedor = compra.proveedor
+    detalles  = compra.detalles
+
+    if estados_map is not None:
+        estado_label = estados_map.get(compra.Estado)
+    else:
+        estado_obj   = db.query(Estado).filter(Estado.ID_Estados == compra.Estado).first()
+        estado_label = estado_obj.Estado if estado_obj else None
 
     return {
         "ID_Compra":            compra.ID_Compra,
@@ -69,14 +71,14 @@ def _formato_compra(compra: Compra, db: Session) -> dict:
         "Fecha_Compra":         compra.Fecha_Compra,
         "Fecha_Llegada":        getattr(compra, "Fecha_Llegada", None),
         "Estado":               compra.Estado,
-        "estado_label":         estado.Estado if estado else None,
+        "estado_label":         estado_label,
         "Metodo_Pago":          compra.Metodo_Pago,
         "Notas":                getattr(compra, "Notas", None),
         "Costo_Transporte":     getattr(compra, "Costo_Transporte", None),
         "IVA_Porcentaje":       getattr(compra, "IVA_Porcentaje", None),
         "Descuento_Porcentaje": getattr(compra, "Descuento_Porcentaje", None),
         "Otros_Costos":         getattr(compra, "Otros_Costos", None),
-        "detalles":             [_formato_detalle(d, db) for d in detalles],
+        "detalles":             [_formato_detalle(d) for d in detalles],
     }
 
 
@@ -102,7 +104,20 @@ def obtener_compras(
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina
-    compras = query.order_by(Compra.Fecha_Compra.desc()).offset(offset).limit(por_pagina).all()
+    compras = (
+        query
+        .options(
+            selectinload(Compra.proveedor),
+            selectinload(Compra.detalles).selectinload(DetalleCompra.insumo),
+            selectinload(Compra.detalles).selectinload(DetalleCompra.lote_compra),
+        )
+        .order_by(Compra.Fecha_Compra.desc())
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    estados_map = {e.ID_Estados: e.Estado for e in db.query(Estado).all()}
 
     if not compras:
         return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "compras": []}

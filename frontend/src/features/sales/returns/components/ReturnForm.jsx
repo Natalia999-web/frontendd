@@ -31,7 +31,12 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
   const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
 
-  const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const set = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (field === 'productId' && !value) setError('Selecciona un producto');
+    else if (field === 'motivo' && !value) setError('Selecciona el motivo');
+    else setError('');
+  };
 
   const handleFile = (file) => {
     if (!file) return;

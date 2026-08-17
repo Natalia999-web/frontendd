@@ -113,7 +113,15 @@ export default function SalidaModal({ entidad, tipo, stockActual, unidadLabel = 
                 type="number" min="1" max={stockActual}
                 className={`field-input${errors.cantidad ? " field-input--error" : ""}`}
                 value={cantidad}
-                onChange={e => { setCantidad(e.target.value); setErrors(p => ({ ...p, cantidad: "" })); }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setCantidad(val);
+                  const cant = Number(val);
+                  let err = "";
+                  if (!val || isNaN(cant) || cant <= 0) err = "Ingresa una cantidad válida";
+                  else if (cant > stockActual) err = `Máximo disponible: ${stockActual} ${unidadLabel}`;
+                  setErrors(p => ({ ...p, cantidad: err }));
+                }}
                 placeholder={`Máx. ${stockActual}`}
                 onFocus={e => e.target.style.borderColor = "#4caf50"}
                 onBlur={e => e.target.style.borderColor = errors.cantidad ? "#e53935" : "#e0e0e0"}

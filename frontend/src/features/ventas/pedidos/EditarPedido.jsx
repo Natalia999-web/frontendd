@@ -323,6 +323,9 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
     if (k === "idCliente"         && !v)        err = "Selecciona un cliente";
     if (k === "metodo_pago"       && !v)        err = "Selecciona método de pago";
     if (k === "direccion_entrega" && !v.trim()) err = "Ingresa la dirección";
+    if (k === "departamento"      && !v.trim()) err = "Selecciona el departamento";
+    if (k === "municipio"         && !v.trim()) err = "Selecciona el municipio";
+    if (k === "descuento"         && Number(v) < 0) err = "El descuento no puede ser negativo";
     setErrors(e => ({ ...e, [k]: err }));
   };
 

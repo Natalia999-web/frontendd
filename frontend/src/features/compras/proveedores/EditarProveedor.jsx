@@ -181,10 +181,14 @@ export default function EditarProveedor({ proveedor, mode = "edit", onClose, onS
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     let err = "";
-    if (v) {
-      if (k === "correo" && v.includes("@") && !/\S+@\S+\.\S+/.test(v)) err = "Correo inválido";
-      if (k === "direccion" && !esUbicacionValida(v)) err = "La dirección debe tener letras y números (mín. 5 caracteres)";
+    if (k === "responsable" && !v.trim()) err = "Campo obligatorio";
+    if (k === "celular" && v.trim() && v.replace(/\D/g, "").length !== 10)
+      err = "El celular debe tener 10 dígitos";
+    if (k === "correo") {
+      if (v.trim() && !/\S+@\S+\.\S+/.test(v)) err = "Correo inválido";
     }
+    if (k === "direccion" && v.trim() && !esUbicacionValida(v))
+      err = "La dirección debe tener letras y números (mín. 5 caracteres)";
     setErrors(e => ({ ...e, [k]: err }));
   };
 

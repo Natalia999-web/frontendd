@@ -8,16 +8,21 @@ import "./Roles.css";
 
 const ITEMS_PER_PAGE = 8;
 
-function Toggle({ value, onChange }) {
+function Toggle({ value, onChange, disabled = false }) {
   return (
     <button
-      onClick={onChange}
+      onClick={disabled ? undefined : onChange}
       className="toggle-btn"
+      disabled={disabled}
       style={{
-        background: value ? "#43a047" : "#c62828",
-        boxShadow: value
+        background: disabled ? "#bdbdbd" : value ? "#43a047" : "#c62828",
+        boxShadow: disabled
+          ? "none"
+          : value
           ? "0 2px 8px rgba(67,160,71,0.45)"
           : "0 2px 8px rgba(198,40,40,0.3)",
+        opacity: disabled ? 0.55 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
       <span className="toggle-thumb" style={{ left: value ? 27 : 3 }}>
@@ -167,7 +172,7 @@ export default function GestionRoles() {
   };
 
   const handleToggleClick = (rol) => {
-    // Si se va a desactivar y tiene usuarios → pedir confirmación primero
+    if (rol.esAdmin) return;
     if (rol.estado && (rol.totalUsuarios ?? 0) > 0) {
       setModal({ mode: "confirmDesactivar", rol });
       return;
@@ -294,7 +299,7 @@ export default function GestionRoles() {
                       </span>
                     </td>
                     <td>
-                      <Toggle value={rol.estado} onChange={() => handleToggleClick(rol)} />
+                      <Toggle value={rol.estado} onChange={() => handleToggleClick(rol)} disabled={rol.esAdmin} />
                     </td>
                     <td>
                       <div className="actions-cell">

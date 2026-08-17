@@ -60,5 +60,6 @@ export async function cambiarEstadoOrden(id, estadoNum, loteData = {}) {
   return apiFetch(`/ordenes-produccion/${id}/estado`, {
     method: "PATCH",
     body: JSON.stringify(body),
+    timeout: 60000,
   });
 }

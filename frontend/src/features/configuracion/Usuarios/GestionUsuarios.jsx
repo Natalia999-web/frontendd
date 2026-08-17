@@ -154,7 +154,7 @@ export default function GestionUsuarios() {
   };
 
   const handleToggleClick = async (user) => {
-    // Optimistic update
+    if (user.tipo === "empleado" && user.idRol === 1) return;
     setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, estado: !u.estado } : u));
     try {
       await toggleEstadoUsuario(user.tipo, user.id, user.estado);

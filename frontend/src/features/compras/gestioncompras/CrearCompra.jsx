@@ -22,6 +22,13 @@ const UNIDADES = [
 
 const GRUPO_UNIDAD = { 1: "masa", 2: "masa", 6: "masa", 3: "vol", 4: "vol", 5: "und" };
 
+// Piso $50 COP: cualquier insumo cuesta al menos esto en Colombia (bolsita, sal, etc.)
+// Techo $10M COP/unit: superar esto es un error de digitación (añadir ceros de más)
+// Cantidad máx 100 000: una mipyme no compra más unidades que esto en un solo pedido
+const PRECIO_MIN = 50;
+const PRECIO_MAX = 10_000_000;
+const CANT_MAX   = 100_000;
+
 const unidadesDelGrupo = (idUnidadBase) => {
   const grupo = GRUPO_UNIDAD[Number(idUnidadBase)];
   if (!grupo) return [];
@@ -236,10 +243,48 @@ export default function CrearCompra({ onClose, onSave }) {
 
   const totalActual = subtotalInsumos + totalGastosExtras;
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    const hoy = new Date().toISOString().split("T")[0];
+    let err = "";
+    if (k === "idProveedor" && !v) err = "Selecciona un proveedor";
+    if (k === "fecha") {
+      if (!v) err = "Ingresa la fecha";
+      else if (v < hoy) err = "La fecha no puede ser anterior a hoy";
+    }
+    if (k === "metodoPago" && !v) err = "Selecciona el método de pago";
+    setErrors(e => ({ ...e, [k]: err }));
+  };
 
-  const setDetalle = (key, field, value) =>
-    setDetalles(ds => ds.map(d => d._key === key ? { ...d, [field]: value } : d));
+  const setDetalle = (key, field, value) => {
+    setDetalles(ds => ds.map((d, i) => {
+      if (d._key !== key) return d;
+      const updated = { ...d, [field]: value };
+      let err = "";
+      if (field === "idInsumo" && !value) err = "Selecciona un insumo";
+      if (field === "cantidad") {
+        if (!value || Number(value) <= 0) err = "Cantidad inválida";
+        else if (Number(value) > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
+      }
+      if (field === "precioUnd") {
+        if (!value || Number(value) <= 0) err = "Precio inválido";
+        else if (Number(value) < PRECIO_MIN) err = `Precio mínimo: $${PRECIO_MIN} COP`;
+        else if (Number(value) > PRECIO_MAX) err = "Precio fuera de rango (máx. $10 000 000)";
+      }
+      if (field === "fechaVencimiento" && updated.vencimientoTipo === "fecha" && !value) err = "Ingresa la fecha";
+      if (field === "vencimientoValor" && updated.vencimientoTipo === "dias" && (!value || Number(value) <= 0)) err = "Ingresa los días";
+
+      const errKey = field === "idInsumo" ? `ins_${i}`
+        : field === "cantidad" ? `cant_${i}`
+        : field === "precioUnd" ? `precio_${i}`
+        : (field === "fechaVencimiento" || field === "vencimientoValor") ? `venc_${i}`
+        : null;
+      if (errKey) {
+        setErrors(prev => ({ ...prev, [errKey]: err }));
+      }
+      return updated;
+    }));
+  };
 
   const toggleExpand = (key) =>
     setDetalles(ds => ds.map(d => d._key === key ? { ...d, isExpanded: !d.isExpanded } : d));
@@ -269,10 +314,12 @@ export default function CrearCompra({ onClose, onSave }) {
     const e = {};
     if (detalles.length === 0) e.detalles = "Agrega al menos un insumo";
     detalles.forEach((d, i) => {
-      if (!d.idInsumo)                              e[`ins_${i}`]    = "Selecciona un insumo";
-      if (!d.cantidad || Number(d.cantidad) <= 0)    e[`cant_${i}`]   = "Cantidad inválida";
-      else if (Number(d.cantidad) > 99999)           e[`cant_${i}`]   = "Máximo 99 999 por línea";
-      if (!d.precioUnd || Number(d.precioUnd) <= 0) e[`precio_${i}`] = "Precio inválido";
+      if (!d.idInsumo)                                   e[`ins_${i}`]    = "Selecciona un insumo";
+      if (!d.cantidad || Number(d.cantidad) <= 0)         e[`cant_${i}`]   = "Cantidad inválida";
+      else if (Number(d.cantidad) > CANT_MAX)             e[`cant_${i}`]   = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
+      if (!d.precioUnd || Number(d.precioUnd) <= 0)      e[`precio_${i}`] = "Precio inválido";
+      else if (Number(d.precioUnd) < PRECIO_MIN)         e[`precio_${i}`] = `Precio mínimo: $${PRECIO_MIN} COP`;
+      else if (Number(d.precioUnd) > PRECIO_MAX)         e[`precio_${i}`] = "Precio fuera de rango (máx. $10 000 000)";
       if (d.vencimientoTipo === "fecha" && !d.fechaVencimiento)
         e[`venc_${i}`] = "Ingresa la fecha";
       else if (d.vencimientoTipo === "dias" && (!d.vencimientoValor || Number(d.vencimientoValor) <= 0))
@@ -505,7 +552,14 @@ export default function CrearCompra({ onClose, onSave }) {
                           min="1"
                           max="99999"
                           value={d.cantidad}
-                          onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setDetalle(d._key, "cantidad", v);
+                            let err = "";
+                            if (v !== "" && Number(v) <= 0)    err = "Cantidad inválida";
+                            else if (v !== "" && Number(v) > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")}`;
+                            setErrors(p => ({ ...p, [`cant_${i}`]: err }));
+                          }}
                           style={{ flex: 1, minWidth: 0 }}
                         />
                         {(() => {
@@ -539,7 +593,15 @@ export default function CrearCompra({ onClose, onSave }) {
                         className={`field-input ${errors[`precio_${i}`] ? "error" : ""}`}
                         placeholder="$ 0"
                         value={d.precioUnd}
-                        onChange={e => setDetalle(d._key, "precioUnd", e.target.value)}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setDetalle(d._key, "precioUnd", v);
+                          let err = "";
+                          if (v !== "" && Number(v) <= 0)       err = "Precio inválido";
+                          else if (v !== "" && Number(v) < PRECIO_MIN) err = `Mín. $${PRECIO_MIN} COP`;
+                          else if (v !== "" && Number(v) > PRECIO_MAX) err = "Máx. $10 000 000";
+                          setErrors(p => ({ ...p, [`precio_${i}`]: err }));
+                        }}
                       />
                       {errors[`precio_${i}`] && <span className="field-error" style={{ fontSize: 10 }}>{errors[`precio_${i}`]}</span>}
                     </div>

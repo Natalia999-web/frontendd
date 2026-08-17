@@ -234,13 +234,32 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
     let val = v;
     if ((k === "nombre" || k === "apellidos") && typeof v === "string") val = soloLetras(v);
     if (k === "numDoc" && typeof v === "string") val = soloDigitos(v);
+    if (k === "telefono" && typeof v === "string") val = soloDigitos(v, 10);
     const newForm = { ...form, [k]: val };
     setForm(newForm);
     let err = "";
-    if (val) {
-      if (k === "correo" && val.includes("@") && !/\S+@\S+\.\S+/.test(val)) err = "Correo inválido";
-      if (k === "contrasena") { const pe = validatePassword(val, newForm.confirmar || undefined); err = pe || ""; }
-      if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) err = "Las contraseñas no coinciden";
+    if (k === "tipoDoc" && !val) err = "Requerido";
+    if (k === "numDoc" && !val.trim()) err = "Requerido";
+    if (k === "idRol" && !val) err = "Selecciona un rol";
+    if (k === "nombre" && !val.trim()) err = "Requerido";
+    if (k === "apellidos" && !val.trim()) err = "Requerido";
+    if (k === "correo") {
+      if (!val.trim()) err = "Correo inválido";
+      else if (!/\S+@\S+\.\S+/.test(val)) err = "Correo inválido";
+    }
+    if (k === "telefono") {
+      if (!val.trim()) err = "Requerido";
+      else if (val.replace(/\D/g, "").length !== 10) err = "El teléfono debe tener 10 dígitos";
+    }
+    if (k === "fechaIngreso" && !val) err = "Requerido";
+    if (k === "departamento" && !val) err = "Requerido";
+    if (k === "municipio" && !val) err = "Requerido";
+    if (k === "contrasena" && val) {
+      const pe = validatePassword(val, newForm.confirmar || undefined);
+      err = pe || "";
+    }
+    if (k === "confirmar" && newForm.contrasena && val !== newForm.contrasena) {
+      err = "Las contraseñas no coinciden";
     }
     setErrors(p => {
       const n = { ...p, [k]: err };

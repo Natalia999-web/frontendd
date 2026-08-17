@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./GestionInsumos.css";
-import { soloLetras } from "../../../utils/inputFilters";
+import { soloLetras, esRepetitivo } from "../../../utils/inputFilters";
 
 const STEPS = ["Identificación", "Stock"];
 
@@ -40,7 +40,21 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
     let err = "";
-    if (k === "stockMinimo" && v !== "" && (isNaN(v) || Number(v) < 0)) err = "Valor válido requerido";
+    if (k === "nombre") {
+      const t = v.trim();
+      if (!t)                                  err = "El nombre es obligatorio";
+      else if (t.length < 2)                   err = "Mínimo 2 caracteres";
+      else if (t.length > 50)                  err = "Máximo 50 caracteres";
+      else if (esRepetitivo(v))                err = "El nombre no puede ser texto repetitivo";
+      else if (existingInsumos.some(i => i.nombre.trim().toLowerCase() === t.toLowerCase()))
+        err = "Ya existe un insumo con este nombre";
+    }
+    if (k === "idCategoria" && !v)             err = "Selecciona una categoría";
+    if (k === "idUnidad" && !v)                err = "Selecciona una unidad";
+    if (k === "stockMinimo") {
+      if (v === "" || v === null)              err = "Valor válido requerido";
+      else if (isNaN(v) || Number(v) < 0)      err = "Valor válido requerido";
+    }
     setSErrors(p => ({ ...p, [k]: err }));
   };
 
@@ -48,7 +62,10 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
     const e = {};
     if (s === 1) {
       const nom = form.nombre.trim().toLowerCase();
-      if (!form.nombre.trim()) e.nombre = "El nombre es obligatorio";
+      if (!form.nombre.trim())               e.nombre = "El nombre es obligatorio";
+      else if (form.nombre.trim().length < 2) e.nombre = "Mínimo 2 caracteres";
+      else if (form.nombre.trim().length > 50) e.nombre = "Máximo 50 caracteres";
+      else if (esRepetitivo(form.nombre))    e.nombre = "El nombre no puede ser texto repetitivo";
       else if (existingInsumos.some(i => i.nombre.trim().toLowerCase() === nom))
         e.nombre = "Ya existe un insumo con este nombre";
       if (!form.idCategoria)   e.idCategoria = "Selecciona una categoría";

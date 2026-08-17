@@ -219,7 +219,13 @@ const ForgotPassword = () => {
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon"><Mail size={14} /></span>
                       <input type="email" required placeholder="tu@correo.com" className="auth-input"
-                        value={email} onChange={(e) => setEmail(e.target.value)} />
+                        value={email} onChange={(e) => {
+                          const v = e.target.value;
+                          setEmail(v);
+                          if (!v.trim()) setError("El correo es obligatorio");
+                          else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) setError("Formato de correo inválido");
+                          else setError("");
+                        }} />
                     </div>
                   </div>
                   <button type="submit" className="auth-submit" disabled={loading}>
@@ -251,7 +257,14 @@ const ForgotPassword = () => {
                       <span className="auth-input-icon"><ShieldCheck size={14} /></span>
                       <input type="text" required maxLength={6} placeholder="123456" className="auth-input"
                         style={{ letterSpacing: '0.5em', textAlign: 'center', paddingLeft: 14 }}
-                        value={code} onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setResendMsg(""); }} />
+                        value={code} onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '');
+                          setCode(v);
+                          setResendMsg("");
+                          if (!v) setError("El código es obligatorio");
+                          else if (v.length < 6) setError("El código debe tener 6 dígitos");
+                          else setError("");
+                        }} />
                     </div>
                   </div>
                   <button type="submit" className="auth-submit" disabled={loading}>
@@ -288,7 +301,12 @@ const ForgotPassword = () => {
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon"><Lock size={14} /></span>
                       <input type={showPass ? 'text' : 'password'} required placeholder="••••••••"
-                        className="auth-input" value={password} onChange={(e) => setPassword(e.target.value)} />
+                        className="auth-input" value={password} onChange={(e) => {
+                          const v = e.target.value;
+                          setPassword(v);
+                          const pe = validatePassword(v, confirm || undefined);
+                          setError(pe || "");
+                        }} />
                       <button type="button" className="auth-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
                         {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -300,7 +318,15 @@ const ForgotPassword = () => {
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon"><Lock size={14} /></span>
                       <input type={showConf ? 'text' : 'password'} required placeholder="••••••••"
-                        className="auth-input" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                        className="auth-input" value={confirm} onChange={(e) => {
+                          const v = e.target.value;
+                          setConfirm(v);
+                          if (password && v !== password) setError("Las contraseñas no coinciden");
+                          else {
+                            const pe = validatePassword(password, v);
+                            setError(pe || "");
+                          }
+                        }} />
                       <button type="button" className="auth-eye" onClick={() => setShowConf(v => !v)} tabIndex={-1}>
                         {showConf ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>

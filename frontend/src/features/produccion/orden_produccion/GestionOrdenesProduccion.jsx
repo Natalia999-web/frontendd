@@ -21,6 +21,11 @@ const ESTADO_TO_NUM = {
   "Cancelada":  5,
 };
 
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const ESTADO_CONFIG = {
   "Pendiente":  { dot: "#f9a825" },
   "En proceso": { dot: "#1976d2" },
@@ -422,7 +427,7 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
   const [stockCheck,       setStockCheck]       = useState(null);
   const [stockLoading,     setStockLoading]     = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
 
   useEffect(() => {
     const necesitaCheck = estadoSel === "En proceso" || estadoSel === "Completada";
@@ -658,8 +663,17 @@ function ModalErrorEstado({ mensaje, orden, onClose }) {
   const navigate = useNavigate();
   if (!mensaje) return null;
 
-  const esFichaTecnica    = /ficha t[eé]cnica/i.test(mensaje);
+  const esFichaTecnica      = /ficha t[eé]cnica/i.test(mensaje);
   const esStockInsuficiente = /stock insuficiente/i.test(mensaje);
+  const esTimeout           = /procesándose|procesandose|recarga/i.test(mensaje);
+
+  const titulo = esStockInsuficiente
+    ? "Stock insuficiente"
+    : esFichaTecnica
+    ? "Ficha técnica requerida"
+    : esTimeout
+    ? "La operación tardó demasiado"
+    : "No se pudo cambiar el estado";
 
   const irAFicha = () => {
     onClose();
@@ -678,7 +692,7 @@ function ModalErrorEstado({ mensaje, orden, onClose }) {
             fontSize: 24, margin: "0 auto 14px",
           }}>⚠️</div>
           <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>
-            No se pudo cambiar el estado
+            {titulo}
           </h3>
           <p style={{ margin: "0 0 16px", fontSize: 13, color: "#616161", lineHeight: 1.5 }}>
             {mensaje}
@@ -862,19 +876,22 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
   };
 
   const handleSave = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localToday();
     const e = {};
     if (!form.idProducto)                    e.idProducto = "Seleccione un producto";
     if (!form.cantidad || form.cantidad < 1) e.cantidad   = "Ingrese una cantidad válida";
     if (!orden) {
-      // Creación: fecha de entrega obligatoria
       if (!form.fechaEntrega)             e.fechaEntrega = "La fecha de entrega es obligatoria";
       else if (form.fechaEntrega < today) e.fechaEntrega = "La fecha no puede ser anterior al día de hoy";
     } else if (form.fechaEntrega && form.fechaEntrega < today) {
-      // Edición: solo validar si el usuario llenó el campo
       e.fechaEntrega = "La fecha no puede ser anterior al día de hoy";
     }
-    if (form.fechaInicio && form.fechaInicio < today) e.fechaInicio = "La fecha de inicio no puede ser anterior al día de hoy";
+    const minFechaInicio = orden ? (orden.fechaInicio || today) : today;
+    if (form.fechaInicio && form.fechaInicio < minFechaInicio) {
+      e.fechaInicio = orden
+        ? "No puede ser anterior a la fecha de inicio original de la orden"
+        : "La fecha de inicio no puede ser anterior al día de hoy";
+    }
     if (form.fechaInicio && form.fechaEntrega && form.fechaInicio > form.fechaEntrega) e.fechaInicio = "La fecha de inicio no puede ser después de la entrega";
     if (Object.keys(e).length) { setErrors(e); return; }
 
@@ -1031,7 +1048,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               <input
                 type="date"
                 className={`field-input${errors.fechaInicio ? " error" : ""}`}
-                min={new Date().toISOString().split('T')[0]}
+                min={orden ? (orden.fechaInicio || localToday()) : localToday()}
                 max={form.fechaEntrega || undefined}
                 value={form.fechaInicio}
                 onChange={e => set("fechaInicio", e.target.value)}
@@ -1043,7 +1060,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               <input
                 type="date"
                 className={`field-input${errors.fechaEntrega ? " error" : ""}`}
-                min={form.fechaInicio || new Date().toISOString().split('T')[0]}
+                min={form.fechaInicio || localToday()}
                 value={form.fechaEntrega}
                 onChange={e => set("fechaEntrega", e.target.value)}
               />
@@ -1187,7 +1204,10 @@ export default function GestionOrdenesProduccion() {
       setModal(null);
       await cargarDatos();
     } catch (e) {
-      const errorMsg = e.message || "Error al cambiar estado";
+      const isApiError = typeof e.statusCode === "number";
+      const errorMsg = isApiError
+        ? (e.message || "Error al cambiar estado")
+        : "La operación puede estar procesándose en el servidor. Recarga la página antes de reintentar para evitar aplicar el cambio dos veces.";
       setModal({ type: "errorEstado", mensaje: errorMsg, orden: ordenActual });
     } finally {
       setActionSaving(false);
@@ -1328,7 +1348,7 @@ export default function GestionOrdenesProduccion() {
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view"   data-tooltip="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}>👁</button>
                         <button className="act-btn act-btn--edit"   data-tooltip="Editar"         onClick={() => setModal({ type: "form",     orden })}>✎</button>
-                        <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })}>🔄</button>
+                        <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })} disabled={actionSaving}>🔄</button>
                         <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}>🗑️</button>
                       </div>
                     </td>

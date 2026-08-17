@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from datetime import datetime
 from decimal import Decimal
@@ -135,51 +135,58 @@ def _actualizar_estado_producto(producto: Producto) -> None:
         producto.Estado = 1
 
 
-def _formato_venta(venta: Venta, db: Session) -> dict:
-    """Construye la respuesta completa de una venta."""
-    usuario = db.query(Usuario).filter(Usuario.ID_Usuario == venta.ID_Usuario).first()
+def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
+    """Construye la respuesta completa de una venta.
 
-    vxp       = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == venta.ID_Venta).all()
+    dxv_map: pre-cargado {id_venta: DescuentoXVenta} para el caso de listado;
+    cuando es None usa db.query() igual que antes (op. individual sin cambio).
+    Los demás sub-datos usan relationships: lazy-load en op. individuales,
+    eager-load (selectinload) en listados — resultado idéntico.
+    """
+    usuario = venta.usuario
+
     productos = []
     requiere_produccion = False
-    for v in vxp:
-        producto = db.query(Producto).filter(Producto.ID_Producto == v.ID_Producto).first()
+    for v in venta.productos:
+        producto = v.producto
         precio   = producto.Precio_venta if producto else Decimal("0")
         if getattr(producto, "Requiere_Produccion", 0):
             requiere_produccion = True
+        imagen = producto.imagenes[0].imagen if (producto and producto.imagenes) else None
         productos.append({
             "ID_Producto":     v.ID_Producto,
             "nombre_producto": producto.nombre if producto else None,
             "Cantidad":        v.Cantidad,
             "precio_unitario": precio,
             "subtotal":        precio * Decimal(str(v.Cantidad)),
-            "imagen":          _imagen_producto(db, v.ID_Producto),
-            # Unidades pedidas por encima del stock al crear el pedido y stock
-            # disponible ahora mismo (para que el panel y la app los muestren).
+            "imagen":          imagen,
             "cantidad_preorden": getattr(v, "Cantidad_Preorden", 0) or 0,
             "stock_disponible":  (producto.Stock or 0) if producto else 0,
         })
 
-    detalle            = db.query(DetalleVenta).filter(DetalleVenta.ID_Venta == venta.ID_Venta).first()
-    credito_aplicado   = detalle.Descuento if detalle else Decimal("0")
-    iva                = detalle.IVA if detalle else Decimal("0")
+    detalle          = venta.detalle[0] if venta.detalle else None
+    credito_aplicado = detalle.Descuento if detalle else Decimal("0")
+    iva              = detalle.IVA if detalle else Decimal("0")
 
-    dxv                = db.query(DescuentoXVenta).filter(DescuentoXVenta.ID_Venta == venta.ID_Venta).first()
+    if dxv_map is not None:
+        dxv = dxv_map.get(venta.ID_Venta)
+    else:
+        dxv = db.query(DescuentoXVenta).filter(DescuentoXVenta.ID_Venta == venta.ID_Venta).first()
     descuento_aplicado = dxv.Monto_Aplicado if dxv else Decimal("0")
 
-    domicilio      = db.query(Domicilio).filter(Domicilio.ID_Venta == venta.ID_Venta).first()
+    domicilio      = venta.domicilios[0] if venta.domicilios else None
     subtotal_bruto = sum(p["subtotal"] for p in productos)
 
     domiciliario = None
     if domicilio and domicilio.ID_Empleado:
-        emp = db.query(Usuario).filter(Usuario.ID_Usuario == domicilio.ID_Empleado).first()
+        emp = domicilio.empleado
         if emp:
             domiciliario = f"{emp.Nombre} {emp.Apellidos}"
 
-    ordenes_pendientes = db.query(OrdenProduccion).filter(
-        OrdenProduccion.ID_Venta == venta.ID_Venta,
-        OrdenProduccion.Estado.notin_([11, 5]),
-    ).count()
+    ordenes_pendientes = sum(
+        1 for o in venta.ordenes_produccion
+        if o.Estado not in (11, 5)
+    )
 
     return {
         "ID_Venta":           venta.ID_Venta,
@@ -484,13 +491,37 @@ def obtener_ventas(
 
     total  = query.count()
     offset = (pagina - 1) * por_pagina
-    ventas = query.order_by(Venta.Fecha_Venta.desc()).offset(offset).limit(por_pagina).all()
+    ventas = (
+        query
+        .options(
+            selectinload(Venta.usuario),
+            selectinload(Venta.productos)
+                .selectinload(VentaXProducto.producto)
+                .selectinload(Producto.imagenes),
+            selectinload(Venta.detalle),
+            selectinload(Venta.domicilios)
+                .selectinload(Domicilio.empleado),
+            selectinload(Venta.ordenes_produccion),
+        )
+        .order_by(Venta.Fecha_Venta.desc())
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    venta_ids = [v.ID_Venta for v in ventas]
+    dxv_map = {}
+    if venta_ids:
+        for row in db.query(DescuentoXVenta).filter(
+            DescuentoXVenta.ID_Venta.in_(venta_ids)
+        ).all():
+            dxv_map.setdefault(row.ID_Venta, row)
 
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ventas":     _batch_ventas(ventas, db),
+        "ventas":     [_formato_venta(v, db, dxv_map=dxv_map) for v in ventas],
     }
 
 
@@ -506,15 +537,39 @@ def obtener_mis_ventas(
 
     id_usuario = actual["registro"].ID_Usuario
     query      = db.query(Venta).filter(Venta.ID_Usuario == id_usuario)
-    total      = query.count()
-    offset     = (pagina - 1) * por_pagina
-    ventas     = query.order_by(Venta.Fecha_pedido.desc()).offset(offset).limit(por_pagina).all()
+    total  = query.count()
+    offset = (pagina - 1) * por_pagina
+    ventas = (
+        query
+        .options(
+            selectinload(Venta.usuario),
+            selectinload(Venta.productos)
+                .selectinload(VentaXProducto.producto)
+                .selectinload(Producto.imagenes),
+            selectinload(Venta.detalle),
+            selectinload(Venta.domicilios)
+                .selectinload(Domicilio.empleado),
+            selectinload(Venta.ordenes_produccion),
+        )
+        .order_by(Venta.Fecha_pedido.desc())
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
+
+    venta_ids = [v.ID_Venta for v in ventas]
+    dxv_map = {}
+    if venta_ids:
+        for row in db.query(DescuentoXVenta).filter(
+            DescuentoXVenta.ID_Venta.in_(venta_ids)
+        ).all():
+            dxv_map.setdefault(row.ID_Venta, row)
 
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ventas":     _batch_ventas(ventas, db),
+        "ventas":     [_formato_venta(v, db, dxv_map=dxv_map) for v in ventas],
     }
 
 

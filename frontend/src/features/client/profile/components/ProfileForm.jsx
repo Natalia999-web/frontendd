@@ -116,11 +116,26 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
     let val = e.target.value;
     if (k === 'cedula') val = soloDigitos(val);
     if (k === 'telefono') val = soloDigitos(val, 10);
-    setForm(p => ({ ...p, [k]: val }));
+    const newForm = { ...form, [k]: val };
+    setForm(newForm);
     setErrors(p => {
       const n = { ...p };
-      if (val && k === 'direccion' && !esUbicacionValida(val)) n[k] = 'La dirección debe tener letras y números (mín. 5 caracteres)';
-      else delete n[k];
+      if (k === 'telefono') {
+        if (val.trim() && val.replace(/\D/g, '').length !== 10) n.telefono = 'El teléfono debe tener 10 dígitos';
+        else delete n.telefono;
+      }
+      if (k === 'direccion') {
+        if (val.trim() && !esUbicacionValida(val)) n.direccion = 'La dirección debe tener letras y números (mín. 5 caracteres)';
+        else delete n.direccion;
+      }
+      if (k === 'tipo_documento') {
+        if (!val && newForm.cedula.trim()) n.tipo_documento = 'Selecciona el tipo de documento';
+        else delete n.tipo_documento;
+      }
+      if (k === 'cedula') {
+        if (val.trim() && !newForm.tipo_documento) n.tipo_documento = 'Selecciona el tipo de documento';
+        else delete n.tipo_documento;
+      }
       return n;
     });
   };

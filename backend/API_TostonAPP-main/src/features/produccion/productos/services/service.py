@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import case
+from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from datetime import datetime
 from decimal import Decimal
@@ -22,33 +23,32 @@ def _calcular_estado(stock: int, stock_minimo: int) -> tuple[int, str]:
 
 def _formato_producto(producto: Producto, db: Session) -> dict:
     """Construye el dict de respuesta con categoría, imágenes y ficha técnica."""
-    categoria = db.query(CategoriaProducto).filter(
-        CategoriaProducto.ID_Categoria == producto.ID_Categoria
-    ).first()
+    # Usa relaciones ya cargadas (eager) — sin queries extra al llamar desde obtener_productos.
+    # Al llamar desde obtener_producto (single), SQLAlchemy hace lazy load normal (1 producto = OK).
+    categoria = producto.categoria
+    imagenes  = producto.imagenes
 
-    imagenes = db.query(ProductoImagen).filter(
-        ProductoImagen.ID_Producto == producto.ID_Producto
-    ).all() if hasattr(ProductoImagen, "ID_Producto") else []
-
-    ficha = db.query(FichaTecnica).filter(
-        FichaTecnica.ID_Producto == producto.ID_Producto
-    ).order_by(FichaTecnica.Fecha_Creacion.desc()).first()
+    # Ficha más reciente del listado ya cargado
+    fichas_ord = sorted(
+        producto.fichas_tecnicas,
+        key=lambda f: f.Fecha_Creacion or datetime.min,
+        reverse=True,
+    )
+    ficha = fichas_ord[0] if fichas_ord else None
 
     stock        = producto.Stock or 0
     stock_minimo = getattr(producto, "Stock_Minimo", 0) or 0
     estado_id, estado_label = _calcular_estado(stock, stock_minimo)
 
     hoy = datetime.utcnow()
+    # Lote más próximo a vencer del listado ya cargado
+    lotes_validos = [
+        l for l in producto.lotes_producto
+        if l.Fecha_Vencimiento and l.Estado == 1 and (l.Cantidad or 0) > 0
+    ]
     proximo_lote_prod = (
-        db.query(LoteProducto)
-        .filter(
-            LoteProducto.ID_Producto == producto.ID_Producto,
-            LoteProducto.Fecha_Vencimiento != None,
-            LoteProducto.Estado == 1,
-            LoteProducto.Cantidad > 0,
-        )
-        .order_by(LoteProducto.Fecha_Vencimiento.asc())
-        .first()
+        min(lotes_validos, key=lambda l: l.Fecha_Vencimiento)
+        if lotes_validos else None
     )
     proximo_venc_prod = None
     dias_para_vencer_prod = None
@@ -96,9 +96,7 @@ def _formato_producto(producto: Producto, db: Session) -> dict:
                     "Cantidad":         fi.Cantidad,
                     "Unidad":           fi.Unidad,
                 }
-                for fi in db.query(FichaTecnicaInsumo).filter(
-                    FichaTecnicaInsumo.ID_Ficha == ficha.ID_Ficha
-                ).all()
+                for fi in (ficha.insumos_ficha if ficha else [])
             ],
         } if ficha else None,
     }
@@ -132,9 +130,23 @@ def obtener_productos(
             CategoriaProducto.Nombre_Categoria.ilike(termino)
         )
 
-    total     = query.count()
-    offset    = (pagina - 1) * por_pagina
-    productos = query.offset(offset).limit(por_pagina).all()
+    total  = query.count()
+    offset = (pagina - 1) * por_pagina
+    productos = (
+        query
+        .options(
+            selectinload(Producto.categoria),
+            selectinload(Producto.imagenes),
+            selectinload(Producto.lotes_producto),
+            selectinload(Producto.fichas_tecnicas)
+                .selectinload(FichaTecnica.insumos_ficha)
+                .selectinload(FichaTecnicaInsumo.insumo)
+                .selectinload(Insumo.categoria),
+        )
+        .offset(offset)
+        .limit(por_pagina)
+        .all()
+    )
 
     if not productos:
         return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "productos": []}
@@ -298,7 +310,10 @@ def obtener_lotes_producto(db: Session, id_producto: int) -> dict:
     lotes = (
         db.query(LoteProducto)
         .filter(LoteProducto.ID_Producto == id_producto)
-        .order_by(LoteProducto.Fecha_Vencimiento.asc().nullslast())
+        .order_by(
+            case((LoteProducto.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteProducto.Fecha_Vencimiento.asc(),
+        )
         .all()
     )
     resultado = []

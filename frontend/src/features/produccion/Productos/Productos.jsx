@@ -319,7 +319,7 @@ function LotesProductoPanel({ idProducto, tipo = "lotes" }) {
     <div style={{ textAlign: "center", padding: "28px 0", color: "#9e9e9e", fontSize: 13 }}>Cargando lotes…</div>
   );
 
-  const activos  = lotes.filter(l => !l.vencido);
+  const activos  = lotes.filter(l => !l.vencido && (l.cantidad ?? 0) > 0);
   const vencidos = lotes.filter(l => l.vencido);
   const mostrar  = tipo === "historial" ? vencidos : activos;
 
