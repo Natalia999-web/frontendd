@@ -12,7 +12,13 @@ def notificar(
     referencia_id: int,
     ruta: str = None,
 ) -> None:
-    """Inserta una notificación solo si no existe ya una sin leer del mismo tipo y referencia."""
+    """Inserta una notificación solo si no existe ya una sin leer del mismo tipo y referencia.
+
+    Además envía un push al celular de los administradores: toda notificación
+    que aparece en el panel se avisa en tiempo real, sin repetir la lógica en
+    cada módulo. Es best-effort (no rompe la operación si Firebase falla) y solo
+    se envía cuando la notificación es nueva, para no repetir avisos.
+    """
     existe = db.query(Notificacion).filter(
         Notificacion.Tipo          == tipo,
         Notificacion.Referencia_ID == referencia_id,
@@ -28,6 +34,12 @@ def notificar(
             Fecha         = datetime.now(),
             Leida         = False,
         ))
+        try:
+            from src.shared.services.fcm_service import notificar_admins_push
+            notificar_admins_push(titulo, mensaje, db=db, tipo=tipo,
+                                  referencia_id=referencia_id)
+        except Exception:
+            pass
 
 
 def descartar_notificacion(db: Session, tipo: str, referencia_id: int) -> None:

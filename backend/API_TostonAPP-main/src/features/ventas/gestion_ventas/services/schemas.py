@@ -81,6 +81,9 @@ class VentaResponse(BaseModel):
     sobre_stock:            bool               = False
     anticipo_requerido:     Optional[Decimal]  = None
     anticipo_pagado:        Optional[Decimal]  = None
+    # Solo los pedidos sobre stock o de producción necesitan fecha propuesta
+    requiere_fecha_propuesta: bool             = False
+    requiere_produccion:      bool             = False
 
     class Config:
         from_attributes = True

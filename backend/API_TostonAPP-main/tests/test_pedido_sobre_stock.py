@@ -17,8 +17,9 @@ from src.features.ventas.gestion_ventas.services.service import (
     PORCENTAJE_ANTICIPO_SOBRE_STOCK,
     _es_transferencia,
     _evaluar_lineas_pedido,
+    requiere_fecha_propuesta,
 )
-from src.shared.services.models import Producto
+from src.shared.services.models import Producto, VentaXProducto
 
 
 class FakeQuery:
@@ -29,12 +30,14 @@ class FakeQuery:
         self.bloqueado = False
 
     def filter(self, *criterios):
-        # El servicio filtra por ID_Producto == <id>: se resuelve leyendo el
-        # valor del lado derecho de la comparación.
+        # Resuelve comparaciones del tipo Modelo.Columna == <valor> leyendo el
+        # nombre de la columna y el valor del lado derecho.
         for criterio in criterios:
+            columna = getattr(getattr(criterio, "left", None), "name", None)
             valor = getattr(getattr(criterio, "right", None), "value", None)
-            if valor is not None:
-                self.rows = [r for r in self.rows if r.ID_Producto == valor]
+            if columna and valor is not None:
+                self.rows = [r for r in self.rows
+                             if getattr(r, columna, None) == valor]
         return self
 
     def with_for_update(self):
@@ -49,12 +52,18 @@ class FakeQuery:
 
 
 class FakeDB:
-    def __init__(self, productos):
+    def __init__(self, productos, venta_productos=None):
         self.productos = productos
+        self.venta_productos = venta_productos or []
         self.queries = []
 
     def query(self, model):
-        q = FakeQuery(list(self.productos)) if model is Producto else FakeQuery([])
+        if model is Producto:
+            q = FakeQuery(list(self.productos))
+        elif model is VentaXProducto:
+            q = FakeQuery(list(self.venta_productos))
+        else:
+            q = FakeQuery([])
         self.queries.append(q)
         return q
 
@@ -160,6 +169,50 @@ class AnticipoTests(unittest.TestCase):
         self.assertTrue(_es_transferencia("  transferencia bancaria "))
         self.assertFalse(_es_transferencia("Efectivo"))
         self.assertFalse(_es_transferencia(None))
+
+
+def venta(id_venta=1, sobre_stock=0):
+    return type("Venta", (), {"ID_Venta": id_venta, "Sobre_Stock": sobre_stock})()
+
+
+def item_venta(id_venta, id_producto, cantidad):
+    return type("VxP", (), {
+        "ID_Venta": id_venta,
+        "ID_Producto": id_producto,
+        "Cantidad": cantidad,
+    })()
+
+
+class RequiereFechaPropuestaTests(unittest.TestCase):
+    """Solo los pedidos que no se pueden entregar de una llevan fecha propuesta."""
+
+    def test_pedido_normal_no_requiere_fecha(self):
+        db = FakeDB(
+            [producto(1, stock=20, precio=10000)],
+            [item_venta(1, 1, 5)],
+        )
+        self.assertFalse(requiere_fecha_propuesta(db, venta()))
+
+    def test_pedido_sobre_stock_requiere_fecha(self):
+        db = FakeDB(
+            [producto(1, stock=10, precio=10000)],
+            [item_venta(1, 1, 15)],
+        )
+        self.assertTrue(requiere_fecha_propuesta(db, venta(sobre_stock=1)))
+
+    def test_producto_por_encargo_con_deficit_requiere_fecha(self):
+        db = FakeDB(
+            [producto(1, stock=0, precio=10000, requiere_produccion=1)],
+            [item_venta(1, 1, 4)],
+        )
+        self.assertTrue(requiere_fecha_propuesta(db, venta()))
+
+    def test_producto_por_encargo_con_stock_no_requiere_fecha(self):
+        db = FakeDB(
+            [producto(1, stock=10, precio=10000, requiere_produccion=1)],
+            [item_venta(1, 1, 4)],
+        )
+        self.assertFalse(requiere_fecha_propuesta(db, venta()))
 
 
 if __name__ == "__main__":

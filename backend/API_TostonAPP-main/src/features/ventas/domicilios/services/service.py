@@ -9,7 +9,7 @@ from src.shared.services.models import (
     Domicilio, Venta, Usuario, Estado, Producto, ProductoImagen,
     VentaXProducto, Rol, MensajeChat,
 )
-from src.shared.services.notificaciones_utils import notificar_stock_producto
+from src.shared.services.notificaciones_utils import notificar, notificar_stock_producto
 from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
 from .schemas import DomicilioCreate, DomicilioUpdate
 
@@ -211,6 +211,42 @@ def obtener_domicilio(db: Session, id_domicilio: int) -> dict:
     return _formato_domicilio(dom, db)
 
 
+def _avisar_asignacion(db: Session, dom: Domicilio) -> None:
+    """Avisa la asignación de un domicilio a su repartidor.
+
+    - Push en tiempo real al celular del domiciliario. Es la ÚNICA notificación
+      push que recibe: no le llegan las del panel (stock, pedidos nuevos,
+      devoluciones...).
+    - Notificación en el panel para que quede registrada la asignación (el
+      repartidor solo ve en su lista las de sus propios domicilios).
+
+    Best-effort: si Firebase falla, la asignación igual queda hecha."""
+    try:
+        from src.shared.services.fcm_service import notificar_asignacion_domicilio_push
+        direccion = ", ".join(
+            p for p in [dom.Direccion_entrega, dom.Municipio_entrega] if p
+        )
+        notificar_asignacion_domicilio_push(
+            id_empleado = dom.ID_Empleado,
+            id_venta    = dom.ID_Venta,
+            direccion   = direccion,
+            db          = db,
+        )
+
+        repartidor = db.query(Usuario).filter(
+            Usuario.ID_Usuario == dom.ID_Empleado
+        ).first()
+        nombre = f"{repartidor.Nombre} {repartidor.Apellidos}" if repartidor else "un repartidor"
+        notificar(
+            db, "domicilio_asignado", "Domicilio asignado",
+            f"El pedido #{dom.ID_Venta} fue asignado a {nombre}",
+            dom.ID_Venta, "/ventas/domicilios",
+        )
+        db.commit()
+    except Exception as e:
+        logger.error(f"FCM: no se pudo avisar la asignación del domicilio {dom.ID_Domicilio}: {e}")
+
+
 def crear_domicilio(db: Session, datos: DomicilioCreate) -> dict:
     """Crea un domicilio. Si viene ID_Empleado el estado es Asignado, si no Pendiente."""
     venta = db.query(Venta).filter(Venta.ID_Venta == datos.ID_Venta).first()
@@ -248,6 +284,9 @@ def crear_domicilio(db: Session, datos: DomicilioCreate) -> dict:
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
+    # Si nace con repartidor, avisarle al instante en su celular.
+    if nuevo.ID_Empleado:
+        _avisar_asignacion(db, nuevo)
     return _formato_domicilio(nuevo, db)
 
 
@@ -281,6 +320,8 @@ def asignar_repartidor(db: Session, id_domicilio: int, id_empleado: int) -> dict
     # Busca el estado 'Asignado' por nombre para no depender de un ID hardcodeado
     estado_asignado = db.query(Estado).filter(Estado.Estado.ilike("asignado")).first()
 
+    cambia_repartidor = dom.ID_Empleado != id_empleado
+
     try:
         dom.ID_Empleado = id_empleado
         if dom.Estado == ESTADO_PENDIENTE and estado_asignado:
@@ -290,6 +331,10 @@ def asignar_repartidor(db: Session, id_domicilio: int, id_empleado: int) -> dict
         db.rollback()
         logger.error(f"Error asignando repartidor a domicilio {id_domicilio}: {e}")
         raise HTTPException(status_code=500, detail="Error al asignar el repartidor")
+
+    # Aviso al celular del repartidor solo cuando la asignación es nueva.
+    if cambia_repartidor:
+        _avisar_asignacion(db, dom)
 
     try:
         db.refresh(dom)

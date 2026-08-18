@@ -95,52 +95,93 @@ def _firebase_app():
         return None
 
 
-def notificar_nuevo_pedido_push(
-    id_venta: int,
-    nombre_cliente: str,
-    total: float,
-    admin_ids: list,
-    db=None,
-) -> None:
-    """Push a todos los admins registrados cuando llega un nuevo pedido.
-    No-op silencioso si firebase-admin no está instalado o no hay tokens."""
+def _enviar_multicast(tokens: list, titulo: str, cuerpo: str, data: dict | None = None) -> None:
+    """Envía un push a varios dispositivos. No-op silencioso si algo falta."""
+    if not tokens:
+        return
+    from firebase_admin import messaging
+
+    app = _firebase_app()
+    if app is None:
+        return
+
+    msg = messaging.MulticastMessage(
+        tokens=tokens,
+        notification=messaging.Notification(title=titulo, body=cuerpo),
+        android=messaging.AndroidConfig(
+            priority="high",
+            notification=messaging.AndroidNotification(
+                channel_id="pedidos_channel",
+                sound="default",
+                icon="@mipmap/ic_launcher",
+            ),
+        ),
+        apns=messaging.APNSConfig(
+            payload=messaging.APNSPayload(aps=messaging.Aps(sound="default")),
+        ),
+        data={k: str(v) for k, v in (data or {}).items()},
+    )
+    messaging.send_each_for_multicast(msg, app=app)
+
+
+def notificar_admins_push(titulo: str, mensaje: str, db=None, tipo: str = "",
+                          referencia_id: int | None = None) -> None:
+    """Push a TODOS los administradores.
+
+    Se dispara desde `notificar()` para que cada notificación que aparece en el
+    panel llegue también al celular del admin, sin duplicar reglas en cada
+    módulo (pedidos, domicilios, stock, devoluciones...).
+
+    Solo van a rol admin: el domiciliario recibe únicamente sus asignaciones y
+    el cliente los cambios de estado de sus propios pedidos."""
     try:
-        from firebase_admin import messaging
-
-        app = _firebase_app()
-        if app is None:
+        if db is None:
             return
+        from src.shared.services.models import Usuario
 
-        tokens = [t for uid in admin_ids if (t := _token_usuario(uid, db))]
-        if not tokens:
-            return
-
-        msg = messaging.MulticastMessage(
-            tokens=tokens,
-            notification=messaging.Notification(
-                title=f"\U0001f6cd️ Nuevo pedido #{id_venta:05d}",
-                body=f"{nombre_cliente}  ·  ${total:,.0f}",
-            ),
-            android=messaging.AndroidConfig(
-                priority="high",
-                notification=messaging.AndroidNotification(
-                    channel_id="pedidos_channel",
-                    sound="default",
-                    icon="@mipmap/ic_launcher",
-                ),
-            ),
-            apns=messaging.APNSConfig(
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(sound="default"),
-                ),
-            ),
+        tokens = [
+            u.FCM_Token
+            for u in db.query(Usuario).filter(
+                Usuario.ID_Rol == 1,
+                Usuario.FCM_Token.isnot(None),
+            ).all()
+            if u.FCM_Token
+        ]
+        _enviar_multicast(
+            tokens, titulo, mensaje,
+            {"tipo": tipo or "panel", "referencia_id": referencia_id or 0},
         )
-        messaging.send_each_for_multicast(msg, app=app)
-
     except ImportError:
         pass  # firebase-admin no instalado
     except Exception as e:
-        logger.error(f"FCM: error enviando push de nuevo pedido #{id_venta}: {e}")
+        logger.error(f"FCM: error enviando push a admins ({tipo}): {e}")
+
+
+def notificar_asignacion_domicilio_push(
+    id_empleado: int,
+    id_venta: int,
+    direccion: str = "",
+    db=None,
+) -> None:
+    """Push al domiciliario cuando le ASIGNAN un pedido.
+
+    Es la única notificación que recibe el repartidor: nada de stock, pedidos
+    nuevos ni movimientos de otros módulos."""
+    try:
+        token = _token_usuario(id_empleado, db)
+        if not token:
+            return
+        destino = f"\U0001f4cd {direccion}" if direccion else "Revisá tus entregas"
+        _enviar_multicast(
+            [token],
+            f"\U0001f6f5 Nuevo domicilio asignado #{id_venta:05d}",
+            destino,
+            {"tipo": "domicilio_asignado", "id_venta": id_venta},
+        )
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.error(f"FCM: error enviando push de asignación al empleado {id_empleado}: {e}")
 
 
 _LABELS_ESTADO_CLIENTE = {

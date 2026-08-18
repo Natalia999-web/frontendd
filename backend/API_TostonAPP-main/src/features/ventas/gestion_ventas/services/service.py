@@ -213,6 +213,9 @@ def _formato_venta(venta: Venta, db: Session) -> dict:
         "sobre_stock":        bool(getattr(venta, "Sobre_Stock", 0)),
         "anticipo_requerido": getattr(venta, "Anticipo_Requerido", None),
         "anticipo_pagado":    getattr(venta, "Anticipo_Pagado", None),
+        # True solo en los pedidos a los que hay que proponerles fecha
+        # (sobre stock o producción). Los normales no la necesitan.
+        "requiere_fecha_propuesta": requiere_fecha_propuesta(db, venta),
     }
 
 
@@ -604,22 +607,20 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         )
         db.commit()
 
-    # Push FCM a admins — sin bloqueo si Firebase no está configurado
-    try:
-        from src.shared.services.fcm_service import notificar_nuevo_pedido_push
-        admin_ids = [
-            row.ID_Usuario
-            for row in db.query(Usuario.ID_Usuario).filter(Usuario.ID_Rol == 1).all()
-        ]
-        notificar_nuevo_pedido_push(
-            id_venta       = nueva_venta.ID_Venta,
-            nombre_cliente = f"{usuario.Nombre} {usuario.Apellidos}",
-            total          = float(nueva_venta.Total or 0),
-            admin_ids      = admin_ids,
-            db             = db,
-        )
-    except Exception:
-        pass
+    # El push a los administradores lo dispara notificar() al crear la
+    # notificación del panel: así todas las alertas llegan por el mismo camino.
+
+    # Si el pedido nació con repartidor asignado, avisarle en su celular.
+    if datos.domicilio and datos.domicilio.ID_Empleado:
+        try:
+            from src.features.ventas.domicilios.services.service import _avisar_asignacion
+            dom_creado = db.query(Domicilio).filter(
+                Domicilio.ID_Venta == nueva_venta.ID_Venta
+            ).first()
+            if dom_creado:
+                _avisar_asignacion(db, dom_creado)
+        except Exception:
+            pass
 
     return _formato_venta(nueva_venta, db)
 
@@ -789,6 +790,32 @@ def obtener_mi_credito(db: Session, usuario_actual: dict) -> dict:
 
 # ── Feature "Fecha propuesta" ──────────────────────────────────────────────
 
+def requiere_fecha_propuesta(db: Session, venta: Venta) -> bool:
+    """True si el pedido necesita que el admin proponga una fecha de entrega.
+
+    Solo los pedidos que NO se pueden entregar de una:
+    - sobre stock (preorden): se pidieron más unidades de las que hay;
+    - producción: incluye productos por encargo cuyo stock no alcanza.
+
+    Los pedidos normales (con o sin domicilio) se confirman directamente.
+    """
+    if bool(getattr(venta, "Sobre_Stock", 0)):
+        return True
+
+    items = db.query(VentaXProducto).filter(
+        VentaXProducto.ID_Venta == venta.ID_Venta
+    ).all()
+    for item in items:
+        prod = db.query(Producto).filter(
+            Producto.ID_Producto == item.ID_Producto
+        ).first()
+        if not prod or not getattr(prod, "Requiere_Produccion", 0):
+            continue
+        if (item.Cantidad or 0) > (prod.Stock or 0):
+            return True
+    return False
+
+
 def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
     """Admin propone una fecha de entrega. Solo válido en ventas Pendientes o con Fecha propuesta."""
     venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
@@ -799,19 +826,16 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
             status_code=400,
             detail="Solo se puede proponer fecha en ventas Pendientes o en estado Fecha propuesta",
         )
-    # La propuesta de fecha aplica a pedidos con DOMICILIO y a los pedidos por
-    # encima del stock (preorden), que necesitan una fecha aunque se recojan en
-    # tienda. Un pedido normal de recoger en tienda no la necesita.
-    tiene_domicilio = db.query(Domicilio).filter(
-        Domicilio.ID_Venta == id_venta
-    ).first() is not None
-    es_sobre_stock = bool(getattr(venta, "Sobre_Stock", 0))
-    if not tiene_domicilio and not es_sobre_stock:
+    # La fecha propuesta es SOLO para los pedidos que no se pueden entregar de
+    # inmediato: los que superan el stock disponible (preorden) y los que
+    # incluyen productos por encargo con déficit. Un pedido normal —haya o no
+    # domicilio— se confirma directamente, sin proponer fecha.
+    if not requiere_fecha_propuesta(db, venta):
         raise HTTPException(
             status_code=400,
             detail=(
-                "Solo se puede proponer fecha de entrega para pedidos con domicilio "
-                "o pedidos por encima del stock"
+                "Solo se propone fecha en pedidos que superan el stock disponible "
+                "o que requieren producción"
             ),
         )
     descartar_notificacion(db, "produccion_requerida", id_venta)
