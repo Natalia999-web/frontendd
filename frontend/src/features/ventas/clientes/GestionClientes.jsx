@@ -210,7 +210,7 @@ export default function GestionClientes() {
             </button>
           )}
 
-          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })} data-tooltip="Agregar nuevo cliente">
+          <button className="btn-agregar" onClick={() => setModal({ mode: "new" })}>
             Agregar <span style={{ fontSize: 18 }}>+</span>
           </button>
         </div>
@@ -261,9 +261,9 @@ export default function GestionClientes() {
                     <td><span className="date-badge">{c.fechaCreacion}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   data-tooltip="Ver cliente"    onClick={() => setModal({ mode:"view",   cliente:c })}>👁</button>
-                        <button className="act-btn act-btn--edit"   data-tooltip="Editar cliente"  onClick={() => setModal({ mode:"edit",   cliente:c })}>✎</button>
-                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar cliente" onClick={() => handleDeleteClick(c)}>🗑️</button>
+                        <button className="act-btn act-btn--view"   onClick={() => setModal({ mode:"view",   cliente:c })}>👁</button>
+                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ mode:"edit",   cliente:c })}>✎</button>
+                        <button className="act-btn act-btn--delete" onClick={() => handleDeleteClick(c)}>🗑️</button>
                       </div>
                     </td>
                   </tr>
