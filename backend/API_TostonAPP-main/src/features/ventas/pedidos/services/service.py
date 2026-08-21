@@ -195,6 +195,30 @@ def cancelar_pedido(db: Session, id_venta: int, actual: dict = None) -> dict:
     return _gv_cambiar_estado(db, id_venta, EstadoPedido.CANCELADO)
 
 
+_ESTADOS_PAGO_YA_COBRADO = {"efectivo_recibido", "pagado_completo", "anticipo_pagado"}
+
+
+def registrar_cobro_pedido(db: Session, id_venta: int, datos, id_usuario_actual: int) -> dict:
+    """
+    Admin/empleado registra cobro en efectivo para un pedido (contra entrega o en tienda).
+    Estado_Pago → 'efectivo_recibido' o 'no_recibido'.
+    """
+    from datetime import datetime, timezone
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+    estado_pago = (getattr(venta, "Estado_Pago", None) or "pendiente").strip()
+    if estado_pago in _ESTADOS_PAGO_YA_COBRADO:
+        raise HTTPException(status_code=409, detail="El cobro ya fue registrado para este pedido")
+
+    venta.Estado_Pago = "efectivo_recibido" if datos.recibido else "no_recibido"
+    db.commit()
+    db.refresh(venta)
+    return _formato_venta(venta, db)
+
+
 def aprobar_comprobante(db: Session, id_venta: int) -> dict:
     """
     Admin aprueba el comprobante de transferencia.

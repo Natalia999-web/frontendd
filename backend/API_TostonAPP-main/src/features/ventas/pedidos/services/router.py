@@ -4,10 +4,10 @@ from typing import Optional
 
 from src.shared.services.database import get_db
 from src.features.auth.services.dependencies import requiere_permiso, obtener_usuario_actual
-from .schemas import PedidoResponse, PedidoListResponse, PedidoUpdate
+from .schemas import PedidoResponse, PedidoListResponse, PedidoUpdate, RegistroCobro
 from .service import (
     obtener_pedidos, obtener_pedido, confirmar_pedido, cancelar_pedido,
-    editar_pedido, aprobar_comprobante, rechazar_comprobante,
+    editar_pedido, aprobar_comprobante, rechazar_comprobante, registrar_cobro_pedido,
 )
 from src.features.ventas.gestion_ventas.services.schemas import RechazoComprobante
 
@@ -98,3 +98,15 @@ def rechazar_comprobante_endpoint(
     """Admin rechaza el comprobante → Estado_Pago='comprobante_rechazado'. El motivo queda en notificación."""
     registro = actual["registro"]
     return rechazar_comprobante(db, id_venta, datos.motivo, registro.ID_Usuario)
+
+
+@router.patch("/{id_venta}/registrar-cobro", response_model=PedidoResponse)
+def registrar_cobro_endpoint(
+    id_venta: int,
+    datos:    RegistroCobro,
+    db:       Session = Depends(get_db),
+    actual:   dict    = Depends(requiere_permiso("editar_ventas")),
+):
+    """Admin/empleado registra cobro en efectivo (contra entrega o en tienda) → Estado_Pago='efectivo_recibido'."""
+    registro = actual["registro"]
+    return registrar_cobro_pedido(db, id_venta, datos, registro.ID_Usuario)

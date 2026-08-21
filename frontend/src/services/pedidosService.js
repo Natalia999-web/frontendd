@@ -171,3 +171,9 @@ export const rechazarComprobante = async (id, motivo) =>
     method: "PATCH",
     body: JSON.stringify({ motivo }),
   });
+
+export const registrarCobroPedido = async (id, { recibido, monto = null, motivo = null }) =>
+  apiFetch(`/pedidos/${id}/registrar-cobro`, {
+    method: "PATCH",
+    body: JSON.stringify({ recibido, monto, motivo }),
+  });

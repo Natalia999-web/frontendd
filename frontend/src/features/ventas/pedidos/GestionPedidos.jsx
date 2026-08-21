@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fmtFecha, getRecordDate } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import { descargarFacturaPedido } from "../../../utils/facturaGenerator.js";
-import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crearPedido, editarPedido, eliminarPedido, cambiarEstadoVenta, proponerFechaProduccion, registrarPagoFinal, aprobarComprobante, rechazarComprobante } from "../../../services/pedidosService.js";
+import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crearPedido, editarPedido, eliminarPedido, cambiarEstadoVenta, proponerFechaProduccion, registrarPagoFinal, aprobarComprobante, rechazarComprobante, registrarCobroPedido } from "../../../services/pedidosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import { asignarRepartidor } from "../../../services/domiciliosService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
@@ -157,7 +157,12 @@ function ModalConfirmarEstado({ pedido, nuevoEstado, onClose, onConfirm }) {
 function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
   const navigate = useNavigate();
   const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
-  const [tab, setTab] = useState(esTransferencia ? "pago" : "resumen");
+  const epInicial = pedido.estado_pago;
+  const [tab, setTab] = useState(
+    esTransferencia || epInicial === "pendiente_validacion" || epInicial === "comprobante_rechazado"
+      ? "pago"
+      : "resumen"
+  );
   const emp = empleados.find(e => e.id === pedido.idEmpleado);
   if (!pedido) return null;
 
@@ -185,7 +190,19 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           <button className={`ver-ped-tab${tab === "resumen"   ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("resumen")}>📋 Resumen</button>
           <button className={`ver-ped-tab${tab === "productos" ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("productos")}>📦 Productos</button>
           <button className={`ver-ped-tab${tab === "pago"      ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("pago")}>
-            💳 Pago {esTransferencia && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#e3f2fd", color: "#1565c0", border: "1px solid #90caf9", borderRadius: 4, padding: "1px 5px" }}>Transferencia</span>}
+            💳 Pago{" "}
+            {esTransferencia && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#e3f2fd", color: "#1565c0", border: "1px solid #90caf9", borderRadius: 4, padding: "1px 5px" }}>Transferencia</span>}
+            {(() => {
+              const ep = pedido.estado_pago;
+              const badges = {
+                pagado_completo:      { bg: "#e8f5e9", color: "#2e7d32", border: "#a5d6a7", label: "✅ Completo" },
+                anticipo_pagado:      { bg: "#fff8e1", color: "#e65100", border: "#ffe082", label: "⚠️ Anticipo" },
+                pendiente_validacion: { bg: "#e3f2fd", color: "#1565c0", border: "#90caf9", label: "🕐 Validar" },
+                comprobante_rechazado:{ bg: "#ffebee", color: "#c62828", border: "#ef9a9a", label: "❌ Rechazado" },
+              };
+              const b = badges[ep];
+              return b ? <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: b.bg, color: b.color, border: `1px solid ${b.border}`, borderRadius: 4, padding: "1px 5px" }}>{b.label}</span> : null;
+            })()}
           </button>
         </div>
 
@@ -356,137 +373,202 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           {/* ── Tab Pago ── */}
           {tab === "pago" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Resumen estado del pago */}
               {(() => {
-                const hasAnticipo = pedido.sobre_stock || pedido.requiere_anticipo || pedido.anticipo_registrado || pedido.pago_final_registrado;
-                if (!hasAnticipo) return null;
-                const montoPagado = pedido.pago_final_registrado
-                  ? Number(pedido.total || 0)
-                  : pedido.anticipo_registrado
-                    ? Number(pedido.anticipo_monto ?? pedido.anticipo_requerido ?? 0)
-                    : 0;
-                const saldo = Math.max(0, Number(pedido.total || 0) - montoPagado);
-                const esPagoCompleto = pedido.pago_final_registrado;
-                const esAnticipo = !esPagoCompleto && pedido.anticipo_registrado;
-                const estadoPagoLabel = esPagoCompleto ? "Pago completo" : esAnticipo ? "Anticipo" : "Pendiente";
+                const totalPedido = Number(pedido.total || 0);
+
+                // Total realmente pagado según los campos del backend
+                let totalPagado = 0;
+                if (pedido.pago_final_registrado) {
+                  totalPagado = pedido.pago_final_monto != null ? pedido.pago_final_monto : totalPedido;
+                } else if (pedido.anticipo_registrado) {
+                  totalPagado = pedido.anticipo_monto ?? 0;
+                } else if (pedido.sobre_stock && pedido.anticipo_pagado != null) {
+                  totalPagado = pedido.anticipo_pagado;
+                }
+
+                const saldo = Math.max(0, totalPedido - totalPagado);
+                const ep = pedido.estado_pago;
+                const pct = totalPedido > 0 ? Math.min(100, Math.round((totalPagado / totalPedido) * 100)) : 0;
+
+                let estadoLabel, estadoColor, estadoBg, estadoBorder, estadoEmoji;
+                if (ep === "pagado_completo" || (!ep && totalPagado >= totalPedido && totalPedido > 0 && totalPagado > 0)) {
+                  estadoLabel = "Pago completo";    estadoColor = "#2e7d32"; estadoBg = "#e8f5e9"; estadoBorder = "#a5d6a7"; estadoEmoji = "✅";
+                } else if (ep === "anticipo_pagado" || (!ep && totalPagado > 0 && totalPagado < totalPedido)) {
+                  estadoLabel = "Anticipo";         estadoColor = "#e65100"; estadoBg = "#fff8e1"; estadoBorder = "#ffe082"; estadoEmoji = "⚠️";
+                } else if (ep === "pendiente_validacion") {
+                  estadoLabel = "Pendiente de validación"; estadoColor = "#1565c0"; estadoBg = "#e3f2fd"; estadoBorder = "#90caf9"; estadoEmoji = "🕐";
+                } else if (ep === "comprobante_rechazado") {
+                  estadoLabel = "Comprobante rechazado"; estadoColor = "#c62828"; estadoBg = "#ffebee"; estadoBorder = "#ef9a9a"; estadoEmoji = "❌";
+                } else {
+                  estadoLabel = "Pendiente";        estadoColor = "#9e9e9e"; estadoBg = "#f5f5f5"; estadoBorder = "#e0e0e0"; estadoEmoji = "🕐";
+                }
+
+                const modalidad = !esTransferencia
+                  ? (pedido.domicilio ? "Contraentrega" : "En tienda")
+                  : null;
+                const fechaPago = pedido.pago_final_fecha || null;
+
                 return (
-                  <div style={{
-                    background: esPagoCompleto ? "#e8f5e9" : esAnticipo ? "#fff8e1" : "#f5f5f5",
-                    border: `1.5px solid ${esPagoCompleto ? "#a5d6a7" : esAnticipo ? "#ffe082" : "#e0e0e0"}`,
-                    borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10,
-                  }}>
-                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, color: esPagoCompleto ? "#2e7d32" : esAnticipo ? "#e65100" : "#757575" }}>
-                      {esPagoCompleto ? "✅" : esAnticipo ? "⚠️" : "🕐"} Estado del pago: {estadoPagoLabel}
-                    </p>
-                    <div className="ver-ped-field">
-                      <span className="ver-ped-field__label">Monto pagado</span>
-                      <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#2e7d32" }}>{fmt(montoPagado)}</span>
+                  <>
+                    {/* ── Estado del pago (siempre visible) ── */}
+                    <div style={{ background: estadoBg, border: `1.5px solid ${estadoBorder}`, borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <p style={{ margin: 0, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.8, color: "#9e9e9e" }}>Estado del pago</p>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", color: estadoColor, border: `1px solid ${estadoBorder}`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                          {estadoEmoji} {estadoLabel}
+                        </span>
+                      </div>
+
+                      {/* Barra de progreso del pago */}
+                      {totalPedido > 0 && (
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: estadoColor }}>{fmt(totalPagado)} pagado</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "#9e9e9e" }}>{pct}%</span>
+                          </div>
+                          <div style={{ height: 7, background: "#fff", borderRadius: 99, overflow: "hidden", border: `1px solid ${estadoBorder}` }}>
+                            <div style={{ height: "100%", width: `${pct}%`, background: estadoColor, borderRadius: 99 }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Grid de montos y método */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Total del pedido</span>
+                          <span className="ver-ped-field__value" style={{ fontWeight: 800 }}>{fmt(totalPedido)}</span>
+                        </div>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Total pagado</span>
+                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: totalPagado > 0 ? "#2e7d32" : "#9e9e9e" }}>{fmt(totalPagado)}</span>
+                        </div>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Saldo pendiente</span>
+                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: saldo > 0 ? "#c62828" : "#2e7d32" }}>{fmt(saldo)}</span>
+                        </div>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Método de pago</span>
+                          <span className="ver-ped-field__value">{esTransferencia ? "🏦 Transferencia" : "💵 Efectivo"}</span>
+                        </div>
+                        {modalidad && (
+                          <div className="ver-ped-field">
+                            <span className="ver-ped-field__label">Modalidad</span>
+                            <span className="ver-ped-field__value">{modalidad}</span>
+                          </div>
+                        )}
+                        {pedido.pago_final_metodo_pago && (
+                          <div className="ver-ped-field">
+                            <span className="ver-ped-field__label">Método pago final</span>
+                            <span className="ver-ped-field__value">{pedido.pago_final_metodo_pago}</span>
+                          </div>
+                        )}
+                        {fechaPago && (
+                          <div className="ver-ped-field" style={{ gridColumn: "1 / -1" }}>
+                            <span className="ver-ped-field__label">Fecha del pago</span>
+                            <span className="ver-ped-field__value">📅 {fmtFecha(fechaPago)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comprobante pendiente de validación */}
+                      {ep === "pendiente_validacion" && pedido.comprobante && (
+                        <div className="info-box info-box--info" style={{ marginTop: 0 }}>
+                          <span className="info-box__icon">📎</span>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                            <span className="info-box__text">Comprobante cargado — pendiente de validación</span>
+                            <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: "#1565c0", flexShrink: 0, marginLeft: 8 }}>Ver →</a>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Comprobante rechazado */}
+                      {ep === "comprobante_rechazado" && (
+                        <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
+                          <span className="info-box__icon">❌</span>
+                          <span className="info-box__text">El comprobante fue rechazado. El cliente debe subir uno nuevo.</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="ver-ped-field">
-                      <span className="ver-ped-field__label">Saldo pendiente</span>
-                      <span className="ver-ped-field__value" style={{ fontWeight: 800, color: saldo > 0 ? "#c62828" : "#2e7d32" }}>{fmt(saldo)}</span>
-                    </div>
-                    {pedido.pago_final_metodo_pago && (
-                      <div className="ver-ped-field">
-                        <span className="ver-ped-field__label">Método pago final</span>
-                        <span className="ver-ped-field__value">{pedido.pago_final_metodo_pago}</span>
+
+                    {/* ── Sobre stock (pedido especial 50%) ── */}
+                    {pedido.sobre_stock && (
+                      <div style={{ background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#e65100", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                          ⚠️ Pedido sobre stock — anticipo del 50%
+                        </p>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Anticipo requerido</span>
+                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#bf360c" }}>{fmt(pedido.anticipo_requerido)}</span>
+                        </div>
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Anticipo pagado</span>
+                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: (pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "#2e7d32" : "#c62828" }}>
+                            {fmt(pedido.anticipo_pagado || 0)}{" "}
+                            {(pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "✅ Cubierto" : "⚠️ Pendiente"}
+                          </span>
+                        </div>
                       </div>
                     )}
-                    {pedido.pago_final_fecha && (
-                      <div className="ver-ped-field">
-                        <span className="ver-ped-field__label">Fecha pago final</span>
-                        <span className="ver-ped-field__value">📅 {fmtFecha(pedido.pago_final_fecha)}</span>
+
+                    {/* ── Transferencia: datos bancarios + comprobante ── */}
+                    {esTransferencia ? (
+                      <>
+                        <p className="section-label" style={{ marginTop: 4 }}>Datos para realizar la transferencia</p>
+                        <div className="cuenta-card">
+                          <div className="cuenta-card__rows">
+                            {[
+                              { label: "Banco",          value: CUENTA_TRANSFERENCIA.banco },
+                              { label: "Titular",        value: CUENTA_TRANSFERENCIA.titular },
+                              { label: "Tipo de cuenta", value: CUENTA_TRANSFERENCIA.tipo },
+                              { label: "Número",         value: CUENTA_TRANSFERENCIA.numero },
+                            ].map(({ label, value }) => (
+                              <div key={label} className="cuenta-card__row">
+                                <span className="cuenta-card__label">{label}</span>
+                                <span className="cuenta-card__value">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="info-box info-box--warn" style={{ marginTop: 0 }}>
+                          <span className="info-box__icon">ℹ️</span>
+                          <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
+                        </div>
+                        {pedido.comprobante ? (
+                          <div>
+                            <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
+                              <span className="info-box__icon">✅</span>
+                              <span className="info-box__text">Comprobante de pago adjuntado.</span>
+                              <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer"
+                                style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
+                                Abrir →
+                              </a>
+                            </div>
+                            <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={pedido.comprobante}
+                                alt="Comprobante de pago"
+                                style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
+                              />
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
+                            <span className="info-box__icon">⚠️</span>
+                            <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="info-box info-box--success">
+                        <span className="info-box__icon">💵</span>
+                        <span className="info-box__text">
+                          Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
+                        </span>
                       </div>
                     )}
-                  </div>
+                  </>
                 );
               })()}
-
-              <div className="ver-ped-field">
-                <span className="ver-ped-field__label">Método de pago</span>
-                <span className="ver-ped-field__value" style={{ fontSize: 15 }}>
-                  {esTransferencia ? "🏦 Transferencia bancaria" : "💵 Efectivo"}
-                </span>
-              </div>
-
-              {pedido.sobre_stock && (
-                <div style={{ background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#e65100", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    ⚠️ Pedido sobre stock — anticipo del 50%
-                  </p>
-                  <div className="ver-ped-field">
-                    <span className="ver-ped-field__label">Anticipo requerido</span>
-                    <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#bf360c" }}>
-                      {fmt(pedido.anticipo_requerido)}
-                    </span>
-                  </div>
-                  <div className="ver-ped-field">
-                    <span className="ver-ped-field__label">Anticipo pagado</span>
-                    <span className="ver-ped-field__value" style={{ fontWeight: 800, color: (pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "#2e7d32" : "#c62828" }}>
-                      {fmt(pedido.anticipo_pagado || 0)}{" "}
-                      {(pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "✅ Cubierto" : "⚠️ Pendiente"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {esTransferencia ? (
-                <>
-                  <p className="section-label" style={{ marginTop: 4 }}>Datos para realizar la transferencia</p>
-                  <div className="cuenta-card">
-                    <div className="cuenta-card__rows">
-                      {[
-                        { label: "Banco",             value: CUENTA_TRANSFERENCIA.banco },
-                        { label: "Titular",           value: CUENTA_TRANSFERENCIA.titular },
-                        { label: "Tipo de cuenta",    value: CUENTA_TRANSFERENCIA.tipo },
-                        { label: "Número",            value: CUENTA_TRANSFERENCIA.numero },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="cuenta-card__row">
-                          <span className="cuenta-card__label">{label}</span>
-                          <span className="cuenta-card__value">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                  </div>
-
-                  <div className="info-box info-box--warn" style={{ marginTop: 0 }}>
-                    <span className="info-box__icon">ℹ️</span>
-                    <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
-                  </div>
-
-                  {pedido.comprobante ? (
-                    <div>
-                      <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
-                        <span className="info-box__icon">✅</span>
-                        <span className="info-box__text">Comprobante de pago adjuntado.</span>
-                        <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer"
-                          style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
-                          Abrir →
-                        </a>
-                      </div>
-                      <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer">
-                        <img
-                          src={pedido.comprobante}
-                          alt="Comprobante de pago"
-                          style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
-                        />
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
-                      <span className="info-box__icon">⚠️</span>
-                      <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="info-box info-box--success">
-                  <span className="info-box__icon">💵</span>
-                  <span className="info-box__text">Pago en efectivo al momento de la entrega. No se requiere comprobante.</span>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -966,6 +1048,64 @@ function ModalCancelarPedido({ pedido, saving, onClose, onConfirm }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   MODAL — REGISTRAR COBRO EFECTIVO (contra entrega / en tienda)
+   ═══════════════════════════════════════════════════════════ */
+function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
+  const [recibido, setRecibido] = useState(null);
+  const [error,    setError]    = useState(null);
+
+  const handleConfirm = () => {
+    if (recibido === null) { setError("Indica si el efectivo fue recibido"); return; }
+    setError(null);
+    onConfirm(pedido.id, { recibido });
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box relative bg-white shadow-2xl overflow-hidden flex flex-col border-none" style={{ borderRadius: "28px", maxWidth: "420px" }}>
+        <div className="modal-header shrink-0" style={{ background: "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)", padding: "20px 24px" }}>
+          <div>
+            <h2 className="text-lg font-black text-white leading-none">Registrar Cobro en Efectivo</h2>
+            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mt-1">Pedido #{pedido.numero} · ${(pedido.total || 0).toLocaleString("es-CO")}</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white"><X size={18} /></button>
+        </div>
+        <div className="modal-body p-6 space-y-4">
+          <p style={{ fontSize: 13, color: "#424242" }}>¿Se recibió el pago en efectivo?</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[{ val: true, label: "Sí, recibido", color: "#2e7d32" }, { val: false, label: "No recibido", color: "#c62828" }].map(({ val, label, color }) => (
+              <button
+                key={String(val)}
+                onClick={() => { setRecibido(val); setError(null); }}
+                style={{
+                  flex: 1, padding: "14px 10px", borderRadius: 12, border: `2px solid ${recibido === val ? color : "#e0e0e0"}`,
+                  background: recibido === val ? color + "15" : "#fafafa",
+                  color: recibido === val ? color : "#757575", fontWeight: 800, fontSize: 13, cursor: "pointer",
+                }}
+              >{label}</button>
+            ))}
+          </div>
+          {error && <p style={{ fontSize: 12, color: "#c62828", background: "#ffebee", padding: "8px 12px", borderRadius: 8 }}>{error}</p>}
+          <div className="space-y-2 pt-2">
+            <button
+              disabled={saving || recibido === null}
+              onClick={handleConfirm}
+              className="w-full py-4 text-xs font-black uppercase tracking-widest rounded-2xl text-white shadow-lg"
+              style={{ background: saving ? "#a5d6a7" : "linear-gradient(135deg, #2e7d32, #388e3c)", cursor: saving ? "not-allowed" : "pointer" }}
+            >
+              {saving ? "Guardando…" : "Confirmar"}
+            </button>
+            <button onClick={onClose} className="w-full py-3 text-[10px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    MODAL — SUBIR COMPROBANTE (para pedidos ya confirmados)
    ═══════════════════════════════════════════════════════════ */
 function ModalSubirComprobante({ pedido, saving, onClose, onConfirm }) {
@@ -1099,7 +1239,7 @@ function ModalRechazarComprobante({ pedido, saving, onClose, onConfirm }) {
 /* ═══════════════════════════════════════════════════════════
    MENÚ DE ACCIONES POR FILA
    ═══════════════════════════════════════════════════════════ */
-function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha, onAprobarComprobante, onRechazarComprobante, onSubirComprobante }) {
+function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha, onAprobarComprobante, onRechazarComprobante, onSubirComprobante, onRegistrarCobro }) {
   const necesitaProduccion  = ped.requiereFechaPropuesta;
   const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
@@ -1112,11 +1252,14 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canEntregar         = ped.estado === "En camino";
   const canCancel           = !["Entregado", "Cancelado"].includes(ped.estado);
   const esTransferencia     = (ped.metodo_pago || "").toLowerCase().includes("transfer");
+  const esEfectivo          = (ped.metodo_pago || "").toLowerCase().includes("efectivo");
   const canAprobar          = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
   const canRechazar         = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
   const _terminalState      = ["Entregado","Cancelado"].includes(ped.estado);
+  const _pagoRegistrado     = ["efectivo_recibido","pagado_completo","anticipo_pagado"].includes(ped.estado_pago);
   const canSubirComprobante = esTransferencia && !_terminalState &&
     (!ped.comprobante || ped.estado_pago === "comprobante_rechazado");
+  const canRegistrarCobro   = esEfectivo && !_terminalState && !_pagoRegistrado;
 
   return (
     <div className="actions-cell">
@@ -1129,6 +1272,7 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
       {canAsignarDomicilio && <button className="act-btn act-btn--info"    data-tooltip="Asignar domiciliario"   disabled={saving} onClick={() => onAsignarDomicilio(ped)}>🛵</button>}
       {canEntregar         && <button className="act-btn act-btn--success" data-tooltip="Registrar entrega"      disabled={saving} onClick={() => onEntregar(ped)}>🚚</button>}
       {canSubirComprobante && <button className="act-btn act-btn--info"    data-tooltip="Subir comprobante"    disabled={saving} onClick={() => onSubirComprobante(ped)}>📎</button>}
+      {canRegistrarCobro   && <button className="act-btn act-btn--success" data-tooltip="Registrar cobro efectivo" disabled={saving} onClick={() => onRegistrarCobro(ped)}>💵</button>}
       {canAprobar && <button className="act-btn act-btn--success" data-tooltip="Aprobar comprobante" disabled={saving} onClick={() => onAprobarComprobante(ped)}>✅</button>}
       {canRechazar && <button className="act-btn act-btn--delete"  data-tooltip="Rechazar comprobante" disabled={saving} onClick={() => onRechazarComprobante(ped)}>🚫</button>}
       {canCancel           && <button className="act-btn act-btn--delete"  data-tooltip="Cancelar pedido"        disabled={saving} onClick={() => onCancelar(ped)}>✕</button>}
@@ -1376,6 +1520,24 @@ export default function GestionPedidos() {
 
   const handleRechazarComprobante = (ped) => {
     setModal({ type: "rechazarComprobante", pedido: ped });
+  };
+
+  const handleRegistrarCobro = (ped) => {
+    setModal({ type: "registrarCobro", pedido: ped });
+  };
+
+  const handleConfirmarCobro = async (idPedido, { recibido }) => {
+    setActionSaving(true);
+    try {
+      await registrarCobroPedido(idPedido, { recibido });
+      await cargarPedidos();
+      setModal(null);
+      showToast(recibido ? "Cobro en efectivo registrado" : "Pago marcado como no recibido", "success");
+    } catch (e) {
+      showToast(e.message || "Error al registrar el cobro", "error");
+    } finally {
+      setActionSaving(false);
+    }
   };
 
   const handleSubirComprobante = (ped) => {
@@ -1829,6 +1991,7 @@ export default function GestionPedidos() {
                             onAprobarComprobante={handleAprobarComprobante}
                             onRechazarComprobante={handleRechazarComprobante}
                             onSubirComprobante={handleSubirComprobante}
+                            onRegistrarCobro={handleRegistrarCobro}
                           />
                         )}
                       </td>
@@ -1861,6 +2024,7 @@ export default function GestionPedidos() {
       {modal?.type === "eliminar" && <ModalEliminarPedido pedido={modal.pedido} onClose={() => setModal(null)} onConfirm={handleEliminarPedido} />}
       {modal?.type === "proponerFecha" && <ModalProponerFecha pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarFechaPropuesta} />}
       {modal?.type === "registrarSaldo" && <ModalRegistrarSaldo pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleRegistrarSaldo} />}
+      {modal?.type === "registrarCobro"      && <ModalRegistrarCobro      pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarCobro} />}
       {modal?.type === "subirComprobante"    && <ModalSubirComprobante    pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarSubirComprobante} />}
       {modal?.type === "rechazarComprobante" && <ModalRechazarComprobante pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarRechazoComprobante} />}
       {modal?.type === "errorEstado" && <ModalErrorEstadoPedido mensaje={modal.mensaje} onClose={() => setModal(null)} />}

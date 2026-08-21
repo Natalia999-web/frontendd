@@ -34,11 +34,36 @@ class PedidoResponse(BaseModel):
     sobre_stock:                  bool              = False
     anticipo_requerido:           Optional[Decimal] = None
     anticipo_pagado:              Optional[Decimal] = None
+    # Anticipo registrado manualmente por admin (pedidos > $50.000 o preorden)
+    requiere_anticipo:            bool              = False
+    anticipo_monto:               Optional[Decimal] = None
+    anticipo_metodo_pago:         Optional[str]     = None
+    anticipo_comprobante_url:     Optional[str]     = None
+    anticipo_registrado:          bool              = False
+    # Pago final
+    pago_final_registrado:        bool              = False
+    pago_final_monto:             Optional[Decimal] = None
+    pago_final_metodo_pago:       Optional[str]     = None
+    pago_final_comprobante_url:   Optional[str]     = None
+    pago_final_fecha:             Optional[datetime] = None
+    # Estado del pago y metadatos adicionales
+    estado_pago:                  Optional[str]     = None
+    fecha_rechazada:              Optional[datetime] = None
+    ID_Empleado:                  Optional[int]     = None
+    observaciones_domicilio:      Optional[str]     = None
+    Numero_Pedido:                Optional[str]     = None
     # Solo los pedidos sobre stock o de producción necesitan fecha propuesta
     requiere_fecha_propuesta:     bool              = False
 
     class Config:
         from_attributes = True
+
+
+# ── Registrar cobro en efectivo desde el panel admin ──
+class RegistroCobro(BaseModel):
+    recibido: bool
+    monto:    Optional[float] = None
+    motivo:   Optional[str]  = None
 
 
 # ── Actualización parcial de un pedido pendiente ──
