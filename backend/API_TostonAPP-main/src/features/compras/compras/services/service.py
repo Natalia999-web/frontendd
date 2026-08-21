@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy import func
 from src.shared.services.models import (
     Compra, DetalleCompra, LoteCompra, Insumo, Proveedor, Estado
 )
@@ -103,11 +104,78 @@ def obtener_compras(
     offset  = (pagina - 1) * por_pagina
     compras = query.order_by(Compra.Fecha_Compra.desc()).offset(offset).limit(por_pagina).all()
 
+    if not compras:
+        return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "compras": []}
+
+    compra_ids   = [c.ID_Compra   for c in compras]
+    prov_ids     = list({c.ID_Proveedor for c in compras if c.ID_Proveedor})
+    estado_ids   = list({c.Estado       for c in compras if c.Estado})
+
+    # Batch 1: proveedores y estados
+    proveedores = {p.ID_Proveedor: p for p in
+                   db.query(Proveedor).filter(Proveedor.ID_Proveedor.in_(prov_ids)).all()} if prov_ids else {}
+    estados     = {e.ID_Estados: e for e in
+                   db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
+
+    # Batch 2: detalles agrupados por compra
+    detalles_all = db.query(DetalleCompra).filter(DetalleCompra.ID_Compra.in_(compra_ids)).all()
+    detalles_por_compra: dict = {}
+    insumo_ids: set = set()
+    lote_ids:   set = set()
+    for d in detalles_all:
+        detalles_por_compra.setdefault(d.ID_Compra, []).append(d)
+        if d.ID_Insumo:
+            insumo_ids.add(d.ID_Insumo)
+        if d.ID_Lote_Compra:
+            lote_ids.add(d.ID_Lote_Compra)
+
+    # Batch 3: insumos y lotes
+    insumos = {i.ID_Insumo: i for i in
+               db.query(Insumo).filter(Insumo.ID_Insumo.in_(list(insumo_ids))).all()} if insumo_ids else {}
+    lotes   = {l.ID_Lote_Compra: l for l in
+               db.query(LoteCompra).filter(LoteCompra.ID_Lote_Compra.in_(list(lote_ids))).all()} if lote_ids else {}
+
+    def _build_detalle(d: DetalleCompra) -> dict:
+        ins  = insumos.get(d.ID_Insumo)
+        lote = lotes.get(d.ID_Lote_Compra) if d.ID_Lote_Compra else None
+        fv   = lote.Fecha_Vencimiento.strftime("%Y-%m-%d") if lote and lote.Fecha_Vencimiento else None
+        return {
+            "ID_Detalle_Compra": d.ID_Detalle_Compra,
+            "ID_Insumo":         d.ID_Insumo,
+            "nombre_insumo":     ins.Nombre if ins else None,
+            "ID_Lote_Compra":    d.ID_Lote_Compra,
+            "Cantidad":          d.Cantidad,
+            "Precio_Und":        d.Precio_Und,
+            "Notas":             d.Notas,
+            "Fecha_Vencimiento": fv,
+        }
+
+    def _build_compra(c: Compra) -> dict:
+        prov   = proveedores.get(c.ID_Proveedor)
+        estado = estados.get(c.Estado)
+        return {
+            "ID_Compra":            c.ID_Compra,
+            "ID_Proveedor":         c.ID_Proveedor,
+            "nombre_proveedor":     prov.Responsable if prov else None,
+            "Total_Pago":           c.Total_Pago,
+            "Fecha_Compra":         c.Fecha_Compra,
+            "Fecha_Llegada":        getattr(c, "Fecha_Llegada", None),
+            "Estado":               c.Estado,
+            "estado_label":         estado.Estado if estado else None,
+            "Metodo_Pago":          c.Metodo_Pago,
+            "Notas":                getattr(c, "Notas", None),
+            "Costo_Transporte":     getattr(c, "Costo_Transporte", None),
+            "IVA_Porcentaje":       getattr(c, "IVA_Porcentaje", None),
+            "Descuento_Porcentaje": getattr(c, "Descuento_Porcentaje", None),
+            "Otros_Costos":         getattr(c, "Otros_Costos", None),
+            "detalles":             [_build_detalle(d) for d in detalles_por_compra.get(c.ID_Compra, [])],
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "compras":    [_formato_compra(c, db) for c in compras],
+        "compras":    [_build_compra(c) for c in compras],
     }
 
 

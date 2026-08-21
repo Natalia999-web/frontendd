@@ -212,7 +212,7 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
         }));
         setNotificaciones(prev => [
           ...backend,
-          ...prev.filter(n => !n.clave?.startsWith('api-')),
+          ...prev.filter(n => !n.clave?.startsWith('api-') && !TIPOS_CLIENTE.has(n.tipo)),
         ]);
       } catch (_) {}
 

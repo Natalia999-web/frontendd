@@ -193,19 +193,23 @@ def _productos_top(db: Session, inicio: datetime, fin: datetime) -> list:
         .all()
     )
 
+    if not resultados:
+        return []
+
     total_vendido = sum(r.total_cantidad for r in resultados) or 1
 
-    productos = []
-    for r in resultados:
-        producto = db.query(Producto).filter(Producto.ID_Producto == r.ID_Producto).first()
-        productos.append({
+    prod_ids     = [r.ID_Producto for r in resultados]
+    productos_map = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()}
+
+    return [
+        {
             "ID_Producto": r.ID_Producto,
-            "nombre":      producto.nombre if producto else f"Producto {r.ID_Producto}",
+            "nombre":      productos_map[r.ID_Producto].nombre if r.ID_Producto in productos_map else f"Producto {r.ID_Producto}",
             "cantidad":    r.total_cantidad,
             "porcentaje":  round((r.total_cantidad / total_vendido) * 100, 1),
-        })
-
-    return productos
+        }
+        for r in resultados
+    ]
 
 
 def obtener_dashboard(db: Session, periodo: str = "hoy", fecha_inicio: datetime | None = None, fecha_fin: datetime | None = None) -> dict:

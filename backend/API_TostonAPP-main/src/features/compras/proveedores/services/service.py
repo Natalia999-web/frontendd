@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import distinct
+from sqlalchemy import distinct, func
 from fastapi import HTTPException
 
 from src.shared.services.models import Proveedor, SujetoDerecho, Compra, DetalleCompra, Insumo, Estado
@@ -59,6 +59,62 @@ def _formato_proveedor(proveedor: Proveedor, db: Session) -> dict:
     }
 
 
+def _batch_proveedores(proveedores: list, db: Session) -> list:
+    if not proveedores:
+        return []
+    prov_ids   = [p.ID_Proveedor for p in proveedores]
+    sujeto_ids = list({p.Sujeto_Derecho for p in proveedores if p.Sujeto_Derecho})
+
+    sujetos_map = {s.ID_Sujeto_Derecho: s for s in db.query(SujetoDerecho).filter(SujetoDerecho.ID_Sujeto_Derecho.in_(sujeto_ids)).all()} if sujeto_ids else {}
+
+    count_rows = (db.query(Compra.ID_Proveedor, func.count(Compra.ID_Compra).label("total"))
+        .filter(Compra.ID_Proveedor.in_(prov_ids)).group_by(Compra.ID_Proveedor).all())
+    compras_count = {r.ID_Proveedor: r.total for r in count_rows}
+
+    ultima_id_rows = (db.query(func.max(Compra.ID_Compra).label("max_id"), Compra.ID_Proveedor)
+        .filter(Compra.ID_Proveedor.in_(prov_ids)).group_by(Compra.ID_Proveedor).all())
+    ultima_id_by_prov = {r.ID_Proveedor: r.max_id for r in ultima_id_rows}
+    uc_ids = [v for v in ultima_id_by_prov.values() if v]
+    ultimas_map = {c.ID_Proveedor: c for c in db.query(Compra).filter(Compra.ID_Compra.in_(uc_ids)).all()} if uc_ids else {}
+
+    estado_ids  = list({c.Estado for c in ultimas_map.values() if c.Estado})
+    estados_map = {e.ID_Estados: e for e in db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
+
+    insumo_rows = (db.query(Compra.ID_Proveedor, DetalleCompra.ID_Insumo)
+        .join(DetalleCompra, DetalleCompra.ID_Compra == Compra.ID_Compra)
+        .filter(Compra.ID_Proveedor.in_(prov_ids), DetalleCompra.ID_Insumo != None)
+        .distinct().all())
+    insumos_by_prov: dict = {}
+    all_insumo_ids: set = set()
+    for row in insumo_rows:
+        insumos_by_prov.setdefault(row.ID_Proveedor, set()).add(row.ID_Insumo)
+        all_insumo_ids.add(row.ID_Insumo)
+    insumos_map = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(list(all_insumo_ids))).all()} if all_insumo_ids else {}
+
+    def _build(prov: Proveedor) -> dict:
+        sujeto  = sujetos_map.get(prov.Sujeto_Derecho)
+        ultima  = ultimas_map.get(prov.ID_Proveedor)
+        u_est   = estados_map.get(ultima.Estado) if ultima and ultima.Estado else None
+        iids    = insumos_by_prov.get(prov.ID_Proveedor, set())
+        return {
+            "ID_Proveedor":         prov.ID_Proveedor,
+            "Sujeto_Derecho":       prov.Sujeto_Derecho,
+            "nombre_sujeto":        sujeto.Sujeto_Derecho if sujeto else None,
+            "Responsable":          prov.Responsable,
+            "Direccion":            prov.Direccion,
+            "Municipio":            prov.Municipio,
+            "Departamento":         prov.Departamento,
+            "Telefono":             prov.Telefono,
+            "Correo":               prov.Correo,
+            "total_compras":        compras_count.get(prov.ID_Proveedor, 0),
+            "ultima_compra_fecha":  ultima.Fecha_Compra if ultima else None,
+            "ultima_compra_estado": u_est.Estado if u_est else None,
+            "insumos_provistos":    [insumos_map[iid].Nombre for iid in iids if iid in insumos_map],
+        }
+
+    return [_build(p) for p in proveedores]
+
+
 def obtener_proveedores(
     db: Session,
     pagina: int = 1,
@@ -83,7 +139,7 @@ def obtener_proveedores(
         "total":       total,
         "pagina":      pagina,
         "por_pagina":  por_pagina,
-        "proveedores": [_formato_proveedor(p, db) for p in proveedores],
+        "proveedores": _batch_proveedores(proveedores, db),
     }
 
 

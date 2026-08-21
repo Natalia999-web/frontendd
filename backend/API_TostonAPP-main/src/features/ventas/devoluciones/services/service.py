@@ -42,19 +42,19 @@ def _formato_devolucion(dev: Devolucion, db: Session) -> dict:
     detalles = db.query(DevolucionDetalle).filter(
         DevolucionDetalle.ID_Devolucion == dev.ID_Devolucion
     ).all()
-
-    productos = []
-    for d in detalles:
-        producto = db.query(Producto).filter(Producto.ID_Producto == d.ID_Producto).first()
-        productos.append({
+    prod_ids = [d.ID_Producto for d in detalles if d.ID_Producto]
+    prods    = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()} if prod_ids else {}
+    productos = [
+        {
             "ID_Devolucion_Detalle": d.ID_Devolucion_Detalle,
             "ID_Producto":           d.ID_Producto,
-            "nombre_producto":       producto.nombre if producto else None,
+            "nombre_producto":       prods[d.ID_Producto].nombre if d.ID_Producto in prods else None,
             "Cantidad":              d.Cantidad,
             "PrecioUnitario":        d.PrecioUnitario,
             "Subtotal":              d.Subtotal,
-        })
-
+        }
+        for d in detalles
+    ]
     return {
         "ID_Devolucion":   dev.ID_Devolucion,
         "ID_Venta":        dev.ID_Venta,
@@ -73,6 +73,57 @@ def _formato_devolucion(dev: Devolucion, db: Session) -> dict:
         "Comprobante_Imagen": dev.Comprobante_Imagen,
         "productos":       productos,
     }
+
+
+def _batch_devoluciones(devoluciones: list, db: Session) -> list:
+    if not devoluciones:
+        return []
+    dev_ids     = [d.ID_Devolucion for d in devoluciones]
+    usuario_ids = list({d.ID_Usuario for d in devoluciones if d.ID_Usuario})
+
+    usuarios_map = {u.ID_Usuario: u for u in db.query(Usuario).filter(Usuario.ID_Usuario.in_(usuario_ids)).all()} if usuario_ids else {}
+
+    detalles_all = db.query(DevolucionDetalle).filter(DevolucionDetalle.ID_Devolucion.in_(dev_ids)).all()
+    detalles_by_dev: dict = {}
+    for d in detalles_all:
+        detalles_by_dev.setdefault(d.ID_Devolucion, []).append(d)
+
+    prod_ids = list({d.ID_Producto for d in detalles_all if d.ID_Producto})
+    productos_map = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()} if prod_ids else {}
+
+    def _build(dev: Devolucion) -> dict:
+        usuario  = usuarios_map.get(dev.ID_Usuario)
+        detalles = detalles_by_dev.get(dev.ID_Devolucion, [])
+        return {
+            "ID_Devolucion":   dev.ID_Devolucion,
+            "ID_Venta":        dev.ID_Venta,
+            "ID_Usuario":      dev.ID_Usuario,
+            "nombre_cliente":  f"{usuario.Nombre} {usuario.Apellidos}" if usuario else None,
+            "ID_DetalleVenta": dev.ID_DetalleVenta,
+            "FechaDevolucion": dev.FechaDevolucion,
+            "Motivo":          dev.Motivo,
+            "Estado":          dev.Estado,
+            "estado_label":    _ESTADO_LABELS.get(dev.Estado, "Desconocido"),
+            "TotalDevuelto":   dev.TotalDevuelto,
+            "FechaAprobacion": dev.FechaAprobacion,
+            "FechaReembolso":  dev.FechaReembolso,
+            "UsuarioAprueba":  dev.UsuarioAprueba,
+            "Comentario":      dev.Comentario,
+            "Comprobante_Imagen": dev.Comprobante_Imagen,
+            "productos": [
+                {
+                    "ID_Devolucion_Detalle": d.ID_Devolucion_Detalle,
+                    "ID_Producto":           d.ID_Producto,
+                    "nombre_producto":       productos_map[d.ID_Producto].nombre if d.ID_Producto in productos_map else None,
+                    "Cantidad":              d.Cantidad,
+                    "PrecioUnitario":        d.PrecioUnitario,
+                    "Subtotal":              d.Subtotal,
+                }
+                for d in detalles
+            ],
+        }
+
+    return [_build(d) for d in devoluciones]
 
 
 def _recargar_credito(db: Session, id_usuario: int, monto: Decimal, id_devolucion: int):
@@ -122,7 +173,7 @@ def obtener_mis_devoluciones(
         "total":        total,
         "pagina":       pagina,
         "por_pagina":   por_pagina,
-        "devoluciones": [_formato_devolucion(d, db) for d in devoluciones],
+        "devoluciones": _batch_devoluciones(devoluciones, db),
     }
 
 
@@ -160,7 +211,7 @@ def obtener_devoluciones(
         "total":        total,
         "pagina":       pagina,
         "por_pagina":   por_pagina,
-        "devoluciones": [_formato_devolucion(d, db) for d in devoluciones],
+        "devoluciones": _batch_devoluciones(devoluciones, db),
     }
 
 

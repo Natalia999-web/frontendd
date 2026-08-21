@@ -1,0 +1,85 @@
+[33m0f13d56[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: commit: todos los cambios
+[33m5ddf657[m HEAD@{1}: checkout: moving from 5ddf657372789c0a89431d4f891bd788e23818d8 to main
+[33m5ddf657[m HEAD@{2}: rebase (start): checkout origin/main
+[33m7cdfffb[m HEAD@{3}: rebase (finish): returning to refs/heads/main
+[33m7cdfffb[m HEAD@{4}: rebase (pick): Normalize client management file casing
+[33m8c98ea0[m HEAD@{5}: rebase (pick): Add client action tooltips
+[33m083f86d[m HEAD@{6}: commit (amend): feat: fecha propuesta solo en pedidos especiales y push por rol
+[33m5ddf657[m HEAD@{7}: reset: moving to origin/main
+[33mdf31749[m HEAD@{8}: commit (amend): feat: fecha propuesta solo en pedidos especiales y push por rol
+[33m5ddf657[m HEAD@{9}: pull --rebase origin main (start): checkout 5ddf657372789c0a89431d4f891bd788e23818d8
+[33m40dbea0[m HEAD@{10}: commit: Normalize client management file casing
+[33ma6bd4da[m HEAD@{11}: cherry-pick: Sync client management changes
+[33m62a060e[m HEAD@{12}: checkout: moving from main to main
+[33m62a060e[m HEAD@{13}: rebase (abort): returning to refs/heads/main
+[33m8ae2b54[m HEAD@{14}: commit: Sync client management changes
+[33m5ddf657[m HEAD@{15}: pull --rebase origin main (start): checkout 5ddf657372789c0a89431d4f891bd788e23818d8
+[33m62a060e[m HEAD@{16}: commit: Add client action tooltips
+[33md5817a0[m HEAD@{17}: commit: Actualiza gestión de clientes
+[33m673af82[m HEAD@{18}: reset: moving to HEAD
+[33m673af82[m HEAD@{19}: reset: moving to HEAD
+[33m673af82[m HEAD@{20}: reset: moving to HEAD
+[33m673af82[m HEAD@{21}: commit: sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33mc4e6c4e[m HEAD@{22}: commit: fix CORS tostonapp
+[33mf00ec0b[m HEAD@{23}: commit: fix: reemplazar tooltips CSS con sistema JS position:fixed
+[33m90f0e51[m HEAD@{24}: commit: feat: implementar sistema de tooltips completo en toda la aplicacion
+[33m5946a8d[m HEAD@{25}: commit: fix: estado devoluciones siempre Pendiente y datos hardcodeados en perfil
+[33ma0d6075[m HEAD@{26}: commit: fix: eliminar cierre huerfano )} del QR modal en CheckoutModal
+[33m98436b8[m HEAD@{27}: commit: fix: reemplazar vite.svg con favicon de la marca (elimina logo Vite del cache)
+[33mabc7afa[m HEAD@{28}: commit: fix: favicon SVG con colores de marca (hoja platano + T dorada)
+[33m9b16829[m HEAD@{29}: commit: fix: favicon cambiado de vite.svg a Logo.png de la app
+[33m35eb6a3[m HEAD@{30}: pull --rebase origin main (finish): returning to refs/heads/main
+[33m35eb6a3[m HEAD@{31}: pull --rebase origin main (pick): fix: cuenta Bancolombia, precio ilimitado y validacion fechas ordenes
+[33m0c514fc[m HEAD@{32}: pull --rebase origin main (start): checkout 0c514fc67c91680d4407b628d73737e793799e08
+[33mfe28a61[m HEAD@{33}: commit: fix: cuenta Bancolombia, precio ilimitado y validacion fechas ordenes
+[33mb6975de[m HEAD@{34}: commit: feat: permisos por modulo, validaciones inline y fix PDF dashboard
+[33m9d9a682[m HEAD@{35}: commit: fix: PDF export dashboard, campo cantidad, clientes, y mejoras visuales
+[33ma4f9f61[m HEAD@{36}: commit: Carrito produccion: permite pedir de mas OK
+[33mb6333e8[m HEAD@{37}: commit: Estable antes de tocar carrito/stock produccion
+[33m2787d3b[m HEAD@{38}: commit: Formulario NIT OK
+[33mca45a12[m HEAD@{39}: commit: Validaciones de contraseña OK
+[33m8446dfe[m HEAD@{40}: commit: feat: pedidos creados por admin nacen en Confirmado con orden de producción
+[33m2de733f[m HEAD@{41}: commit: fix: mostrar fecha y habilitar botones en notificación de fecha propuesta al cliente
+[33m64f8f7c[m HEAD@{42}: commit: fix: mostrar fecha propuesta en aviso al cliente y mejorar su visual
+[33me5fca14[m HEAD@{43}: commit: fix: exponer requiere_produccion y estado_label correcto en respuesta de pedidos
+[33m82774cf[m HEAD@{44}: commit: fix: derivar requiereProduccion desde catálogo de productos en el admin
+[33m22d262b[m HEAD@{45}: commit: feat: mover creación de OrdenProduccion a aceptar_fecha
+[33m7935148[m HEAD@{46}: commit: fix: agregar Fecha_Entrega a OrdenProduccion auto-generada y exponer errores silenciosos
+[33me87a905[m HEAD@{47}: commit: fix: proponerFechaProduccion enviaba campo incorrecto al backend
+[33m8ac1f27[m HEAD@{48}: commit: fix: venta de producción nace en Pendiente (1) no en Fecha propuesta (16)
+[33m4ead071[m HEAD@{49}: commit: fix: eliminar campos de fecha y hora del checkout
+[33m145e769[m HEAD@{50}: commit: feat: requiereProduccion en carrito, fecha entrega en pedido, landing con paginación y mejoras UI
+[33m4eb6100[m HEAD@{51}: commit: feat: feature Fecha propuesta para pedidos de producción (estado 16)
+[33m9c069df[m HEAD@{52}: commit: fix: ordenar todas las listas de más nuevo a más viejo
+[33m96682c7[m HEAD@{53}: commit: fix: perfil con cambio de contraseña, logout con confirmación, foto en sidebar y stock en landing
+[33ma475c13[m HEAD@{54}: commit: feat: mejoras en carrito, compras, usuarios y landing
+[33m6fbee50[m HEAD@{55}: commit: fix: limitar nombre de categoria de insumos y productos a 50 caracteres
+[33m14b690e[m HEAD@{56}: commit: feat: reemplazar emojis del sidebar por iconos uniformes de lucide-react
+[33m03d04b5[m HEAD@{57}: commit: fix: mostrar foto de perfil en navbar y sincronizar al guardar cambios
+[33mb73cdc4[m HEAD@{58}: commit: fix: incluir foto de perfil en el payload al guardar edicion
+[33md871c65[m HEAD@{59}: commit: feat: agregar boton cerrar sesion en vista de perfil del cliente
+[33m62dc3b9[m HEAD@{60}: commit: fix: permitir guardar perfil sin telefono y aumentar timeout a 90s
+[33mbc581bb[m HEAD@{61}: commit: fix: aumentar limite de imagen de perfil de 1MB a 5MB
+[33m9e8c6ae[m HEAD@{62}: commit: fix: redisenar recuperar contrasena con layout de dos paneles igual que login y register
+[33mb3c194a[m HEAD@{63}: commit: feat: agregar asteriscos de campos obligatorios en formulario de registro
+[33m877e2ea[m HEAD@{64}: commit: feat: agregar tipo y numero de documento al formulario de registro publico
+[33mf4fed4d[m HEAD@{65}: commit: fix: eliminar regla CSS duplicada de doc-combo en clientes.css
+[33md2646c9[m HEAD@{66}: commit: fix: agregar stopPropagation y z-10 a flechas del carrusel en modal de producto
+[33m7e84699[m HEAD@{67}: commit: fix: quitar badge Agotado del modal de detalle en landing
+[33m3643510[m HEAD@{68}: commit: fix: quitar badge Agotado y escala de grises de productos en landing
+[33mf445560[m HEAD@{69}: commit: fix: toast no trunca texto largo - quitar white-space:nowrap y agregar max-width
+[33ma7acc85[m HEAD@{70}: commit: fix: registrar salidas - timeout 150s, error handling y mensaje mas claro
+[33m6d39325[m HEAD@{71}: commit: fix: permitir agregar productos agotados al carrito para generar pedido con orden de produccion
+[33m5ef3152[m HEAD@{72}: commit: refactor: unificar secciones categorias y productos en landing
+[33mff35329[m HEAD@{73}: commit: fix: mostrar productos sin stock en landing como agotados
+[33m820bbe9[m HEAD@{74}: commit: fix: corregir posicion de lupa en buscadores de todas las vistas
+[33mcfdef7c[m HEAD@{75}: commit: fix: labels negros con solo asterisco rojo en formularios
+[33m9530244[m HEAD@{76}: commit: fix: unificar lectura de Fecha_Creacion en adaptadores de componentes
+[33m1f36eb0[m HEAD@{77}: commit: fix: leer Fecha_Creacion con mayúscula en adaptarUsuario
+[33me0c7d02[m HEAD@{78}: commit: feat: validaciones duplicados, contacto en footer y dirección de recogida
+[33mcec1275[m HEAD@{79}: commit: feat: modal de detalles del producto en landing con galería de imágenes
+[33mffee93c[m HEAD@{80}: commit: feat: mostrar conteo de caracteres (mín/máx) en campos de formularios
+[33mf340a5c[m HEAD@{81}: commit: fix: mostrar descripción del producto en ver detalles
+[33m6b846ab[m HEAD@{82}: commit: fix: ocultar botón de autocompletado del navegador en buscadores
+[33mc868ca4[m HEAD@{83}: commit: feat: emoji picker mejorado, validaciones y responsive
+[33m9ef750b[m HEAD@{84}: commit: fix: qui

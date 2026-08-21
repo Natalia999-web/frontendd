@@ -55,14 +55,14 @@ def obtener_todos(db: Session, pagina: int = 1, por_pagina: int = 10, busqueda: 
             Usuario.Cedula.ilike(t)
         )
 
-    todos = q.all()
-    resultado = [_formato_persona(u, _rol_nombre(db, u.ID_Rol)) for u in todos]
+    total  = q.count()
+    offset = (pagina - 1) * por_pagina
+    users  = q.offset(offset).limit(por_pagina).all()
 
-    total    = len(resultado)
-    offset   = (pagina - 1) * por_pagina
-    paginado = resultado[offset: offset + por_pagina]
+    rol_ids   = list({u.ID_Rol for u in users if u.ID_Rol})
+    roles_map = {r.ID_Rol: r.Rol for r in db.query(Rol).filter(Rol.ID_Rol.in_(rol_ids)).all()} if rol_ids else {}
 
-    return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "personas": paginado}
+    return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "personas": [_formato_persona(u, roles_map.get(u.ID_Rol)) for u in users]}
 
 
 def obtener_persona(db: Session, id_persona: int) -> dict:

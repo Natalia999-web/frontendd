@@ -131,11 +131,63 @@ def obtener_salidas(
     offset  = (pagina - 1) * por_pagina
     salidas = query.order_by(Salida.Fecha.desc()).offset(offset).limit(por_pagina).all()
 
+    if not salidas:
+        return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "salidas": []}
+
+    insumo_ids  = list({s.ID_Insumo   for s in salidas if s.ID_Insumo})
+    prod_ids    = list({s.ID_Producto  for s in salidas if s.ID_Producto})
+    emp_ids     = list({s.ID_Empleado  for s in salidas if s.ID_Empleado})
+    anulado_ids = list({getattr(s, "ID_Anulado_Por", None) for s in salidas if getattr(s, "ID_Anulado_Por", None)})
+    estado_ids  = list({s.Estado for s in salidas if s.Estado})
+
+    insumos_map  = {i.ID_Insumo:   i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(insumo_ids)).all()}   if insumo_ids  else {}
+    productos_map = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()} if prod_ids    else {}
+    usuarios_ids = list(set(emp_ids) | set(anulado_ids))
+    usuarios_map = {u.ID_Usuario:  u for u in db.query(Usuario).filter(Usuario.ID_Usuario.in_(usuarios_ids)).all()} if usuarios_ids else {}
+    estados_map  = {e.ID_Estados:  e for e in db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()}     if estado_ids  else {}
+
+    cat_insumo_ids  = list({i.ID_Categoria for i in insumos_map.values()  if i.ID_Categoria})
+    cat_prod_ids    = list({p.ID_Categoria for p in productos_map.values() if p.ID_Categoria})
+    cats_insumo_map = {c.ID_Categoria: c for c in db.query(CategoriaInsumo).filter(CategoriaInsumo.ID_Categoria.in_(cat_insumo_ids)).all()}   if cat_insumo_ids else {}
+    cats_prod_map   = {c.ID_Categoria: c for c in db.query(CategoriaProducto).filter(CategoriaProducto.ID_Categoria.in_(cat_prod_ids)).all()} if cat_prod_ids   else {}
+
+    def _build(s: Salida) -> dict:
+        insumo   = insumos_map.get(s.ID_Insumo)
+        producto = productos_map.get(s.ID_Producto)
+        empleado = usuarios_map.get(s.ID_Empleado)
+        anulado  = usuarios_map.get(getattr(s, "ID_Anulado_Por", None))
+        estado   = estados_map.get(s.Estado)
+        if insumo and insumo.ID_Categoria:
+            cat = cats_insumo_map.get(insumo.ID_Categoria)
+        elif producto and producto.ID_Categoria:
+            cat = cats_prod_map.get(producto.ID_Categoria)
+        else:
+            cat = None
+        return {
+            "ID_Salida":          s.ID_Salida,
+            "Tipo":               s.Tipo,
+            "ID_Insumo":          s.ID_Insumo,
+            "nombre_insumo":      insumo.Nombre   if insumo   else None,
+            "ID_Producto":        s.ID_Producto,
+            "nombre_producto":    producto.nombre if producto else None,
+            "nombre_categoria":   cat.Nombre_Categoria if cat else None,
+            "Cantidad":           s.Cantidad,
+            "Motivo":             s.Motivo,
+            "ID_Empleado":        s.ID_Empleado,
+            "nombre_empleado":    f"{empleado.Nombre} {empleado.Apellidos}" if empleado else None,
+            "Fecha":              s.Fecha,
+            "Estado":             s.Estado,
+            "estado_label":       estado.Estado if estado else None,
+            "ID_Anulado_Por":     getattr(s, "ID_Anulado_Por", None),
+            "nombre_anulado_por": f"{anulado.Nombre} {anulado.Apellidos}" if anulado else None,
+            "Fecha_Anulacion":    getattr(s, "Fecha_Anulacion", None),
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "salidas":    [_formato_salida(s, db) for s in salidas],
+        "salidas":    [_build(s) for s in salidas],
     }
 
 

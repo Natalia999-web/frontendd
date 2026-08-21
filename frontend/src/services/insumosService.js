@@ -1,8 +1,8 @@
 import { apiFetch } from "../utils/api";
 
-export async function getInsumos({ pagina = 1, porPagina = 100, busqueda = "" } = {}) {
+export async function getInsumos({ pagina = 1, porPagina = 100, busqueda = "" } = {}, options = {}) {
   const q = busqueda ? `&busqueda=${encodeURIComponent(busqueda)}` : "";
-  return apiFetch(`/insumos/?pagina=${pagina}&por_pagina=${porPagina}${q}`);
+  return apiFetch(`/insumos/?pagina=${pagina}&por_pagina=${porPagina}${q}`, options);
 }
 
 export async function crearInsumo(data) {

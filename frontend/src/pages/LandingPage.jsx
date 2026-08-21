@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { getUser } from '../services/authService.js';
 import { crearPedido } from '../services/pedidosService.js';
-import { getProductos } from '../services/productosService.js';
+import { API_URL } from '../config/api.js';
 import { useNotificaciones, TIPOS } from '../features/notificaciones/context/NotificacionesContext.jsx';
 import Navbar from '../shared/components/Navbar.jsx';
 import Footer from '../shared/components/Footer.jsx';
@@ -294,7 +294,8 @@ const LandingPage = ({ hideNavbar = false }) => {
 
   const cargarProductos = useCallback(async () => {
     try {
-      const data = await getProductos();
+      const res  = await fetch(`${API_URL}/productos/?pagina=1&por_pagina=100`);
+      const data = await res.json();
       const lista = data?.productos || [];
 
       // Construir mapa de categorías desde los datos de productos (ya incluyen nombre e icono)
@@ -331,7 +332,8 @@ const LandingPage = ({ hideNavbar = false }) => {
   }, []);
 
   useEffect(() => {
-    cargarProductos();
+    const id = setTimeout(cargarProductos, 0);
+    return () => clearTimeout(id);
   }, [cargarProductos]);
 
   // Re-fetch al volver a la pestaña (productos pueden haber cambiado)

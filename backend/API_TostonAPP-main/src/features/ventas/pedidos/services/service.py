@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
 from src.shared.services.models import Venta, Estado, DetalleVenta, Domicilio
-from src.features.ventas.gestion_ventas.services.service import _formato_venta, cambiar_estado as _gv_cambiar_estado
+from src.features.ventas.gestion_ventas.services.service import _formato_venta, _batch_ventas, cambiar_estado as _gv_cambiar_estado
 from src.features.ventas.pedidos.services.estados import EstadoPedido, ESTADOS_ACTIVOS
 
 
@@ -43,7 +43,7 @@ def obtener_pedidos(
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "pedidos":    [_formato_venta(p, db) for p in pedidos],
+        "pedidos":    _batch_ventas(pedidos, db),
     }
 
 

@@ -3,7 +3,8 @@ from fastapi import HTTPException
 from datetime import datetime
 from decimal import Decimal
 
-from src.shared.services.models import Producto, CategoriaProducto, ProductoImagen, FichaTecnica, FichaTecnicaInsumo, Insumo, OrdenProduccion, VentaXProducto, DevolucionDetalle, LoteProducto, Venta
+from sqlalchemy import func
+from src.shared.services.models import Producto, CategoriaProducto, ProductoImagen, FichaTecnica, FichaTecnicaInsumo, Insumo, OrdenProduccion, VentaXProducto, DevolucionDetalle, LoteProducto, Venta, UnidadMedida
 from .schemas import ProductoCreate, ProductoUpdate, FichaTecnicaInput
 
 
@@ -111,7 +112,7 @@ def obtener_productos(
     estado:     int = None,
     publicado:  int = None,
 ) -> dict:
-    """Lista paginada. Busca por nombre o categoría. Filtra por estado y/o publicado."""
+    """Lista paginada con queries en lote. Evita N+1."""
     query = db.query(Producto)
 
     if estado is not None:
@@ -135,11 +136,151 @@ def obtener_productos(
     offset    = (pagina - 1) * por_pagina
     productos = query.offset(offset).limit(por_pagina).all()
 
+    if not productos:
+        return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "productos": []}
+
+    prod_ids  = [p.ID_Producto for p in productos]
+    cat_ids   = list({p.ID_Categoria for p in productos if p.ID_Categoria})
+
+    # Batch 1: categorías
+    categorias = {c.ID_Categoria: c for c in
+                  db.query(CategoriaProducto)
+                    .filter(CategoriaProducto.ID_Categoria.in_(cat_ids)).all()} if cat_ids else {}
+
+    # Batch 2: imágenes agrupadas por producto
+    imagenes_map: dict = {}
+    for img in db.query(ProductoImagen).filter(ProductoImagen.ID_Producto.in_(prod_ids)).all():
+        imagenes_map.setdefault(img.ID_Producto, []).append(img)
+
+    # Batch 3: fichas técnicas (la más reciente por producto)
+    fichas_raw = (
+        db.query(FichaTecnica)
+        .filter(FichaTecnica.ID_Producto.in_(prod_ids))
+        .order_by(FichaTecnica.Fecha_Creacion.desc())
+        .all()
+    )
+    fichas: dict = {}
+    for f in fichas_raw:
+        if f.ID_Producto not in fichas:
+            fichas[f.ID_Producto] = f
+
+    # Batch 4: insumos de fichas
+    ficha_ids = [f.ID_Ficha for f in fichas.values()]
+    fi_rows: dict = {}   # ficha_id → list[FichaTecnicaInsumo]
+    insumo_fi_ids: set = set()
+    if ficha_ids:
+        for fi in db.query(FichaTecnicaInsumo).filter(FichaTecnicaInsumo.ID_Ficha.in_(ficha_ids)).all():
+            fi_rows.setdefault(fi.ID_Ficha, []).append(fi)
+            insumo_fi_ids.add(fi.ID_Insumo)
+
+    # Batch 5: insumos para fichas
+    insumos_fi: dict = {}
+    cat_ins_ids: set = set()
+    if insumo_fi_ids:
+        for ins in db.query(Insumo).filter(Insumo.ID_Insumo.in_(list(insumo_fi_ids))).all():
+            insumos_fi[ins.ID_Insumo] = ins
+            if ins.ID_Categoria:
+                cat_ins_ids.add(ins.ID_Categoria)
+
+    # Batch 6: categorías de insumos
+    from src.shared.services.models import CategoriaInsumo
+    cats_insumo: dict = {}
+    if cat_ins_ids:
+        from src.shared.services.models import CategoriaInsumo as _CI
+        cats_insumo = {c.ID_Categoria: c for c in
+                       db.query(_CI).filter(_CI.ID_Categoria.in_(list(cat_ins_ids))).all()}
+
+    # Batch 7: primer lote activo con vencimiento por producto
+    hoy = datetime.utcnow()
+    lotes_raw = (
+        db.query(LoteProducto)
+        .filter(
+            LoteProducto.ID_Producto.in_(prod_ids),
+            LoteProducto.Fecha_Vencimiento != None,
+            LoteProducto.Estado == 1,
+            LoteProducto.Cantidad > 0,
+        )
+        .order_by(LoteProducto.Fecha_Vencimiento.asc())
+        .all()
+    )
+    primer_lote: dict = {}
+    for lote in lotes_raw:
+        if lote.ID_Producto not in primer_lote:
+            primer_lote[lote.ID_Producto] = lote
+
+    def _build(producto: Producto) -> dict:
+        cat   = categorias.get(producto.ID_Categoria)
+        ficha = fichas.get(producto.ID_Producto)
+        lote  = primer_lote.get(producto.ID_Producto)
+        imgs  = imagenes_map.get(producto.ID_Producto, [])
+
+        stock        = producto.Stock or 0
+        stock_minimo = getattr(producto, "Stock_Minimo", 0) or 0
+        estado_id, estado_label = _calcular_estado(stock, stock_minimo)
+
+        proximo_venc     = None
+        dias_para_vencer = None
+        if lote and lote.Fecha_Vencimiento:
+            proximo_venc     = lote.Fecha_Vencimiento.strftime("%Y-%m-%d")
+            dias_para_vencer = (lote.Fecha_Vencimiento - hoy).days
+
+        ficha_dict = None
+        if ficha:
+            fis = fi_rows.get(ficha.ID_Ficha, [])
+            ficha_dict = {
+                "ID_Ficha":       ficha.ID_Ficha,
+                "Version":        ficha.Version,
+                "Observaciones":  ficha.Observaciones,
+                "Procedimiento":  ficha.Procedimiento,
+                "Estado":         ficha.Estado,
+                "Fecha_Creacion": ficha.Fecha_Creacion,
+                "Dias_Vida_Util": getattr(ficha, "Dias_Vida_Util", None),
+                "insumos": [
+                    {
+                        "ID_Ficha_Insumo":  fi.ID_Ficha_Insumo,
+                        "ID_Insumo":        fi.ID_Insumo,
+                        "nombre_insumo":    insumos_fi[fi.ID_Insumo].Nombre if fi.ID_Insumo in insumos_fi else None,
+                        "ID_Categoria":     insumos_fi[fi.ID_Insumo].ID_Categoria if fi.ID_Insumo in insumos_fi else None,
+                        "nombre_categoria": (cats_insumo[insumos_fi[fi.ID_Insumo].ID_Categoria].Nombre_Categoria
+                                             if fi.ID_Insumo in insumos_fi and insumos_fi[fi.ID_Insumo].ID_Categoria in cats_insumo
+                                             else None),
+                        "Cantidad":         fi.Cantidad,
+                        "Unidad":           fi.Unidad,
+                    }
+                    for fi in fis
+                ],
+            }
+
+        return {
+            "ID_Producto":      producto.ID_Producto,
+            "nombre":           producto.nombre,
+            "ID_Categoria":     producto.ID_Categoria,
+            "nombre_categoria": cat.Nombre_Categoria if cat else None,
+            "icono_categoria":  cat.Icono            if cat else None,
+            "Precio_venta":     producto.Precio_venta,
+            "Stock":            stock,
+            "Stock_Minimo":     stock_minimo,
+            "Estado":           estado_id,
+            "estado_label":     estado_label,
+            "Publicado":           getattr(producto, "Publicado",           0) or 0,
+            "Requiere_Produccion": getattr(producto, "Requiere_Produccion", 0) or 0,
+            "Descripcion_Corta":   getattr(producto, "Descripcion_Corta",  None),
+            "Descripcion_Larga":   getattr(producto, "Descripcion_Larga",  None),
+            "Fecha_Creacion":      getattr(producto, "Fecha_Creacion",     None),
+            "proximo_vencimiento": proximo_venc,
+            "dias_para_vencer":    dias_para_vencer,
+            "imagenes": [
+                {"ID_Producto_Img": img.ID_Producto_Img, "url": img.imagen}
+                for img in imgs
+            ],
+            "ficha_tecnica": ficha_dict,
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "productos":  [_formato_producto(p, db) for p in productos],
+        "productos":  [_build(p) for p in productos],
     }
 
 

@@ -365,7 +365,7 @@ def obtener_ordenes(
     por_pagina: int = 10,
     busqueda: str = None
 ) -> dict:
-    """Lista paginada. Busca por nombre de producto o código de orden."""
+    """Lista paginada con queries en lote. Evita N+1."""
     query = db.query(OrdenProduccion)
 
     if busqueda:
@@ -375,19 +375,82 @@ def obtener_ordenes(
             .filter(Producto.nombre.ilike(termino))
             .subquery()
         )
-        query = query.filter(
-            OrdenProduccion.ID_Producto.in_(productos_ids)
-        )
+        query = query.filter(OrdenProduccion.ID_Producto.in_(productos_ids))
 
-    total  = query.count()
-    offset = (pagina - 1) * por_pagina
+    total   = query.count()
+    offset  = (pagina - 1) * por_pagina
     ordenes = query.offset(offset).limit(por_pagina).all()
+
+    if not ordenes:
+        return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "ordenes": []}
+
+    orden_ids   = [o.ID_Orden_Produccion for o in ordenes]
+    prod_ids    = list({o.ID_Producto for o in ordenes if o.ID_Producto})
+    insumo_ids  = list({o.ID_Insumo   for o in ordenes if o.ID_Insumo})
+    ficha_ids   = list({o.ID_Ficha    for o in ordenes if o.ID_Ficha})
+    estado_ids  = list({o.Estado      for o in ordenes if o.Estado})
+
+    # Batch 1: productos, insumos, fichas, estados, lotes
+    productos_map = {p.ID_Producto: p for p in
+                     db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()} if prod_ids else {}
+    insumos_map   = {i.ID_Insumo: i for i in
+                     db.query(Insumo).filter(Insumo.ID_Insumo.in_(insumo_ids)).all()} if insumo_ids else {}
+    fichas_map    = {f.ID_Ficha: f for f in
+                     db.query(FichaTecnica).filter(FichaTecnica.ID_Ficha.in_(ficha_ids)).all()} if ficha_ids else {}
+    estados_map   = {e.ID_Estados: e for e in
+                     db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
+    lotes_map     = {l.ID_Orden_Produccion: l for l in
+                     db.query(LoteProducto)
+                       .filter(LoteProducto.ID_Orden_Produccion.in_(orden_ids)).all()}
+
+    def _build(orden: OrdenProduccion) -> dict:
+        producto = productos_map.get(orden.ID_Producto)
+        insumo   = insumos_map.get(orden.ID_Insumo)
+        ficha    = fichas_map.get(orden.ID_Ficha) if orden.ID_Ficha else None
+        lote     = lotes_map.get(orden.ID_Orden_Produccion)
+        estado   = estados_map.get(orden.Estado)
+
+        if orden.ID_Ficha and ficha:
+            desglose        = _calcular_costo_detalle(db, ficha.ID_Ficha, orden.Cantidad)
+            costo_calculado = sum((d["costo"] for d in desglose if d["error"] is None), Decimal("0"))
+            costo_detalle   = [{"nombre": d["nombre"], "costo": float(d["costo"]), "error": d["error"]} for d in desglose]
+        else:
+            costo_calculado = _calcular_costo(db, None, orden.ID_Insumo, orden.Cantidad)
+            costo_detalle   = []
+
+        costo = costo_calculado if costo_calculado > 0 else (orden.Costo or Decimal("0"))
+
+        return {
+            "ID_Orden_Produccion": orden.ID_Orden_Produccion,
+            "ID_Venta":            orden.ID_Venta,
+            "ID_Producto":         orden.ID_Producto,
+            "nombre_producto":     producto.nombre if producto else None,
+            "ID_Insumo":           orden.ID_Insumo,
+            "nombre_insumo":       insumo.Nombre   if insumo   else None,
+            "stock_insumo":        insumo.Stock_Actual if insumo else None,
+            "ID_Ficha":            orden.ID_Ficha,
+            "version_ficha":       ficha.Version   if ficha    else None,
+            "Cantidad":            orden.Cantidad,
+            "Fecha_inicio":        orden.Fecha_inicio,
+            "Fecha_Entrega":       orden.Fecha_Entrega,
+            "Estado":              orden.Estado,
+            "estado_label":        estado.Estado   if estado   else None,
+            "Costo":               float(costo),
+            "costo_detalle":       costo_detalle,
+            "lote": {
+                "ID_Lote_Producto":  lote.ID_Lote_Producto,
+                "Numero_Lote":       lote.Numero_Lote,
+                "Fecha_Produccion":  lote.Fecha_Produccion,
+                "Fecha_Vencimiento": lote.Fecha_Vencimiento,
+                "Cantidad":          lote.Cantidad,
+            } if lote else None,
+        }
 
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ordenes":    [_formato_orden(o, db) for o in ordenes],
+        "ordenes":    [_build(o) for o in ordenes],
     }
 
 

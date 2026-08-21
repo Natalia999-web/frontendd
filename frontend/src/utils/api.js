@@ -35,7 +35,7 @@ export function clearSession() {
 export async function apiFetch(endpoint, options = {}) {
   const token = getToken();
   const hasBody = options.body !== undefined;
-  const { timeout: timeoutMs = 15000, ...fetchOptions } = options;
+  const { timeout: timeoutMs = 30000, ...fetchOptions } = options;
 
   const controller = new AbortController();
   const timeoutId  = setTimeout(() => controller.abort(), timeoutMs);
@@ -79,7 +79,6 @@ export async function apiFetch(endpoint, options = {}) {
     ) {
       throw new Error(
         "El servidor tardó demasiado en responder. " +
-        "Puede estar iniciando (primera solicitud del día) o bajo carga. " +
         "Intenta de nuevo en unos segundos."
       );
     }

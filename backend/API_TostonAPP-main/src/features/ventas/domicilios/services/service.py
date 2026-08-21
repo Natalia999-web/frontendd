@@ -196,11 +196,98 @@ def obtener_domicilios(
     offset     = (pagina - 1) * por_pagina
     domicilios = query.order_by(Domicilio.Fecha_asignacion.desc()).offset(offset).limit(por_pagina).all()
 
+    if not domicilios:
+        return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "domicilios": []}
+
+    venta_ids = list({d.ID_Venta for d in domicilios if d.ID_Venta})
+    emp_ids   = list({d.ID_Empleado for d in domicilios if d.ID_Empleado})
+
+    # Batch 1: ventas
+    ventas_map = {v.ID_Venta: v for v in
+                  db.query(Venta).filter(Venta.ID_Venta.in_(venta_ids)).all()} if venta_ids else {}
+
+    # Batch 2: clientes (desde las ventas)
+    cli_ids  = list({v.ID_Usuario for v in ventas_map.values() if v.ID_Usuario})
+    todos_emp_ids = list(set(cli_ids) | set(emp_ids))
+    usuarios_map = {u.ID_Usuario: u for u in
+                    db.query(Usuario).filter(Usuario.ID_Usuario.in_(todos_emp_ids)).all()} if todos_emp_ids else {}
+
+    # Batch 3: Estados
+    estado_ids = list({d.Estado for d in domicilios if d.Estado})
+    estados_map = {e.ID_Estados: e for e in
+                   db.query(Estado).filter(Estado.ID_Estados.in_(estado_ids)).all()} if estado_ids else {}
+
+    # Batch 4: VentaXProducto agrupado por venta
+    vxp_all = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta.in_(venta_ids)).all() if venta_ids else []
+    vxp_by_venta: dict = {}
+    prod_ids: set = set()
+    for vxp in vxp_all:
+        vxp_by_venta.setdefault(vxp.ID_Venta, []).append(vxp)
+        if vxp.ID_Producto:
+            prod_ids.add(vxp.ID_Producto)
+
+    # Batch 5: productos e imágenes
+    productos_map: dict = {}
+    imagenes_map:  dict = {}
+    if prod_ids:
+        for p in db.query(Producto).filter(Producto.ID_Producto.in_(list(prod_ids))).all():
+            productos_map[p.ID_Producto] = p
+        for img in db.query(ProductoImagen).filter(ProductoImagen.ID_Producto.in_(list(prod_ids))).all():
+            if img.ID_Producto not in imagenes_map:
+                imagenes_map[img.ID_Producto] = img.imagen
+
+    def _build_domicilio(dom: Domicilio) -> dict:
+        venta      = ventas_map.get(dom.ID_Venta)
+        cliente    = usuarios_map.get(venta.ID_Usuario) if venta else None
+        repartidor = usuarios_map.get(dom.ID_Empleado)  if dom.ID_Empleado else None
+        estado_obj = estados_map.get(dom.Estado)
+
+        total_v    = float(venta.Total) if venta and venta.Total else 0.0
+        metodo     = venta.Metodo_Pago or "" if venta else ""
+
+        prods = []
+        if venta:
+            for item in vxp_by_venta.get(venta.ID_Venta, []):
+                prod   = productos_map.get(item.ID_Producto)
+                precio = float(prod.Precio_venta) if prod and prod.Precio_venta else 0.0
+                prods.append({
+                    "ID_Producto":     item.ID_Producto,
+                    "nombre_producto": prod.nombre if prod else "",
+                    "Cantidad":        item.Cantidad,
+                    "precio_unitario": precio,
+                    "subtotal":        precio * (item.Cantidad or 0),
+                    "imagen":          imagenes_map.get(item.ID_Producto),
+                })
+
+        return {
+            "ID_Domicilio":         dom.ID_Domicilio,
+            "ID_Venta":             dom.ID_Venta,
+            "nombre_cliente":       f"{cliente.Nombre} {cliente.Apellidos}" if cliente else None,
+            "ID_Empleado":          dom.ID_Empleado,
+            "nombre_repartidor":    f"{repartidor.Nombre} {repartidor.Apellidos}" if repartidor else None,
+            "Fecha_asignacion":     dom.Fecha_asignacion,
+            "Fecha_entrega":        dom.Fecha_entrega,
+            "Observaciones":        dom.Observaciones,
+            "indicaciones_cliente": cliente.Indicaciones if cliente else None,
+            "Estado":               dom.Estado,
+            "estado_label":         estado_obj.Estado if estado_obj else None,
+            "venta_estado":         venta.Estado if venta else None,
+            "Direccion_entrega":    dom.Direccion_entrega,
+            "Municipio_entrega":    dom.Municipio_entrega,
+            "Departamento_entrega": dom.Departamento_entrega,
+            "total":                total_v,
+            "metodo_pago":          metodo,
+            "comprobante_pago":     venta.Comprobante_Pago if venta else None,
+            "productos":            prods,
+            "telefono_cliente":     cliente.Telefono if cliente else "",
+            "otp":                  getattr(dom, "OTP", None),
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "domicilios": [_formato_domicilio(d, db) for d in domicilios],
+        "domicilios": [_build_domicilio(d) for d in domicilios],
     }
 
 

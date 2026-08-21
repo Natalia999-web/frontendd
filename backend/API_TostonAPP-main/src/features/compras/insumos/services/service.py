@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime
 
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, func, case
 from src.shared.services.models import Insumo, CategoriaInsumo, UnidadMedida, LoteCompra, FichaTecnicaInsumo, OrdenProduccion, DetalleCompra
 from .schemas import InsumoCreate, InsumoUpdate
 
@@ -76,15 +76,22 @@ def _formato_insumo(insumo: Insumo, db: Session) -> dict:
 
 
 def _calcular_resumen(db: Session) -> dict:
-    """Calcula las 4 tarjetas del tope de la página."""
-    todos = db.query(Insumo).all()
-    total       = len(todos)
-    agotados    = sum(1 for i in todos if i.Stock_Actual == 0)
-    stock_bajo  = sum(1 for i in todos if 0 < i.Stock_Actual <= i.Stock_Minimo)
-    disponibles = total - agotados - stock_bajo
+    """Calcula las 4 tarjetas con una sola query SQL agregada."""
+    row = db.query(
+        func.count().label("total"),
+        func.sum(case([(Insumo.Stock_Actual == 0, 1)], else_=0)).label("agotados"),
+        func.sum(case(
+            [(and_(Insumo.Stock_Actual > 0, Insumo.Stock_Actual <= Insumo.Stock_Minimo), 1)],
+            else_=0
+        )).label("stock_bajo"),
+    ).select_from(Insumo).first()
+
+    total      = int(row.total      or 0)
+    agotados   = int(row.agotados   or 0)
+    stock_bajo = int(row.stock_bajo or 0)
     return {
         "total":       total,
-        "disponibles": disponibles,
+        "disponibles": total - agotados - stock_bajo,
         "stock_bajo":  stock_bajo,
         "agotados":    agotados,
     }
@@ -96,12 +103,11 @@ def obtener_insumos(
     por_pagina: int = 10,
     busqueda: str = None
 ) -> dict:
-    """Lista paginada con resumen. Busca por nombre, categoría o lote."""
+    """Lista paginada con resumen. Usa queries en lote para evitar N+1."""
     query = db.query(Insumo)
 
     if busqueda:
         termino = f"%{busqueda}%"
-        # Busca en nombre del insumo o nombre de categoría
         query = query.join(
             CategoriaInsumo,
             CategoriaInsumo.ID_Categoria == Insumo.ID_Categoria,
@@ -115,12 +121,121 @@ def obtener_insumos(
     offset  = (pagina - 1) * por_pagina
     insumos = query.offset(offset).limit(por_pagina).all()
 
+    if not insumos:
+        return {
+            "resumen":    _calcular_resumen(db),
+            "total":      total,
+            "pagina":     pagina,
+            "por_pagina": por_pagina,
+            "insumos":    [],
+        }
+
+    insumo_ids     = [i.ID_Insumo for i in insumos]
+    insumo_ids_set = set(insumo_ids)
+
+    # Batch 1: categorías y unidades de medida
+    cat_ids    = list({i.ID_Categoria for i in insumos if i.ID_Categoria})
+    unidad_ids = list({i.Unidad_Medida for i in insumos if i.Unidad_Medida})
+    categorias = {
+        c.ID_Categoria: c
+        for c in db.query(CategoriaInsumo)
+                   .filter(CategoriaInsumo.ID_Categoria.in_(cat_ids)).all()
+    } if cat_ids else {}
+    unidades = {
+        u.ID_Unidad_Medida: u
+        for u in db.query(UnidadMedida)
+                   .filter(UnidadMedida.ID_Unidad_Medida.in_(unidad_ids)).all()
+    } if unidad_ids else {}
+
+    # Batch 2: primer lote por insumo
+    lotes_raw: dict[int, LoteCompra] = {}
+    for lote in db.query(LoteCompra).filter(LoteCompra.ID_Insumo.in_(insumo_ids)).all():
+        if lote.ID_Insumo not in lotes_raw:
+            lotes_raw[lote.ID_Insumo] = lote
+
+    # Batch 3: último detalle de compra por insumo (precio)
+    subq = (
+        db.query(
+            DetalleCompra.ID_Insumo,
+            func.max(DetalleCompra.ID_Detalle_Compra).label("max_id"),
+        )
+        .filter(DetalleCompra.ID_Insumo.in_(insumo_ids))
+        .group_by(DetalleCompra.ID_Insumo)
+        .subquery()
+    )
+    ultimos_detalles = {
+        d.ID_Insumo: d
+        for d in db.query(DetalleCompra)
+                   .join(subq, DetalleCompra.ID_Detalle_Compra == subq.c.max_id)
+                   .all()
+    }
+
+    # Batch 4: fichas técnicas
+    ficha_rows = (
+        db.query(FichaTecnicaInsumo.ID_Insumo, FichaTecnicaInsumo.ID_Ficha)
+        .filter(FichaTecnicaInsumo.ID_Insumo.in_(insumo_ids))
+        .all()
+    )
+    fichas_insumos_set = {row.ID_Insumo for row in ficha_rows}
+    ficha_ids          = [row.ID_Ficha for row in ficha_rows]
+    ficha_to_insumos: dict[int, list] = {}
+    for row in ficha_rows:
+        ficha_to_insumos.setdefault(row.ID_Ficha, []).append(row.ID_Insumo)
+
+    # Batch 5: órdenes activas (directas o vía ficha)
+    orden_filter = [OrdenProduccion.ID_Insumo.in_(insumo_ids)]
+    if ficha_ids:
+        orden_filter.append(OrdenProduccion.ID_Ficha.in_(ficha_ids))
+    active_ordenes = db.query(OrdenProduccion).filter(
+        or_(*orden_filter),
+        OrdenProduccion.Estado.in_([1, 13]),
+    ).all()
+
+    insumos_en_orden: set = set()
+    for orden in active_ordenes:
+        if orden.ID_Insumo and orden.ID_Insumo in insumo_ids_set:
+            insumos_en_orden.add(orden.ID_Insumo)
+        if orden.ID_Ficha and orden.ID_Ficha in ficha_to_insumos:
+            insumos_en_orden.update(ficha_to_insumos[orden.ID_Ficha])
+
+    hoy = datetime.utcnow()
+
+    def _build(insumo: Insumo) -> dict:
+        categoria      = categorias.get(insumo.ID_Categoria)
+        unidad         = unidades.get(insumo.Unidad_Medida)
+        proximo_lote   = lotes_raw.get(insumo.ID_Insumo)
+        ultimo_detalle = ultimos_detalles.get(insumo.ID_Insumo)
+
+        proximo_venc     = None
+        dias_para_vencer = None
+        if proximo_lote and proximo_lote.Fecha_Vencimiento:
+            proximo_venc     = proximo_lote.Fecha_Vencimiento.strftime("%Y-%m-%d")
+            dias_para_vencer = (proximo_lote.Fecha_Vencimiento - hoy).days
+
+        return {
+            "ID_Insumo":              insumo.ID_Insumo,
+            "Nombre":                 insumo.Nombre,
+            "ID_Categoria":           insumo.ID_Categoria,
+            "nombre_categoria":       categoria.Nombre_Categoria if categoria else None,
+            "Unidad_Medida":          insumo.Unidad_Medida,
+            "simbolo_unidad":         unidad.Simbolo if unidad else None,
+            "Stock_Actual":           float(insumo.Stock_Actual or 0),
+            "Stock_Minimo":           insumo.Stock_Minimo,
+            "Estado":                 insumo.Estado,
+            "proximo_vencimiento":    proximo_venc,
+            "dias_para_vencer":       dias_para_vencer,
+            "lote_id":                proximo_lote.ID_Lote_Compra if proximo_lote else None,
+            "precio_unitario":        float(ultimo_detalle.Precio_Und) if ultimo_detalle and ultimo_detalle.Precio_Und else 0.0,
+            "tiene_ficha_tecnica":    insumo.ID_Insumo in fichas_insumos_set,
+            "tiene_orden_produccion": insumo.ID_Insumo in insumos_en_orden,
+        }
+
     return {
         "resumen":    _calcular_resumen(db),
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "insumos":    [_formato_insumo(i, db) for i in insumos],
+        "insumos":    [_build(i) for i in insumos],
     }
 
 

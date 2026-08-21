@@ -56,25 +56,54 @@ def obtener_roles(
     busqueda: str = None,
     estado:   int = None,
 ):
-    """
-    Lista roles con filtros opcionales:
-    - busqueda: nombre parcial, case-insensitive
-    - estado: 1=Activo, 2=Inactivo
-    La paginación la maneja el frontend.
-    """
     query = db.query(Rol)
-
     if busqueda:
-        termino = busqueda.strip()
-        query = query.filter(Rol.Rol.ilike(f"%{termino}%"))
-
+        query = query.filter(Rol.Rol.ilike(f"%{busqueda.strip()}%"))
     if estado is not None:
         query = query.filter(Rol.Estado == estado)
 
     roles = query.all()
+    if not roles:
+        return {"total": 0, "roles": []}
+
+    rol_ids = [r.ID_Rol for r in roles]
+
+    rxp_rows = (
+        db.query(RolXPermiso, Permiso)
+        .join(Permiso, Permiso.ID_Permiso == RolXPermiso.ID_Permiso)
+        .filter(RolXPermiso.ID_Rol.in_(rol_ids))
+        .all()
+    )
+    permisos_by_rol: dict = {}
+    for rxp, perm in rxp_rows:
+        permisos_by_rol.setdefault(rxp.ID_Rol, []).append({
+            "ID_Permiso":  perm.ID_Permiso,
+            "Permiso":     perm.Permiso,
+            "Descripcion": perm.Descripcion,
+        })
+
+    count_rows = (
+        db.query(Usuario.ID_Rol, func.count(Usuario.ID_Usuario).label("cnt"))
+        .filter(Usuario.ID_Rol.in_(rol_ids))
+        .group_by(Usuario.ID_Rol)
+        .all()
+    )
+    count_by_rol = {r.ID_Rol: r.cnt for r in count_rows}
+
     return {
         "total": len(roles),
-        "roles": [_formato_rol(r, db) for r in roles],
+        "roles": [
+            {
+                "ID_Rol":         r.ID_Rol,
+                "Rol":            r.Rol,
+                "Icono":          r.Icono,
+                "Estado":         r.Estado,
+                "total_usuarios": count_by_rol.get(r.ID_Rol, 0),
+                "protegido":      _es_protegido(r.ID_Rol),
+                "permisos":       permisos_by_rol.get(r.ID_Rol, []),
+            }
+            for r in roles
+        ],
     }
 
 

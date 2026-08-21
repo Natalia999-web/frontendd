@@ -10,6 +10,7 @@ _BOGOTA = ZoneInfo("America/Bogota")
 def _now():
     return datetime.now(_BOGOTA).replace(tzinfo=None)
 
+from sqlalchemy import func
 from src.shared.services.models import (
     Venta, VentaXProducto, DetalleVenta, Producto, ProductoImagen, Usuario,
     Estado, Domicilio, CreditoCliente, MovimientoCredito,
@@ -316,6 +317,143 @@ def _aplicar_descuento(
     return monto_descontado
 
 
+def _batch_ventas(ventas: list, db: Session) -> list:
+    """Formatea una lista de ventas con queries en lote. Evita N+1."""
+    if not ventas:
+        return []
+
+    venta_ids   = [v.ID_Venta   for v in ventas]
+    usuario_ids = list({v.ID_Usuario for v in ventas if v.ID_Usuario})
+
+    # Batch 1: clientes
+    usuarios = {u.ID_Usuario: u for u in
+                db.query(Usuario).filter(Usuario.ID_Usuario.in_(usuario_ids)).all()} if usuario_ids else {}
+
+    # Batch 2: VentaXProducto
+    vxp_all = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta.in_(venta_ids)).all()
+    vxp_by_venta: dict = {}
+    for vxp in vxp_all:
+        vxp_by_venta.setdefault(vxp.ID_Venta, []).append(vxp)
+
+    # Batch 3: productos
+    prod_ids = list({v.ID_Producto for v in vxp_all if v.ID_Producto})
+    productos = {p.ID_Producto: p for p in
+                 db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()} if prod_ids else {}
+
+    # Batch 4: primera imagen por producto
+    imagenes_map: dict = {}
+    if prod_ids:
+        for img in db.query(ProductoImagen).filter(ProductoImagen.ID_Producto.in_(prod_ids)).all():
+            if img.ID_Producto not in imagenes_map:
+                imagenes_map[img.ID_Producto] = img.imagen
+
+    # Batch 5: detalles de venta
+    detalles = {d.ID_Venta: d for d in
+                db.query(DetalleVenta).filter(DetalleVenta.ID_Venta.in_(venta_ids)).all()}
+
+    # Batch 6: descuentos por venta
+    dxvs = {d.ID_Venta: d for d in
+            db.query(DescuentoXVenta).filter(DescuentoXVenta.ID_Venta.in_(venta_ids)).all()}
+
+    # Batch 7: domicilios
+    domicilios = {d.ID_Venta: d for d in
+                  db.query(Domicilio).filter(Domicilio.ID_Venta.in_(venta_ids)).all()}
+
+    # Batch 8: repartidores
+    emp_ids = list({d.ID_Empleado for d in domicilios.values() if d.ID_Empleado})
+    repartidores = {u.ID_Usuario: u for u in
+                    db.query(Usuario).filter(Usuario.ID_Usuario.in_(emp_ids)).all()} if emp_ids else {}
+
+    # Batch 9: órdenes pendientes por venta (COUNT)
+    ordenes_rows = (
+        db.query(OrdenProduccion.ID_Venta,
+                 func.count(OrdenProduccion.ID_Orden_Produccion).label("cnt"))
+        .filter(OrdenProduccion.ID_Venta.in_(venta_ids),
+                OrdenProduccion.Estado.notin_([11, 5]))
+        .group_by(OrdenProduccion.ID_Venta)
+        .all()
+    )
+    ordenes_counts = {row.ID_Venta: row.cnt for row in ordenes_rows}
+
+    result = []
+    for venta in ventas:
+        usuario    = usuarios.get(venta.ID_Usuario)
+        vxp_list   = vxp_by_venta.get(venta.ID_Venta, [])
+        detalle    = detalles.get(venta.ID_Venta)
+        dxv        = dxvs.get(venta.ID_Venta)
+        dom        = domicilios.get(venta.ID_Venta)
+        repartidor = repartidores.get(dom.ID_Empleado) if dom and dom.ID_Empleado else None
+
+        prods_list          = []
+        requiere_produccion = False
+        for v in vxp_list:
+            prod  = productos.get(v.ID_Producto)
+            precio = prod.Precio_venta if prod else Decimal("0")
+            if getattr(prod, "Requiere_Produccion", 0):
+                requiere_produccion = True
+            prods_list.append({
+                "ID_Producto":       v.ID_Producto,
+                "nombre_producto":   prod.nombre if prod else None,
+                "Cantidad":          v.Cantidad,
+                "precio_unitario":   precio,
+                "subtotal":          precio * Decimal(str(v.Cantidad)),
+                "imagen":            imagenes_map.get(v.ID_Producto),
+                "cantidad_preorden": getattr(v, "Cantidad_Preorden", 0) or 0,
+                "stock_disponible":  (prod.Stock or 0) if prod else 0,
+            })
+
+        credito_aplicado   = detalle.Descuento        if detalle else Decimal("0")
+        descuento_aplicado = dxv.Monto_Aplicado       if dxv     else Decimal("0")
+        subtotal_bruto     = sum(p["subtotal"] for p in prods_list)
+        domiciliario       = (f"{repartidor.Nombre} {repartidor.Apellidos}"
+                              if repartidor else None)
+
+        # requiere_fecha_propuesta desde datos en memoria
+        rfp = bool(getattr(venta, "Sobre_Stock", 0))
+        if not rfp:
+            for vxp in vxp_list:
+                prod = productos.get(vxp.ID_Producto)
+                if prod and getattr(prod, "Requiere_Produccion", 0) and (vxp.Cantidad or 0) > (prod.Stock or 0):
+                    rfp = True
+                    break
+
+        result.append({
+            "ID_Venta":           venta.ID_Venta,
+            "ID_Usuario":         venta.ID_Usuario,
+            "nombre_cliente":     f"{usuario.Nombre} {usuario.Apellidos}" if usuario else None,
+            "correo_cliente":     usuario.Correo   if usuario else None,
+            "telefono_cliente":   usuario.Telefono if usuario else None,
+            "Total":              venta.Total,
+            "subtotal_bruto":     subtotal_bruto,
+            "credito_aplicado":   credito_aplicado,
+            "descuento_aplicado": descuento_aplicado,
+            "Estado":             venta.Estado,
+            "estado_label":       _label_estado(db, venta.Estado) if venta.Estado else None,
+            "Metodo_Pago":            venta.Metodo_Pago,
+            "Fecha_Venta":            venta.Fecha_Venta,
+            "Fecha_pedido":           venta.Fecha_pedido,
+            "Fecha_entrega":          getattr(venta, "Fecha_entrega", None),
+            "Fecha_entrega_esperada": venta.Fecha_entrega_esperada,
+            "productos":              prods_list,
+            "comprobante_pago":             venta.Comprobante_Pago,
+            "tiene_domicilio":              dom is not None,
+            "ID_Domicilio":                 dom.ID_Domicilio        if dom else None,
+            "direccion_entrega":            dom.Direccion_entrega   if dom else None,
+            "municipio_entrega":            dom.Municipio_entrega   if dom else None,
+            "departamento_entrega":         dom.Departamento_entrega if dom else None,
+            "nombre_domiciliario":          domiciliario,
+            "ID_Empleado":                  dom.ID_Empleado if dom else None,
+            "ordenes_produccion_pendientes": ordenes_counts.get(venta.ID_Venta, 0),
+            "requiere_produccion":           requiere_produccion,
+            "sobre_stock":        bool(getattr(venta, "Sobre_Stock", 0)),
+            "anticipo_requerido": getattr(venta, "Anticipo_Requerido", None),
+            "anticipo_pagado":    getattr(venta, "Anticipo_Pagado", None),
+            "requiere_fecha_propuesta": rfp,
+        })
+
+    return result
+
+
 def obtener_ventas(
     db: Session,
     pagina: int = 1,
@@ -352,7 +490,7 @@ def obtener_ventas(
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ventas":     [_formato_venta(v, db) for v in ventas],
+        "ventas":     _batch_ventas(ventas, db),
     }
 
 
@@ -376,7 +514,7 @@ def obtener_mis_ventas(
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "ventas":     [_formato_venta(v, db) for v in ventas],
+        "ventas":     _batch_ventas(ventas, db),
     }
 
 
