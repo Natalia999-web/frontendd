@@ -39,16 +39,20 @@ const adaptPedido = (p) => {
     requiereProduccion: !!(p.requiere_produccion),
     fecha_propuesta:  p.Fecha_Propuesta || p.fecha_propuesta || p.Fecha_entrega_esperada || null,
     comprobante:      p.comprobante_pago || p.Comprobante || p.comprobante || null,
+    sobre_stock:      !!(p.sobre_stock),
+    anticipo_requerido: p.anticipo_requerido != null ? Number(p.anticipo_requerido) : null,
+    anticipo_pagado:    p.anticipo_pagado    != null ? Number(p.anticipo_pagado)    : null,
     cliente: {
       nombre:   p.nombre_cliente   || "",
       correo:   p.correo_cliente   || "",
       telefono: p.telefono_cliente || "",
     },
     productosItems: (p.productos || p.Productos || []).map(i => ({
-      idProducto: i.ID_Producto    || i.id_producto,
-      nombre:     i.nombre_producto || i.Nombre || i.nombre || "",
-      precio:     i.precio_unitario || i.Precio_venta || i.precio || 0,
-      cantidad:   i.Cantidad        || i.cantidad || 0,
+      idProducto:       i.ID_Producto    || i.id_producto,
+      nombre:           i.nombre_producto || i.Nombre || i.nombre || "",
+      precio:           i.precio_unitario || i.Precio_venta || i.precio || 0,
+      cantidad:         i.Cantidad        || i.cantidad || 0,
+      cantidad_preorden: i.cantidad_preorden || 0,
     })),
   };
 };

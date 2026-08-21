@@ -759,7 +759,10 @@ const PedidosClientePage = () => {
                 <div style={{ background: '#f9fdf9', border: '1px solid #c8e6c9', borderRadius: 12, padding: '12px 14px' }}>
                   <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>💳 Pago</p>
                   <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{selectedPedido.metodo_pago || '—'}</p>
-                  <p style={{ fontSize: 11, color: '#9e9e9e', marginTop: 2 }}>{fmtFecha(selectedPedido.fecha_pedido)}</p>
+                  {selectedPedido.sobre_stock
+                    ? <p style={{ fontSize: 11, fontWeight: 700, color: '#e65100', marginTop: 4 }}>⚠️ Anticipo requerido</p>
+                    : <p style={{ fontSize: 11, color: '#9e9e9e', marginTop: 2 }}>{fmtFecha(selectedPedido.fecha_pedido)}</p>
+                  }
                 </div>
               </div>
 
@@ -777,6 +780,31 @@ const PedidosClientePage = () => {
               {selectedPedido.domicilio && !selectedPedido.nombre_domiciliario && ['Confirmado', 'Listo'].includes(selectedPedido.estado) && (
                 <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
                   🕐 Asignando domiciliario...
+                </div>
+              )}
+
+              {/* Anticipo (pedido sobre stock) */}
+              {selectedPedido.sobre_stock && (
+                <div style={{ background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 12, padding: '12px 14px' }}>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: '#e65100', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>⚠️ Pedido sobre stock — anticipo del 50%</p>
+                  <p style={{ fontSize: 12, color: '#5d4037', lineHeight: 1.5, marginBottom: 10 }}>
+                    Algunos productos de tu pedido no tienen stock suficiente. Se requiere un anticipo del 50% del total para procesar tu pedido.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5d4037' }}>Anticipo requerido:</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: '#bf360c' }}>
+                      {selectedPedido.anticipo_requerido != null
+                        ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.anticipo_requerido)
+                        : '—'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5d4037' }}>Anticipo pagado:</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: (selectedPedido.anticipo_pagado || 0) >= (selectedPedido.anticipo_requerido || 1) ? '#2e7d32' : '#c62828' }}>
+                      {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.anticipo_pagado || 0)}
+                      {' '}{(selectedPedido.anticipo_pagado || 0) >= (selectedPedido.anticipo_requerido || 1) ? '✅' : '⚠️'}
+                    </span>
+                  </div>
                 </div>
               )}
 

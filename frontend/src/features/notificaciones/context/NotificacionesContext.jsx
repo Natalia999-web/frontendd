@@ -281,31 +281,40 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
       const nuevas = [];
       const hoy    = new Date(); hoy.setHours(0, 0, 0, 0);
 
+      const insumosLoaded = insumos.length > 0;
+      const lotesLoaded   = lotes.length > 0;
+      const comprasLoaded = compras.length > 0;
+
       const notificacionesActuales = prev.filter(n => {
         if (n.clave?.startsWith('api-') || TIPOS_CLIENTE.has(n.tipo)) return true;
         if (n.tipo === TIPOS.STOCK_AGOTADO) {
+          if (!insumosLoaded) return true;
           const ins = insumos.find(i => i.id === n.idReferencia);
           return ins && ins.stockActual <= 0;
         }
         if (n.tipo === TIPOS.STOCK_MINIMO) {
+          if (!insumosLoaded) return true;
           const ins = insumos.find(i => i.id === n.idReferencia);
           if (!ins) return false;
           const min = nivelesMinimos[ins.id] !== undefined ? nivelesMinimos[ins.id] : ins.stockMinimo;
           return ins.stockActual > 0 && ins.stockActual <= min;
         }
         if (n.tipo === TIPOS.LOTE_POR_VENCER) {
+          if (!lotesLoaded) return true;
           const lote = lotes.find(l => l.id === n.idReferencia);
           if (!lote || lote.cantidadActual <= 0) return false;
           const dias = Math.round((new Date(lote.fechaVencimiento + "T00:00:00") - hoy) / 86_400_000);
           return dias >= 0 && dias <= 7;
         }
         if (n.tipo === TIPOS.LOTE_VENCIDO) {
+          if (!lotesLoaded) return true;
           const lote = lotes.find(l => l.id === n.idReferencia);
           if (!lote || lote.cantidadActual <= 0) return false;
           const dias = Math.round((new Date(lote.fechaVencimiento + "T00:00:00") - hoy) / 86_400_000);
           return dias < 0;
         }
         if (n.tipo === TIPOS.COMPRA_PENDIENTE) {
+          if (!comprasLoaded) return true;
           const compra = compras.find(c => c.id === n.idReferencia);
           return compra && compra.estado === "pendiente";
         }

@@ -5,7 +5,20 @@ from datetime import datetime
 from src.shared.services.models import Notificacion, Venta, Devolucion
 
 
+def _sincronizar_stock(db: Session) -> None:
+    """Genera notifs para insumos/productos con stock bajo que aún no tienen una notif activa."""
+    from src.shared.services.models import Insumo, Producto
+    from src.shared.services.notificaciones_utils import notificar_stock_insumo, notificar_stock_producto
+
+    for insumo in db.query(Insumo).filter(Insumo.Estado.in_([14, 15])).all():
+        notificar_stock_insumo(db, insumo)
+    for producto in db.query(Producto).filter(Producto.Estado.in_([14, 15])).all():
+        notificar_stock_producto(db, producto)
+    db.flush()
+
+
 def obtener_notificaciones(db: Session) -> dict:
+    _sincronizar_stock(db)
     notificaciones = (
         db.query(Notificacion)
         .order_by(Notificacion.Leida.asc(), Notificacion.Fecha.desc())

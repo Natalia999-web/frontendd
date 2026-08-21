@@ -353,6 +353,9 @@
   border: 1.5px solid #e8e8e8;
   border-radius: 12px;
   overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
+  background: yellow;
 }
 
 .prod-dev-list__header {
@@ -368,6 +371,10 @@
   text-transform: uppercase;
   gap: 10px;
 }
+
+.prod-dev-list__header > span:first-child  { flex: 1; }
+.prod-dev-list__header > span:nth-child(2) { width: 110px; flex-shrink: 0; text-align: center; }
+.prod-dev-list__header > span:last-child   { width: 90px;  flex-shrink: 0; text-align: right; }
 
 .prod-dev-row {
   display: flex;

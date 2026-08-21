@@ -288,6 +288,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   <tr>
                     <th>Producto</th>
                     <th style={{ textAlign: "center" }}>Cant.</th>
+                    {pedido.sobre_stock && <th style={{ textAlign: "center" }}>Preorden</th>}
                     <th style={{ textAlign: "right" }}>Precio</th>
                     <th style={{ textAlign: "right" }}>Subtotal</th>
                   </tr>
@@ -299,6 +300,13 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       <td style={{ textAlign: "center" }}>
                         <span style={{ background: "#f1f8f1", border: "1px solid #c8e6c9", borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>×{p.cantidad}</span>
                       </td>
+                      {pedido.sobre_stock && (
+                        <td style={{ textAlign: "center" }}>
+                          {p.cantidad_preorden > 0
+                            ? <span style={{ background: "#fff3e0", border: "1px solid #ffcc02", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#e65100" }}>×{p.cantidad_preorden} preorden</span>
+                            : <span style={{ color: "#9e9e9e", fontSize: 11 }}>—</span>}
+                        </td>
+                      )}
                       <td style={{ textAlign: "right", color: "#757575" }}>{fmt(p.precio)}</td>
                       <td style={{ textAlign: "right", fontWeight: 700, color: "#2e7d32" }}>{fmt(p.precio * p.cantidad)}</td>
                     </tr>
@@ -334,6 +342,27 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   {esTransferencia ? "🏦 Transferencia bancaria" : "💵 Efectivo"}
                 </span>
               </div>
+
+              {pedido.sobre_stock && (
+                <div style={{ background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#e65100", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    ⚠️ Pedido sobre stock — anticipo del 50%
+                  </p>
+                  <div className="ver-ped-field">
+                    <span className="ver-ped-field__label">Anticipo requerido</span>
+                    <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#bf360c" }}>
+                      {fmt(pedido.anticipo_requerido)}
+                    </span>
+                  </div>
+                  <div className="ver-ped-field">
+                    <span className="ver-ped-field__label">Anticipo pagado</span>
+                    <span className="ver-ped-field__value" style={{ fontWeight: 800, color: (pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "#2e7d32" : "#c62828" }}>
+                      {fmt(pedido.anticipo_pagado || 0)}{" "}
+                      {(pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "✅ Cubierto" : "⚠️ Pendiente"}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {esTransferencia ? (
                 <>
@@ -1317,6 +1346,11 @@ export default function GestionPedidos() {
                       <td><span className="row-num">{String((safePage - 1) * PER_PAGE + idx + 1).padStart(2, "0")}</span></td>
                       <td>
                         <div className="pedido-num font-black text-green-800">{ped.numero}</div>
+                        {ped.sobre_stock && (
+                          <div className="text-[9px] font-black text-orange-600 uppercase flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full" /> Preorden
+                          </div>
+                        )}
                         {ped.comprobante && (
                           <div className="text-[9px] font-black text-green-600 uppercase flex items-center gap-1 mt-0.5">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Pago Adjunto
