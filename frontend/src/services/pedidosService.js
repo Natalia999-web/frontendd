@@ -35,13 +35,26 @@ const adaptPedido = (p) => {
     idCliente:        p.ID_Usuario        || p.ID_Cliente       || p.id_cliente   || null,
     idEmpleado:          p.ID_Empleado          || p.id_empleado         || null,
     nombre_domiciliario: p.nombre_domiciliario  || null,
-    orden_produccion:   (p.ordenes_produccion_pendientes > 0) || !!(p.Orden_Produccion ?? p.orden_produccion),
-    requiereProduccion: !!(p.requiere_produccion),
+    orden_produccion:      (p.ordenes_produccion_pendientes > 0) || !!(p.Orden_Produccion ?? p.orden_produccion),
+    requiereProduccion:    !!(p.requiere_produccion),
+    requiereFechaPropuesta: !!(p.requiere_fecha_propuesta),
     fecha_propuesta:  p.Fecha_Propuesta || p.fecha_propuesta || p.Fecha_entrega_esperada || null,
+    fecha_rechazada:  p.fecha_rechazada || null,
     comprobante:      p.comprobante_pago || p.Comprobante || p.comprobante || null,
     sobre_stock:      !!(p.sobre_stock),
     anticipo_requerido: p.anticipo_requerido != null ? Number(p.anticipo_requerido) : null,
     anticipo_pagado:    p.anticipo_pagado    != null ? Number(p.anticipo_pagado)    : null,
+    anticipo_monto:     p.anticipo_monto     != null ? Number(p.anticipo_monto)     : null,
+    anticipo_metodo_pago:    p.anticipo_metodo_pago    || null,
+    anticipo_comprobante_url: p.anticipo_comprobante_url || null,
+    anticipo_registrado:    !!(p.anticipo_registrado),
+    requiere_anticipo:      !!(p.requiere_anticipo),
+    pago_final_registrado:     !!(p.pago_final_registrado),
+    pago_final_monto:          p.pago_final_monto    != null ? Number(p.pago_final_monto) : null,
+    pago_final_metodo_pago:    p.pago_final_metodo_pago    || null,
+    pago_final_comprobante_url: p.pago_final_comprobante_url || null,
+    pago_final_fecha:          p.pago_final_fecha    || null,
+    estado_pago:               p.estado_pago         || null,
     cliente: {
       nombre:   p.nombre_cliente   || "",
       correo:   p.correo_cliente   || "",
@@ -57,10 +70,10 @@ const adaptPedido = (p) => {
   };
 };
 
-export const getPedidos = async ({ pagina = 1, porPagina = 100, estado = null } = {}) => {
+export const getPedidos = async ({ pagina = 1, porPagina = 100, estado = null, timeout } = {}) => {
   let url = `/pedidos/?pagina=${pagina}&por_pagina=${porPagina}`;
   if (estado != null) url += `&estado=${estado}`;
-  const data = await apiFetch(url);
+  const data = await apiFetch(url, timeout ? { timeout } : {});
   return {
     total:     data.total,
     pagina:    data.pagina,
@@ -105,6 +118,14 @@ export const editarPedido = async (id, data) => {
 
 export const eliminarPedido = async (id) => {
   return apiFetch(`/pedidos/${id}`, { method: "DELETE" });
+};
+
+export const registrarPagoFinal = async (id, { monto, metodo_pago, comprobante_url }) => {
+  const data = await apiFetch(`/ventas/${id}/registrar-pago-final`, {
+    method: "POST",
+    body: JSON.stringify({ monto, metodo_pago, comprobante_url: comprobante_url ?? null }),
+  });
+  return adaptPedido(data);
 };
 
 export const cambiarEstadoVenta = async (id, estadoId) => {
