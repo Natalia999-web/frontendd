@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fmtFecha, getRecordDate } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import { descargarFacturaPedido } from "../../../utils/facturaGenerator.js";
-import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crearPedido, editarPedido, eliminarPedido, cambiarEstadoVenta, proponerFechaProduccion, registrarPagoFinal } from "../../../services/pedidosService.js";
+import { getPedidos, getHistorialPedidos, confirmarPedido, cancelarPedido, crearPedido, editarPedido, eliminarPedido, cambiarEstadoVenta, proponerFechaProduccion, registrarPagoFinal, aprobarComprobante, rechazarComprobante } from "../../../services/pedidosService.js";
 import { asignarRepartidor } from "../../../services/domiciliosService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
 import { getUsuarios } from "../../../services/usuariosService.js";
@@ -965,18 +965,77 @@ function ModalCancelarPedido({ pedido, saving, onClose, onConfirm }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   MODAL — RECHAZAR COMPROBANTE (con motivo)
+   ═══════════════════════════════════════════════════════════ */
+function ModalRechazarComprobante({ pedido, saving, onClose, onConfirm }) {
+  const [motivo, setMotivo] = useState("");
+  const [error,  setError]  = useState("");
+
+  const handleSubmit = () => {
+    if (!motivo.trim()) { setError("El motivo es obligatorio"); return; }
+    onConfirm(pedido.id, motivo.trim());
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box relative bg-white shadow-2xl overflow-hidden flex flex-col border-none" style={{ borderRadius: "28px", maxWidth: "440px" }}>
+        <div className="modal-header shrink-0" style={{ background: "linear-gradient(135deg, #b71c1c 0%, #e53935 100%)", padding: "20px 24px" }}>
+          <div>
+            <h2 className="text-lg font-black text-white leading-none">Rechazar Comprobante</h2>
+            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mt-1">Pedido #{pedido.numero}</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white"><X size={18} /></button>
+        </div>
+        <div className="modal-body p-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Motivo del rechazo <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className={`w-full bg-gray-50 border-2 rounded-2xl p-4 text-sm font-medium text-gray-700 outline-none transition-all resize-none h-24 ${
+                error ? "border-red-400 bg-red-50" : "border-transparent focus:border-red-400 focus:bg-white"
+              }`}
+              placeholder="Ej: El comprobante está borroso o no coincide con el monto..."
+              value={motivo}
+              onChange={e => { setMotivo(e.target.value); setError(""); }}
+            />
+            {error && <p className="text-[10px] font-bold text-red-500">{error}</p>}
+          </div>
+          <div className="space-y-2 pt-2">
+            <button
+              disabled={saving}
+              onClick={handleSubmit}
+              className="w-full py-4 text-xs font-black uppercase tracking-widest rounded-2xl text-white shadow-lg"
+              style={{ background: "linear-gradient(135deg, #b71c1c, #e53935)" }}
+            >
+              {saving ? "Rechazando…" : "Confirmar Rechazo"}
+            </button>
+            <button onClick={onClose} className="w-full py-3 text-[10px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors">
+              Volver
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    MENÚ DE ACCIONES POR FILA
    ═══════════════════════════════════════════════════════════ */
-function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha }) {
+function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha, onAprobarComprobante, onRechazarComprobante }) {
   const necesitaProduccion  = ped.requiereFechaPropuesta;
   const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
-  const canMarcarListo      = ped.estado === "Confirmado";
+  const canMarcarListo      = ped.estado === "Confirmado" && !ped.requiereProduccion;
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canEntregar         = ped.estado === "En camino";
   const canCancel           = !["Entregado", "Cancelado"].includes(ped.estado);
+  const esTransferencia     = (ped.metodo_pago || "").toLowerCase().includes("transfer");
+  const canAprobar          = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
+  const canRechazar         = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
 
   return (
     <div className="actions-cell">
@@ -988,6 +1047,8 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
       {canEntregarTienda   && <button className="act-btn act-btn--success" data-tooltip="Entregar en tienda"     disabled={saving} onClick={() => onEntregar(ped)}>🏪</button>}
       {canAsignarDomicilio && <button className="act-btn act-btn--info"    data-tooltip="Asignar domiciliario"   disabled={saving} onClick={() => onAsignarDomicilio(ped)}>🛵</button>}
       {canEntregar         && <button className="act-btn act-btn--success" data-tooltip="Registrar entrega"      disabled={saving} onClick={() => onEntregar(ped)}>🚚</button>}
+      {canAprobar && <button className="act-btn act-btn--success" data-tooltip="Aprobar comprobante" disabled={saving} onClick={() => onAprobarComprobante(ped)}>✅</button>}
+      {canRechazar && <button className="act-btn act-btn--delete"  data-tooltip="Rechazar comprobante" disabled={saving} onClick={() => onRechazarComprobante(ped)}>🚫</button>}
       {canCancel           && <button className="act-btn act-btn--delete"  data-tooltip="Cancelar pedido"        disabled={saving} onClick={() => onCancelar(ped)}>✕</button>}
     </div>
   );
@@ -1166,10 +1227,17 @@ export default function GestionPedidos() {
       setModal({ type: "registrarSaldo", pedido: ped });
       return;
     }
-    // Pedidos sin anticipo: comprobante obligatorio solo si fue por transferencia
     const esTransferencia = (ped.metodo_pago || "").toLowerCase().includes("transfer");
-    if (!ped.requiere_anticipo && esTransferencia && !ped.comprobante) {
+    const ESTADOS_PAGO_OK = new Set(["efectivo_recibido","pagado_completo","anticipo_pagado","no_recibido","pendiente_validacion"]);
+    const estadoPago = ped.estado_pago || "pendiente";
+    // Transferencia sin comprobante adjunto
+    if (esTransferencia && !ped.comprobante) {
       setModal({ type: "errorEstado", mensaje: "No se puede entregar: el pedido no tiene comprobante de pago adjunto. Adjunta el comprobante antes de marcar como entregado." });
+      return;
+    }
+    // Comprobante rechazado
+    if (esTransferencia && estadoPago === "comprobante_rechazado") {
+      setModal({ type: "errorEstado", mensaje: "El comprobante fue rechazado. El cliente debe subir uno nuevo antes de poder entregar el pedido." });
       return;
     }
     setModal({ type: "confirmarEstado", pedido: ped, nuevoEstado: "Entregado" });
@@ -1210,6 +1278,39 @@ export default function GestionPedidos() {
 
   const handleProponerFecha = (ped) => {
     setModal({ type: "proponerFecha", pedido: ped });
+  };
+
+  const handleAprobarComprobante = async (ped) => {
+    setActionSaving(true);
+    try {
+      await aprobarComprobante(ped.id);
+      setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado_pago: "pagado_completo" } : p));
+      showToast(`Comprobante de ${ped.numero} aprobado`);
+    } catch (err) {
+      setModal({ type: "errorEstado", mensaje: err.message || "No se pudo aprobar el comprobante." });
+    } finally {
+      setActionSaving(false);
+    }
+  };
+
+  const handleRechazarComprobante = (ped) => {
+    setModal({ type: "rechazarComprobante", pedido: ped });
+  };
+
+  const handleConfirmarRechazoComprobante = async (id, motivo) => {
+    const ped = pedidos.find(p => p.id === id);
+    if (!ped) return;
+    setActionSaving(true);
+    try {
+      await rechazarComprobante(id, motivo);
+      setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado_pago: "comprobante_rechazado" } : p));
+      showToast(`Comprobante de ${ped.numero} rechazado`);
+      setModal(null);
+    } catch (err) {
+      setModal({ type: "errorEstado", mensaje: err.message || "No se pudo rechazar el comprobante." });
+    } finally {
+      setActionSaving(false);
+    }
   };
 
   const handleConfirmarFechaPropuesta = async (id, fecha) => {
@@ -1589,6 +1690,24 @@ export default function GestionPedidos() {
                               Cliente rechazó fecha
                             </span>
                           )}
+                          {ped.estado_pago && ped.estado_pago !== "pendiente" && (() => {
+                            const EP = {
+                              pendiente_validacion:  { label: "En revisión",        color: "#e65100" },
+                              pagado_completo:       { label: "Pago completo",       color: "#2e7d32" },
+                              anticipo_pagado:       { label: "Anticipo pagado",     color: "#f57f17" },
+                              efectivo_recibido:     { label: "Efectivo recibido",   color: "#1565c0" },
+                              no_recibido:           { label: "No recibido",         color: "#c62828" },
+                              comprobante_rechazado: { label: "Comprobante rechazado", color: "#c62828" },
+                            };
+                            const cfg = EP[ped.estado_pago];
+                            if (!cfg) return null;
+                            return (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color, letterSpacing: 0.3, display: "flex", alignItems: "center", gap: 3 }}>
+                                <span style={{ width: 5, height: 5, borderRadius: "50%", background: cfg.color, display: "inline-block", flexShrink: 0 }} />
+                                {cfg.label}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
                       <td>
@@ -1609,6 +1728,8 @@ export default function GestionPedidos() {
                             onAsignarDomicilio={ped => setModal({ type: "asignarDomiciliario", pedido: ped })}
                             onCancelar={handleCancelarPedido}
                             onProponerFecha={handleProponerFecha}
+                            onAprobarComprobante={handleAprobarComprobante}
+                            onRechazarComprobante={handleRechazarComprobante}
                           />
                         )}
                       </td>
@@ -1641,6 +1762,7 @@ export default function GestionPedidos() {
       {modal?.type === "eliminar" && <ModalEliminarPedido pedido={modal.pedido} onClose={() => setModal(null)} onConfirm={handleEliminarPedido} />}
       {modal?.type === "proponerFecha" && <ModalProponerFecha pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarFechaPropuesta} />}
       {modal?.type === "registrarSaldo" && <ModalRegistrarSaldo pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleRegistrarSaldo} />}
+      {modal?.type === "rechazarComprobante" && <ModalRechazarComprobante pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarRechazoComprobante} />}
       {modal?.type === "errorEstado" && <ModalErrorEstadoPedido mensaje={modal.mensaje} onClose={() => setModal(null)} />}
 
       <Toast toast={toast} />

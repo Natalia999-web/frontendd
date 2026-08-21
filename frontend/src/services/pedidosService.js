@@ -162,3 +162,12 @@ export const aceptarFechaProduccion = async (id) =>
 
 export const rechazarFechaProduccion = async (id) =>
   apiFetch(`/ventas/${id}/rechazar-fecha`, { method: "PATCH" });
+
+export const aprobarComprobante = async (id) =>
+  apiFetch(`/pedidos/${id}/aprobar-comprobante`, { method: "PATCH" });
+
+export const rechazarComprobante = async (id, motivo) =>
+  apiFetch(`/pedidos/${id}/rechazar-comprobante`, {
+    method: "PATCH",
+    body: JSON.stringify({ motivo }),
+  });

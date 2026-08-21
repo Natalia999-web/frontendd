@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { getUser } from "../../../services/authService";
-import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, computarOTP, verificarOTP } from "../../../services/domiciliosService";
+import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, computarOTP, verificarOTP, registrarPagoEfectivo } from "../../../services/domiciliosService";
 import { subirImagenCloudinary } from "../../../utils/cloudinary";
 import "./Domicilios.css";
 
@@ -29,6 +29,147 @@ const ACCIONES = {
     { valor: 5,  label: "Cancelar",    icon: "❌", color: "#c62828", bg: "#ffebee", secondary: true },
   ],
 };
+
+const ESTADO_PAGO_INFO = {
+  pendiente:             { label: "Pago pendiente",         color: "#757575", bg: "#f5f5f5" },
+  pendiente_validacion:  { label: "Comprobante en revisión", color: "#e65100", bg: "#fff3e0" },
+  pagado_completo:       { label: "Pago completo",           color: "#2e7d32", bg: "#e8f5e9" },
+  anticipo_pagado:       { label: "Anticipo pagado",         color: "#f57f17", bg: "#fff8e1" },
+  efectivo_recibido:     { label: "Efectivo recibido",       color: "#1565c0", bg: "#e3f2fd" },
+  no_recibido:           { label: "Efectivo no recibido",    color: "#c62828", bg: "#ffebee" },
+  comprobante_rechazado: { label: "Comprobante rechazado",   color: "#c62828", bg: "#ffebee" },
+};
+
+function EstadoPagoBadge({ estadoPago }) {
+  if (!estadoPago || estadoPago === "pendiente") return null;
+  const cfg = ESTADO_PAGO_INFO[estadoPago] || { label: estadoPago, color: "#757575", bg: "#f5f5f5" };
+  return (
+    <span style={{
+      display: "inline-block", padding: "3px 10px", borderRadius: 20,
+      fontSize: 11, fontWeight: 700, color: cfg.color, background: cfg.bg,
+      border: `1px solid ${cfg.color}22`,
+    }}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
+  const [recibido, setRecibido] = useState(true);
+  const [monto,    setMonto]    = useState(String(pedido.total || ""));
+  const [motivo,   setMotivo]   = useState("");
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState(null);
+
+  const handleConfirm = async () => {
+    setError(null);
+    if (recibido) {
+      const m = parseFloat(monto);
+      if (!monto || isNaN(m) || m <= 0) { setError("Ingresa el monto recibido"); return; }
+    } else {
+      if (motivo.trim().length < 10) { setError("El motivo debe tener al menos 10 caracteres"); return; }
+    }
+    setSaving(true);
+    try {
+      await onConfirm({ recibido, monto: recibido ? parseFloat(monto) : null, motivo: recibido ? null : motivo.trim() });
+    } catch (e) {
+      setError(e.message || "Error al registrar cobro");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "24px 28px",
+        width: "min(420px, 95vw)", boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Registrar cobro en efectivo</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9e9e9e" }}>✕</button>
+        </div>
+
+        <div style={{ marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: "#f8f8f8", fontSize: 13 }}>
+          <div style={{ fontWeight: 600 }}>{pedido.cliente?.nombre || "Cliente"}</div>
+          <div style={{ color: "#2e7d32", fontWeight: 800, fontSize: 16 }}>{fmt(pedido.total)}</div>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#616161", marginBottom: 8 }}>¿Recibiste el pago?</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[{ val: true, label: "✅ Sí, recibí el dinero" }, { val: false, label: "❌ No recibí" }].map(op => (
+              <button key={String(op.val)} onClick={() => { setRecibido(op.val); setError(null); }} style={{
+                flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+                border: recibido === op.val ? "2px solid #2e7d32" : "1.5px solid #e0e0e0",
+                background: recibido === op.val ? "#e8f5e9" : "#fafafa",
+                color: recibido === op.val ? "#2e7d32" : "#616161",
+                fontWeight: recibido === op.val ? 700 : 400, fontSize: 13,
+              }}>{op.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {recibido ? (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#616161", display: "block", marginBottom: 6 }}>
+              Monto recibido (debe coincidir con el total)
+            </label>
+            <input
+              type="number"
+              value={monto}
+              onChange={e => setMonto(e.target.value)}
+              style={{
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                border: "1.5px solid #e0e0e0", fontSize: 15, fontWeight: 700,
+                outline: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        ) : (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#616161", display: "block", marginBottom: 6 }}>
+              Motivo (mínimo 10 caracteres)
+            </label>
+            <textarea
+              rows={3}
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              placeholder="Ej: El cliente no tenía efectivo disponible..."
+              style={{
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                border: "1.5px solid #e0e0e0", fontSize: 13, resize: "vertical",
+                fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ fontSize: 11, color: motivo.trim().length >= 10 ? "#9e9e9e" : "#c62828", textAlign: "right" }}>
+              {motivo.trim().length}/10 mín.
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ color: "#c62828", fontSize: 13, marginBottom: 12, padding: "8px 12px", background: "#ffebee", borderRadius: 8 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", color: "#555", fontSize: 13, cursor: "pointer" }}>
+            Cancelar
+          </button>
+          <button onClick={handleConfirm} disabled={saving} style={{
+            padding: "9px 20px", borderRadius: 8, border: "none",
+            background: saving ? "#a5d6a7" : "#2e7d32",
+            color: "#fff", fontSize: 13, fontWeight: 700,
+            cursor: saving ? "not-allowed" : "pointer",
+          }}>
+            {saving ? "Registrando…" : "Confirmar cobro ✅"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function EvidenciaModal({ pedido, onClose, onConfirm }) {
   const esTransferencia = (pedido.metodo_pago || "").toLowerCase().includes("transfer");
@@ -233,8 +374,9 @@ export default function PedidoActual() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
-  const [confirmando, setConfirmando] = useState(null);
-  const [evidenciaOpen, setEvidenciaOpen] = useState(false);
+  const [confirmando,    setConfirmando]    = useState(null);
+  const [evidenciaOpen,  setEvidenciaOpen]  = useState(false);
+  const [cobrandoOpen,   setCobrandoOpen]   = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToast({ message: msg, type });
@@ -269,13 +411,24 @@ export default function PedidoActual() {
 
   const handleAccion = async (accion) => {
     if (accion.secondary) { setConfirmando(accion); return; }
-    if (accion.evidencia)  { setEvidenciaOpen(true); return; }
+    if (accion.evidencia) {
+      const esEfectivo = !(pedido.metodo_pago || "").toLowerCase().includes("transfer");
+      if (esEfectivo) { setCobrandoOpen(true); return; }
+      setEvidenciaOpen(true);
+      return;
+    }
     await ejecutarCambio(accion.valor, accion.label);
   };
 
   const handleEvidenciaConfirm = async (observacion) => {
     setEvidenciaOpen(false);
     await ejecutarCambio(8, "Entregado", observacion);
+  };
+
+  const handleCobrarEfectivo = async ({ recibido, monto, motivo }) => {
+    await registrarPagoEfectivo(pedido.id, { recibido, monto, motivo });
+    setCobrandoOpen(false);
+    await ejecutarCambio(8, "Entregado");
   };
 
   const ejecutarCambio = async (valor, label, observacion = null) => {
@@ -421,8 +574,9 @@ export default function PedidoActual() {
                   <span style={{ fontWeight: 800, fontSize: 18, color: "#2e7d32" }}>{fmt(pedido.total)}</span>
                 </div>
                 {pedido.metodo_pago && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#757575" }}>
-                    💳 Pago: {pedido.metodo_pago}
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#757575", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span>💳 Pago: {pedido.metodo_pago}</span>
+                    <EstadoPagoBadge estadoPago={pedido.estado_pago} />
                   </div>
                 )}
               </div>
@@ -481,7 +635,16 @@ export default function PedidoActual() {
         )}
       </div>
 
-      {/* ── Modal evidencia ── */}
+      {/* ── Modal cobro efectivo ── */}
+      {cobrandoOpen && pedido && (
+        <CobrarEfectivoModal
+          pedido={pedido}
+          onClose={() => setCobrandoOpen(false)}
+          onConfirm={handleCobrarEfectivo}
+        />
+      )}
+
+      {/* ── Modal evidencia (Transferencia) ── */}
       {evidenciaOpen && pedido && (
         <EvidenciaModal
           pedido={pedido}

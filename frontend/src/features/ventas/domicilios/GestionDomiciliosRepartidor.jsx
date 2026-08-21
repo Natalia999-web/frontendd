@@ -18,6 +18,29 @@ const ESTADO_INFO = {
   "Cancelado":   { color: "#c62828", bg: "#ffebee", border: "#ef9a9a", icon: "❌" },
 };
 
+const ESTADO_PAGO_INFO = {
+  pendiente_validacion:  { label: "Comprobante en revisión", color: "#e65100", bg: "#fff3e0" },
+  pagado_completo:       { label: "Pago completo",           color: "#2e7d32", bg: "#e8f5e9" },
+  anticipo_pagado:       { label: "Anticipo pagado",         color: "#f57f17", bg: "#fff8e1" },
+  efectivo_recibido:     { label: "Efectivo recibido",       color: "#1565c0", bg: "#e3f2fd" },
+  no_recibido:           { label: "Efectivo no recibido",    color: "#c62828", bg: "#ffebee" },
+  comprobante_rechazado: { label: "Comprobante rechazado",   color: "#c62828", bg: "#ffebee" },
+};
+
+function EstadoPagoBadge({ estadoPago }) {
+  if (!estadoPago || estadoPago === "pendiente") return null;
+  const cfg = ESTADO_PAGO_INFO[estadoPago] || { label: estadoPago, color: "#757575", bg: "#f5f5f5" };
+  return (
+    <span style={{
+      display: "inline-block", padding: "2px 8px", borderRadius: 20,
+      fontSize: 10, fontWeight: 700, color: cfg.color, background: cfg.bg,
+      border: `1px solid ${cfg.color}33`,
+    }}>
+      {cfg.label}
+    </span>
+  );
+}
+
 // Flujo: Asignado/Confirmado → En proceso (llegué al local) → En camino → Entregado
 const PROXIMOS_ESTADOS = {
   "Pendiente":   [{ valor: 13, label: "Llegué al local", icon: "🏠" }],
@@ -241,6 +264,7 @@ export default function GestionDomiciliosRepartidor() {
   const [domicilios, setDomicilios] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [filtro,  setFiltro]        = useState("activos");
+  const [search,  setSearch]        = useState("");
   const [modal,   setModal]         = useState(null);
   const [toast,   setToast]         = useState(null);
 
@@ -266,10 +290,16 @@ export default function GestionDomiciliosRepartidor() {
 
   const esActivo = (d) => d.estado !== "Entregado" && d.estado !== "Cancelado";
 
+  const q = search.trim().toLowerCase();
   const filtrados = domicilios.filter(d => {
-    if (filtro === "activos")    return esActivo(d);
-    if (filtro === "entregados") return d.estado === "Entregado";
-    return true;
+    const matchFiltro = filtro === "activos" ? esActivo(d)
+      : filtro === "entregados" ? d.estado === "Entregado"
+      : true;
+    const matchSearch = !q
+      || String(d.numero || "").toLowerCase().includes(q)
+      || (d.cliente?.nombre || "").toLowerCase().includes(q)
+      || (d.direccion_entrega || "").toLowerCase().includes(q);
+    return matchFiltro && matchSearch;
   });
 
   const handleCambiarEstado = async (id, nuevoEstado, observaciones) => {
@@ -296,6 +326,23 @@ export default function GestionDomiciliosRepartidor() {
       </div>
 
       <div className="page-inner">
+        {/* Buscador */}
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#9e9e9e", pointerEvents: "none" }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por número, cliente o dirección…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: "100%", padding: "9px 12px 9px 32px",
+              border: "1.5px solid #e0e0e0", borderRadius: 10,
+              fontSize: 13, fontFamily: "inherit", outline: "none",
+              boxSizing: "border-box", background: "#fafafa",
+            }}
+          />
+        </div>
+
         {/* Filtros */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
           {FILTROS.map(f => (
@@ -348,7 +395,7 @@ export default function GestionDomiciliosRepartidor() {
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🛵</div>
             <p style={{ fontSize: 15, fontWeight: 600 }}>
-              {filtro === "activos" ? "No tienes entregas pendientes" : "Sin resultados"}
+              {q ? "Sin resultados para esa búsqueda" : filtro === "activos" ? "No tienes entregas pendientes" : "Sin resultados"}
             </p>
           </div>
         ) : (
@@ -384,7 +431,14 @@ export default function GestionDomiciliosRepartidor() {
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "#2e7d32" }}>{fmt(dom.total || 0)}</span>
+                    <div>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: "#2e7d32" }}>{fmt(dom.total || 0)}</span>
+                      {dom.estado_pago && dom.estado_pago !== "pendiente" && (
+                        <div style={{ marginTop: 4 }}>
+                          <EstadoPagoBadge estadoPago={dom.estado_pago} />
+                        </div>
+                      )}
+                    </div>
                     {puedeCambiar && (
                       <button
                         onClick={e => { e.stopPropagation(); setModal({ type: "cambiarEstado", dom }); }}

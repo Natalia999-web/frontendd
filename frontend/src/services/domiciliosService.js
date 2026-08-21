@@ -30,6 +30,7 @@ const adaptDomicilio = (d) => {
     metodo_pago:        d.metodo_pago         || "",
     comprobante_pago:   d.comprobante_pago    || null,
     productos:          d.productos           || [],
+    estado_pago:        d.estado_pago        || null,
     domicilio:          true,
     venta_estado_id:    d.venta_estado ?? null,
     cliente: {
@@ -98,6 +99,13 @@ export const verificarOTP = async (id, codigo) => {
   return apiFetch(`/domicilios/${id}/verificar-otp`, {
     method: "POST",
     body: JSON.stringify({ codigo }),
+  });
+};
+
+export const registrarPagoEfectivo = async (id, { recibido, monto = null, motivo = null }) => {
+  return apiFetch(`/domicilios/${id}/registrar-pago-efectivo`, {
+    method: "PATCH",
+    body: JSON.stringify({ recibido, monto, motivo }),
   });
 };
 
