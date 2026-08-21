@@ -22,12 +22,10 @@ const UNIDADES = [
 
 const GRUPO_UNIDAD = { 1: "masa", 2: "masa", 6: "masa", 3: "vol", 4: "vol", 5: "und" };
 
-// Piso $50 COP: cualquier insumo cuesta al menos esto en Colombia (bolsita, sal, etc.)
-// Techo $10M COP/unit: superar esto es un error de digitación (añadir ceros de más)
-// Cantidad máx 100 000: una mipyme no compra más unidades que esto en un solo pedido
-const PRECIO_MIN = 50;
-const PRECIO_MAX = 10_000_000;
-const CANT_MAX   = 100_000;
+// Cantidad máx 10 000 por línea; total entre $1 000 y $50 000 000 COP
+const CANT_MAX  = 10_000;
+const TOTAL_MIN = 1_000;
+const TOTAL_MAX = 50_000_000;
 
 const unidadesDelGrupo = (idUnidadBase) => {
   const grupo = GRUPO_UNIDAD[Number(idUnidadBase)];
@@ -263,13 +261,15 @@ export default function CrearCompra({ onClose, onSave }) {
       let err = "";
       if (field === "idInsumo" && !value) err = "Selecciona un insumo";
       if (field === "cantidad") {
-        if (!value || Number(value) <= 0) err = "Cantidad inválida";
-        else if (Number(value) > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
+        const n = Number(value);
+        const grupo = GRUPO_UNIDAD[Number(d.idUnidad)];
+        const soloEntero = grupo === "und";
+        if (!value || n <= 0) err = "Cantidad inválida";
+        else if (soloEntero && !Number.isInteger(n)) err = "La cantidad debe ser un número entero";
+        else if (n > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
       }
       if (field === "precioUnd") {
-        if (!value || Number(value) <= 0) err = "Precio inválido";
-        else if (Number(value) < PRECIO_MIN) err = `Precio mínimo: $${PRECIO_MIN} COP`;
-        else if (Number(value) > PRECIO_MAX) err = "Precio fuera de rango (máx. $10 000 000)";
+        if (!value || Number(value) <= 0) err = "El precio unitario debe ser mayor a $0";
       }
       if (field === "fechaVencimiento" && updated.vencimientoTipo === "fecha" && !value) err = "Ingresa la fecha";
       if (field === "vencimientoValor" && updated.vencimientoTipo === "dias" && (!value || Number(value) <= 0)) err = "Ingresa los días";
@@ -314,12 +314,19 @@ export default function CrearCompra({ onClose, onSave }) {
     const e = {};
     if (detalles.length === 0) e.detalles = "Agrega al menos un insumo";
     detalles.forEach((d, i) => {
-      if (!d.idInsumo)                                   e[`ins_${i}`]    = "Selecciona un insumo";
-      if (!d.cantidad || Number(d.cantidad) <= 0)         e[`cant_${i}`]   = "Cantidad inválida";
-      else if (Number(d.cantidad) > CANT_MAX)             e[`cant_${i}`]   = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
-      if (!d.precioUnd || Number(d.precioUnd) <= 0)      e[`precio_${i}`] = "Precio inválido";
-      else if (Number(d.precioUnd) < PRECIO_MIN)         e[`precio_${i}`] = `Precio mínimo: $${PRECIO_MIN} COP`;
-      else if (Number(d.precioUnd) > PRECIO_MAX)         e[`precio_${i}`] = "Precio fuera de rango (máx. $10 000 000)";
+      const n = Number(d.cantidad);
+      const grupo = GRUPO_UNIDAD[Number(d.idUnidad)];
+      const soloEntero = grupo === "und";
+      if (!d.idInsumo)
+        e[`ins_${i}`] = "Selecciona un insumo";
+      if (!d.cantidad || n <= 0)
+        e[`cant_${i}`] = "Cantidad inválida";
+      else if (soloEntero && !Number.isInteger(n))
+        e[`cant_${i}`] = "La cantidad debe ser un número entero para esta unidad";
+      else if (n > CANT_MAX)
+        e[`cant_${i}`] = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
+      if (!d.precioUnd || Number(d.precioUnd) <= 0)
+        e[`precio_${i}`] = "El precio unitario debe ser mayor a $0";
       if (d.vencimientoTipo === "fecha" && !d.fechaVencimiento)
         e[`venc_${i}`] = "Ingresa la fecha";
       else if (d.vencimientoTipo === "dias" && (!d.vencimientoValor || Number(d.vencimientoValor) <= 0))
@@ -339,9 +346,18 @@ export default function CrearCompra({ onClose, onSave }) {
 
   const handleBack = () => setStep(s => s - 1);
 
+  const validateTotal = () => {
+    const e = {};
+    if (totalActual < TOTAL_MIN)
+      e.total = `El total (${COP(totalActual)}) debe ser al menos ${COP(TOTAL_MIN)} COP`;
+    else if (totalActual > TOTAL_MAX)
+      e.total = `El total (${COP(totalActual)}) supera el máximo permitido de ${COP(TOTAL_MAX)} COP`;
+    return e;
+  };
+
   const handleSave = async () => {
     if (saving) return;
-    const e = { ...validateStep1(), ...validateStep2() };
+    const e = { ...validateStep1(), ...validateStep2(), ...validateTotal() };
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     try {
@@ -545,23 +561,26 @@ export default function CrearCompra({ onClose, onSave }) {
                     <div>
                       <label className="field-label" style={{ fontSize: 10 }}>Cantidad</label>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <input
-                          type="number"
-                          className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
-                          placeholder="0"
-                          min="1"
-                          max="99999"
-                          value={d.cantidad}
-                          onChange={e => {
-                            const v = e.target.value;
-                            setDetalle(d._key, "cantidad", v);
-                            let err = "";
-                            if (v !== "" && Number(v) <= 0)    err = "Cantidad inválida";
-                            else if (v !== "" && Number(v) > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")}`;
-                            setErrors(p => ({ ...p, [`cant_${i}`]: err }));
-                          }}
-                          style={{ flex: 1, minWidth: 0 }}
-                        />
+                        {(() => {
+                          const grupoActual = GRUPO_UNIDAD[Number(d.idUnidad)];
+                          const soloEntero = grupoActual === "und";
+                          return (
+                            <input
+                              type="number"
+                              className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
+                              placeholder="0"
+                              min="0.001"
+                              max={CANT_MAX}
+                              step={soloEntero ? "1" : "0.001"}
+                              value={d.cantidad}
+                              onChange={e => {
+                                const v = e.target.value;
+                                setDetalle(d._key, "cantidad", v);
+                              }}
+                              style={{ flex: 1, minWidth: 0 }}
+                            />
+                          );
+                        })()}
                         {(() => {
                           const opciones = insSelect ? unidadesDelGrupo(insSelect.idUnidad) : [];
                           if (opciones.length <= 1) {
@@ -596,11 +615,6 @@ export default function CrearCompra({ onClose, onSave }) {
                         onChange={e => {
                           const v = e.target.value;
                           setDetalle(d._key, "precioUnd", v);
-                          let err = "";
-                          if (v !== "" && Number(v) <= 0)       err = "Precio inválido";
-                          else if (v !== "" && Number(v) < PRECIO_MIN) err = `Mín. $${PRECIO_MIN} COP`;
-                          else if (v !== "" && Number(v) > PRECIO_MAX) err = "Máx. $10 000 000";
-                          setErrors(p => ({ ...p, [`precio_${i}`]: err }));
                         }}
                       />
                       {errors[`precio_${i}`] && <span className="field-error" style={{ fontSize: 10 }}>{errors[`precio_${i}`]}</span>}
@@ -722,7 +736,14 @@ export default function CrearCompra({ onClose, onSave }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div className="total-bar" style={{ margin: 0 }}>
               <span className="total-bar__label">Total</span>
-              <span className="total-bar__value">{COP(totalActual || 0)}</span>
+              <span className="total-bar__value" style={{ color: errors.total ? "#c62828" : undefined }}>
+                {COP(totalActual || 0)}
+              </span>
+              {errors.total && (
+                <span className="field-error" style={{ display: "block", fontSize: 11, marginTop: 2 }}>
+                  {errors.total}
+                </span>
+              )}
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               {step > 1

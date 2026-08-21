@@ -170,10 +170,28 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                 <div className="field-input field-input--disabled">{form.producto || "—"}</div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Fecha</label>
+                <label className="form-label">Vida útil {!isView && <span style={{ fontWeight: 400, color: "#9e9e9e" }}>(opcional)</span>}</label>
                 {isView
-                  ? <div className="ficha-date-display"><span>📅</span>{form.fecha}</div>
-                  : <input type="date" className="field-input" value={form.fecha || ""} onChange={e => set("fecha", e.target.value)} />
+                  ? <div className="ficha-date-display">
+                      {form.vidaUtilCantidad
+                        ? <><span>🕐</span>{form.vidaUtilCantidad} {form.vidaUtilUnidad || "días"}</>
+                        : <span style={{ color: "#9e9e9e" }}>Sin vencimiento</span>}
+                    </div>
+                  : <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="number" min="1" className="field-input" style={{ width: 80 }}
+                        placeholder="ej. 7"
+                        value={form.vidaUtilCantidad || ""}
+                        onChange={e => set("vidaUtilCantidad", e.target.value)} />
+                      <select
+                        className="field-input" style={{ flex: 1 }}
+                        value={form.vidaUtilUnidad || "dias"}
+                        onChange={e => set("vidaUtilUnidad", e.target.value)}>
+                        <option value="dias">días</option>
+                        <option value="semanas">semanas</option>
+                        <option value="meses">meses</option>
+                      </select>
+                    </div>
                 }
               </div>
             </div>

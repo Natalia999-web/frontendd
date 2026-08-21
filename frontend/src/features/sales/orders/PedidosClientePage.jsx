@@ -570,7 +570,7 @@ const PedidosClientePage = () => {
                   <div className="p-6 flex-1 space-y-4">
                     <div className="flex justify-between items-end">
                       <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-none">Total Pagado</p>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-none">Total</p>
                         <p className="text-2xl font-black text-gray-900 tracking-tight leading-none">
                           {COP(pedido.total || (
                             (pedido.productosItems || []).reduce((s, p) => s + p.precio * p.cantidad, 0)
@@ -601,7 +601,7 @@ const PedidosClientePage = () => {
                         <div style={{ background: '#e8eaf6', border: '1px solid #9fa8da', borderRadius: 10, padding: '7px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 14 }}>📅</span>
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#283593', textTransform: 'capitalize' }}>
-                            {new Date(pedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            {new Date(pedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
                           </span>
                         </div>
                       )}
@@ -689,9 +689,9 @@ const PedidosClientePage = () => {
 
               {/* Aviso de producción */}
               {selectedPedido.orden_produccion && selectedPedido.estado === 'Pendiente' && (
-                <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 12, padding: '12px 14px', marginBottom: 4 }}>
+                <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 12, padding: '12px 14px' }}>
                   <p style={{ fontSize: 12, fontWeight: 800, color: '#1565c0', marginBottom: 2 }}>🏭 Pedido en espera de producción</p>
-                  <p style={{ fontSize: 11, color: '#1976d2', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 11, color: '#1976d2', lineHeight: 1.5, margin: 0 }}>
                     Uno o más productos requieren producción. El equipo te propondrá una fecha de entrega pronto.
                   </p>
                 </div>
@@ -699,146 +699,209 @@ const PedidosClientePage = () => {
 
               {/* Aviso de fecha propuesta */}
               {selectedPedido.estado === 'Fecha propuesta' && (
-                <div style={{ background: 'linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)', border: '2px solid #9fa8da', borderRadius: 16, padding: '16px 18px', marginBottom: 4 }}>
+                <div style={{ background: 'linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)', border: '2px solid #9fa8da', borderRadius: 16, padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <span style={{ fontSize: 20 }}>📅</span>
-                    <p style={{ fontSize: 13, fontWeight: 800, color: '#283593', margin: 0 }}>
-                      El equipo propuso una fecha de entrega
-                    </p>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#283593', margin: 0 }}>El equipo propuso una fecha de entrega</p>
                   </div>
-
-                  {selectedPedido.fecha_propuesta ? (
+                  {selectedPedido.fecha_propuesta && (
                     <div style={{ background: '#fff', border: '1.5px solid #9fa8da', borderRadius: 12, padding: '10px 14px', marginBottom: 10, textAlign: 'center' }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: '#7986cb', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 4px' }}>
-                        Fecha estimada de entrega
-                      </p>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#7986cb', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 4px' }}>Fecha estimada de entrega</p>
                       <p style={{ fontSize: 17, fontWeight: 900, color: '#283593', margin: 0, lineHeight: 1.25, textTransform: 'capitalize' }}>
-                        {new Date(selectedPedido.fecha_propuesta + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(selectedPedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </div>
-                  ) : null}
-
+                  )}
                   <p style={{ fontSize: 11, color: '#3949ab', marginBottom: 12, lineHeight: 1.5 }}>
                     ¿Puedes recibir tu pedido en esta fecha? Si rechazas, el pedido quedará cancelado.
                   </p>
-
-                  {accionFechaErr && (
-                    <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8 }}>⚠ {accionFechaErr}</p>
-                  )}
+                  {accionFechaErr && <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8 }}>⚠ {accionFechaErr}</p>}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      disabled={!!accionFecha}
-                      onClick={() => handleAceptarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}
-                    >
+                    <button disabled={!!accionFecha} onClick={() => handleAceptarFecha(selectedPedido)}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}>
                       {accionFecha === 'aceptar' ? 'Aceptando…' : '✓ Sí, acepto esta fecha'}
                     </button>
-                    <button
-                      disabled={!!accionFecha}
-                      onClick={() => handleRechazarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c62828', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}
-                    >
+                    <button disabled={!!accionFecha} onClick={() => handleRechazarFecha(selectedPedido)}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c62828', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}>
                       {accionFecha === 'rechazar' ? 'Rechazando…' : '✕ Rechazar fecha'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Entrega */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ background: '#f9fdf9', border: '1px solid #c8e6c9', borderRadius: 12, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
-                    {selectedPedido.domicilio ? '🛵 Domicilio' : '🏪 Recogida en local'}
-                  </p>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4 }}>
-                    {selectedPedido.domicilio
-                      ? (selectedPedido.direccion_entrega || 'Dirección registrada')
-                      : 'Retiro en el local'}
-                  </p>
-                </div>
-                <div style={{ background: '#f9fdf9', border: '1px solid #c8e6c9', borderRadius: 12, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>💳 Pago</p>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{selectedPedido.metodo_pago || '—'}</p>
-                  {selectedPedido.sobre_stock
-                    ? <p style={{ fontSize: 11, fontWeight: 700, color: '#e65100', marginTop: 4 }}>⚠️ Anticipo requerido</p>
-                    : <p style={{ fontSize: 11, color: '#9e9e9e', marginTop: 2 }}>{fmtFecha(selectedPedido.fecha_pedido)}</p>
-                  }
-                </div>
-              </div>
-
-              {/* Domiciliario (si aplica y está asignado) */}
-              {selectedPedido.domicilio && selectedPedido.nombre_domiciliario && (
-                <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>🛵</span>
+              {/* ── Sección: Información del pedido ── */}
+              <div style={{ background: '#f9fdf9', border: '1px solid #e8f5e9', borderRadius: 14, padding: '14px 16px' }}>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#2e7d32', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>📋 Información del pedido</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <p style={{ fontSize: 9, fontWeight: 700, color: '#6a1b9a', letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>Tu domiciliario</p>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>{selectedPedido.nombre_domiciliario}</p>
-                    <p style={{ fontSize: 11, color: '#9e9e9e', margin: 0 }}>Tiempo estimado: 30–45 min</p>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Número</p>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#1a1a1a', margin: 0 }}>#{selectedPedido.numero}</p>
                   </div>
-                </div>
-              )}
-              {selectedPedido.domicilio && !selectedPedido.nombre_domiciliario && ['Confirmado', 'Listo'].includes(selectedPedido.estado) && (
-                <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
-                  🕐 Asignando domiciliario...
-                </div>
-              )}
-
-              {/* Anticipo (pedido sobre stock) */}
-              {selectedPedido.sobre_stock && (
-                <div style={{ background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 12, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 10, fontWeight: 800, color: '#e65100', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>⚠️ Pedido sobre stock — anticipo del 50%</p>
-                  <p style={{ fontSize: 12, color: '#5d4037', lineHeight: 1.5, marginBottom: 10 }}>
-                    Algunos productos de tu pedido no tienen stock suficiente. Se requiere un anticipo del 50% del total para procesar tu pedido.
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5d4037' }}>Anticipo requerido:</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: '#bf360c' }}>
-                      {selectedPedido.anticipo_requerido != null
-                        ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.anticipo_requerido)
-                        : '—'}
-                    </span>
+                  <div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Fecha del pedido</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{fmtFecha(selectedPedido.fecha_pedido) || '—'}</p>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5d4037' }}>Anticipo pagado:</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: (selectedPedido.anticipo_pagado || 0) >= (selectedPedido.anticipo_requerido || 1) ? '#2e7d32' : '#c62828' }}>
-                      {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.anticipo_pagado || 0)}
-                      {' '}{(selectedPedido.anticipo_pagado || 0) >= (selectedPedido.anticipo_requerido || 1) ? '✅' : '⚠️'}
-                    </span>
+                  <div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Método de pago</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{selectedPedido.metodo_pago || '—'}</p>
                   </div>
-                </div>
-              )}
-
-              {/* Comprobante de pago */}
-              {(() => { const mp = (selectedPedido.metodo_pago || '').toLowerCase(); return mp === 'digital' || mp.includes('transferencia') || !!selectedPedido.comprobante; })() && (
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Comprobante de pago</p>
-                  {selectedPedido.comprobante ? (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '10px 14px' }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>✅ Comprobante adjuntado</p>
-                      <img
-                        src={normalizeComprobanteSrc(selectedPedido.comprobante)}
-                        alt="Comprobante de pago"
-                        style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, marginBottom: 6, background: '#fff' }}
-                        onError={e => { e.target.style.display = 'none'; }}
-                      />
-                      <a
-                        href={normalizeComprobanteSrc(selectedPedido.comprobante)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}
-                      >
-                        Abrir en nueva pestaña ↗
-                      </a>
-                    </div>
-                  ) : (
-                    <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
-                      ⚠️ Aún no se ha adjuntado comprobante de pago
+                  <div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Tipo de entrega</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{selectedPedido.domicilio ? '🛵 Domicilio' : '🏪 Retiro en tienda'}</p>
+                  </div>
+                  {selectedPedido.fecha_propuesta && selectedPedido.estado !== 'Fecha propuesta' && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Fecha de entrega estimada</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#283593', margin: 0, textTransform: 'capitalize' }}>
+                        📅 {new Date(selectedPedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
 
-              {/* Productos */}
+              {/* ── Sección: Entrega ── */}
+              <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 16px' }}>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
+                  {selectedPedido.domicilio ? '🛵 Entrega a domicilio' : '🏪 Retiro en tienda'}
+                </p>
+                {selectedPedido.domicilio ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>Dirección</p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', margin: 0, lineHeight: 1.4 }}>{selectedPedido.direccion_entrega || '—'}</p>
+                      </div>
+                      {(selectedPedido.municipio || selectedPedido.departamento) && (
+                        <div>
+                          <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>Ciudad</p>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{[selectedPedido.municipio, selectedPedido.departamento].filter(Boolean).join(', ')}</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedPedido.nombre_domiciliario ? (
+                      <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 18 }}>🛵</span>
+                        <div>
+                          <p style={{ fontSize: 9, fontWeight: 700, color: '#6a1b9a', letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>Tu domiciliario</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>{selectedPedido.nombre_domiciliario}</p>
+                          <p style={{ fontSize: 10, color: '#9e9e9e', margin: 0 }}>Tiempo estimado: 30–45 min</p>
+                        </div>
+                      </div>
+                    ) : ['Confirmado', 'Listo'].includes(selectedPedido.estado) ? (
+                      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
+                        🕐 Asignando domiciliario...
+                      </div>
+                    ) : null}
+                    {selectedPedido.observaciones_domicilio && (
+                      <div style={{ background: '#fffde7', border: '1px solid #fff176', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>📝</span>
+                        <div>
+                          <p style={{ fontSize: 9, fontWeight: 700, color: '#f9a825', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Observaciones</p>
+                          <p style={{ fontSize: 12, color: '#5d4037', lineHeight: 1.5, margin: 0 }}>{selectedPedido.observaciones_domicilio}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>🏪</span>
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>Retiro en el local</p>
+                      <p style={{ fontSize: 11, color: '#9e9e9e', margin: 0 }}>Te avisaremos cuando tu pedido esté listo para recoger.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Sección: Pago ── */}
+              <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 16px' }}>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>💳 Información del pago</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                  {/* Método + cuándo pagar */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>Método</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
+                        {(selectedPedido.metodo_pago || '').toLowerCase().includes('transfer') ? '🏦' : '💵'} {selectedPedido.metodo_pago || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>Cuándo pagar</p>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#424242', margin: 0 }}>
+                        {(selectedPedido.metodo_pago || '').toLowerCase().includes('transfer')
+                          ? 'Comprobante al confirmar'
+                          : selectedPedido.domicilio ? 'Al recibir el domicilio' : 'Al retirar en tienda'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Estado del pago (anticipo / completo) */}
+                  {(selectedPedido.anticipo_registrado || selectedPedido.pago_final_registrado || selectedPedido.sobre_stock || selectedPedido.requiere_anticipo) && (() => {
+                    const montoPagado = selectedPedido.pago_final_registrado
+                      ? Number(selectedPedido.total || 0)
+                      : selectedPedido.anticipo_registrado
+                        ? Number(selectedPedido.anticipo_monto ?? selectedPedido.anticipo_requerido ?? 0)
+                        : 0;
+                    const saldo = Math.max(0, Number(selectedPedido.total || 0) - montoPagado);
+                    const esPagoCompleto = selectedPedido.pago_final_registrado;
+                    return (
+                      <div style={{ background: esPagoCompleto ? '#e8f5e9' : '#fff8e1', border: `1.5px solid ${esPagoCompleto ? '#a5d6a7' : '#ffe082'}`, borderRadius: 10, padding: '10px 12px' }}>
+                        <p style={{ fontSize: 10, fontWeight: 800, color: esPagoCompleto ? '#2e7d32' : '#e65100', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 8px' }}>
+                          {esPagoCompleto ? '✅ Pago completo' : selectedPedido.anticipo_registrado ? '⚠️ Anticipo pagado' : '⚠️ Anticipo pendiente'}
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#5d4037' }}>Abonado:</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: '#2e7d32' }}>{COP(montoPagado)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#5d4037' }}>Saldo pendiente:</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: saldo > 0 ? '#c62828' : '#2e7d32' }}>{COP(saldo)}</span>
+                        </div>
+                        {selectedPedido.pago_final_fecha && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#5d4037' }}>Fecha del pago:</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>📅 {fmtFecha(selectedPedido.pago_final_fecha)}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Info adicional sobre_stock */}
+                  {selectedPedido.sobre_stock && (
+                    <div style={{ background: '#fff3e0', border: '1px solid #ffcc02', borderRadius: 10, padding: '10px 12px', fontSize: 11, color: '#e65100', lineHeight: 1.5 }}>
+                      ⚠️ Este pedido tiene productos por encima del stock disponible. Se requirió un anticipo del 50% para procesarlo.
+                    </div>
+                  )}
+
+                  {/* Comprobante */}
+                  {(() => { const mp = (selectedPedido.metodo_pago || '').toLowerCase(); return mp.includes('transfer') || mp === 'digital' || !!selectedPedido.comprobante; })() && (
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Comprobante de pago</p>
+                      {selectedPedido.comprobante ? (
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>✅ Comprobante adjuntado</p>
+                          <img src={normalizeComprobanteSrc(selectedPedido.comprobante)} alt="Comprobante de pago"
+                            style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, marginBottom: 6, background: '#fff' }}
+                            onError={e => { e.target.style.display = 'none'; }} />
+                          <a href={normalizeComprobanteSrc(selectedPedido.comprobante)} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}>
+                            Abrir en nueva pestaña ↗
+                          </a>
+                        </div>
+                      ) : (
+                        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
+                          ⚠️ Aún no se ha adjuntado comprobante de pago
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Sección: Productos ── */}
               <div>
               <p style={{ fontSize: 10, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Productos</p>
               <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 12, overflow: 'hidden' }}>
@@ -871,8 +934,14 @@ const PedidosClientePage = () => {
                         <td style={{ padding: '8px 14px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#7b1fa2' }}>{COP(5000)}</td>
                       </tr>
                     )}
+                    {(selectedPedido.descuento || 0) > 0 && (
+                      <tr style={{ borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
+                        <td colSpan={2} style={{ padding: '8px 14px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#1976d2' }}>💳 Crédito aplicado</td>
+                        <td style={{ padding: '8px 14px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#1565c0' }}>− {COP(selectedPedido.descuento)}</td>
+                      </tr>
+                    )}
                     <tr style={{ borderTop: '2px solid #e8f5e9', background: '#f9fdf9' }}>
-                      <td colSpan={2} style={{ padding: '10px 14px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase' }}>Total pagado</td>
+                      <td colSpan={2} style={{ padding: '10px 14px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase' }}>Total</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#2e7d32' }}>
                         {COP(selectedPedido.total || (
                           (selectedPedido.productosItems || []).reduce((s, p) => s + p.precio * p.cantidad, 0)

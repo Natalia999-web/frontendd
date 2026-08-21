@@ -36,11 +36,9 @@ def _formato_proveedor(proveedor: Proveedor, db: Session) -> dict:
         )
         .all()
     )
-    insumos_provistos = []
-    for (id_ins,) in insumo_ids:
-        ins = db.query(Insumo).filter(Insumo.ID_Insumo == id_ins).first()
-        if ins:
-            insumos_provistos.append(ins.Nombre)
+    ids_lista = [id_ins for (id_ins,) in insumo_ids]
+    ins_map   = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(ids_lista)).all()} if ids_lista else {}
+    insumos_provistos = [ins_map[iid].Nombre for iid in ids_lista if iid in ins_map]
 
     return {
         "ID_Proveedor":         proveedor.ID_Proveedor,

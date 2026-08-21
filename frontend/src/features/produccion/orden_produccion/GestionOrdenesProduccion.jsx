@@ -113,7 +113,7 @@ function ModalDetallesOrden({ orden, onClose }) {
   const [fichaError, setFichaError] = useState("");
   const [insumosDataMap, setInsumosDataMap] = useState({});
   const [multiplier, setMultiplier] = useState(Number(orden?.cantidad || 1));
-  const [showInsumos, setShowInsumos] = useState(false);
+  const [showInsumos, setShowInsumos] = useState(true);
 
   useEffect(() => {
     setMultiplier(Number(orden?.cantidad || 1));
@@ -147,6 +147,7 @@ function ModalDetallesOrden({ orden, onClose }) {
           nombre: i.nombre_insumo || "",
           cantidad: Number(i.Cantidad ?? 0),
           unidad: i.Unidad || "",
+          stockActual: i.Stock_Actual ?? null,
         }));
         setFichaInsumos(mapped);
 
@@ -305,7 +306,7 @@ function ModalDetallesOrden({ orden, onClose }) {
                             <tbody>
                               {fichaInsumos.map((item, index) => {
                                 const requerido = Number(item.cantidad || 0) * Number(multiplier || 1);
-                                const stock = item.idInsumo ? (insumosDataMap[item.idInsumo]?.stock ?? null) : null;
+                                const stock = item.stockActual !== null ? item.stockActual : (item.idInsumo ? (insumosDataMap[item.idInsumo]?.stock ?? null) : null);
                                 const agotado = stock !== null ? (stock < requerido) : null;
                                 const detalleItem = detalleCostoPorNombre[item.nombre] || null;
                                 const costoItem = detalleItem && !detalleItem.error

@@ -1,0 +1,61 @@
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m worktrees/attachment-pasted-text-1/HEAD@{0}: reset: moving to HEAD
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m refs/heads/agents/attachment-pasted-text-1@{0}: branch: Created from origin/main
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m worktrees/attachment-pasted-text-1/HEAD@{1}: 
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m refs/remotes/origin/main@{0}: update by push
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m refs/heads/main@{0}: commit: Recuperar cambios de desarrollo
+[33m0527e4f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/attachment-pasted-text-1[m[33m)[m HEAD@{0}: commit: Recuperar cambios de desarrollo
+[33m0f13d56[m refs/remotes/origin/main@{1}: update by push
+[33m0f13d56[m refs/heads/main@{1}: commit: todos los cambios
+[33m0f13d56[m HEAD@{1}: commit: todos los cambios
+[33m5ddf657[m HEAD@{2}: checkout: moving from 5ddf657372789c0a89431d4f891bd788e23818d8 to main
+[33m5ddf657[m refs/heads/main@{2}: branch: Reset to HEAD
+[33maf45d4f[m[33m ([m[1;35mrefs/stash[m[33m)[m refs/stash@{0}: On (no branch): keep clients without tooltips
+[33md518675[m refs/stash@{1}: On (no branch): exclude client tooltips
+[33m5ddf657[m HEAD@{3}: rebase (start): checkout origin/main
+[33m7cdfffb[m refs/heads/main@{3}: rebase (finish): refs/heads/main onto 5ddf657372789c0a89431d4f891bd788e23818d8
+[33m7cdfffb[m HEAD@{4}: rebase (finish): returning to refs/heads/main
+[33m7cdfffb[m HEAD@{5}: rebase (pick): Normalize client management file casing
+[33m8c98ea0[m HEAD@{6}: rebase (pick): Add client action tooltips
+[33m083f86d[m HEAD@{7}: commit (amend): feat: fecha propuesta solo en pedidos especiales y push por rol
+[33m5ddf657[m HEAD@{8}: reset: moving to origin/main
+[33m1f8def1[m[33m ([m[1;31morigin/fix/comprobante-solo-transferencia[m[33m)[m refs/remotes/origin/fix/comprobante-solo-transferencia@{0}: fetch origin: storing head
+[33mdf31749[m HEAD@{9}: commit (amend): feat: fecha propuesta solo en pedidos especiales y push por rol
+[33m9693a3e[m refs/stash@{2}: WIP on (no branch): 5ddf657 feat: fecha propuesta solo en pedidos especiales y push por rol
+[33m5ddf657[m HEAD@{10}: pull --rebase origin main (start): checkout 5ddf657372789c0a89431d4f891bd788e23818d8
+[33m40dbea0[m refs/heads/main@{4}: commit: Normalize client management file casing
+[33m40dbea0[m HEAD@{11}: commit: Normalize client management file casing
+[33ma6bd4da[m refs/heads/main@{5}: cherry-pick: Sync client management changes
+[33ma6bd4da[m HEAD@{12}: cherry-pick: Sync client management changes
+[33m62a060e[m HEAD@{13}: checkout: moving from main to main
+[33m62a060e[m HEAD@{14}: rebase (abort): returning to refs/heads/main
+[33m8ae2b54[m HEAD@{15}: commit: Sync client management changes
+[33m5ddf657[m HEAD@{16}: pull --rebase origin main (start): checkout 5ddf657372789c0a89431d4f891bd788e23818d8
+[33m5ddf657[m refs/remotes/origin/main@{2}: pull --rebase origin main: fast-forward
+[33m62a060e[m refs/heads/main@{6}: commit: Add client action tooltips
+[33m62a060e[m HEAD@{17}: commit: Add client action tooltips
+[33md5817a0[m refs/heads/main@{7}: commit: Actualiza gestión de clientes
+[33md5817a0[m HEAD@{18}: commit: Actualiza gestión de clientes
+[33m673af82[m HEAD@{19}: reset: moving to HEAD
+[33m8fe52b5[m refs/stash@{3}: WIP on main: 673af82 sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33m673af82[m HEAD@{20}: reset: moving to HEAD
+[33mc34a18b[m refs/stash@{4}: WIP on main: 673af82 sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33m673af82[m HEAD@{21}: reset: moving to HEAD
+[33m20f2577[m refs/stash@{5}: WIP on main: 673af82 sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33m673af82[m refs/heads/main@{8}: commit: sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33m673af82[m HEAD@{22}: commit: sesion completa: fix FEFO nullslast, N+1 en productos/ordenes/insumos/compras/pedidos, validaciones, estados, fechas, lotes
+[33mc4e6c4e[m refs/remotes/origin/main@{3}: update by push
+[33mc4e6c4e[m refs/heads/main@{9}: commit: fix CORS tostonapp
+[33mc4e6c4e[m HEAD@{23}: commit: fix CORS tostonapp
+[33mf00ec0b[m refs/remotes/origin/main@{4}: update by push
+[33mf00ec0b[m refs/heads/main@{10}: commit: fix: reemplazar tooltips CSS con sistema JS position:fixed
+[33mf00ec0b[m HEAD@{24}: commit: fix: reemplazar tooltips CSS con sistema JS position:fixed
+[33m90f0e51[m refs/remotes/origin/main@{5}: update by push
+[33m90f0e51[m refs/heads/main@{11}: commit: feat: implementar sistema de tooltips completo en toda la aplicacion
+[33m90f0e51[m HEAD@{25}: commit: feat: implementar sistema de tooltips completo en toda la aplicacion
+[33m5946a8d[m refs/remotes/origin/main@{6}: update by push
+[33m5946a8d[m refs/heads/main@{12}: commit: fix: estado devoluciones siempre Pendiente y datos hardcodeados en perfil
+[33m5946a8d[m HEAD@{26}: commit: fix: estado devoluciones siempre Pendiente y datos hardcodeados en perfil
+[33ma0d6075[m refs/remotes/origin/main@{7}: update by push
+[33ma0d6075[m refs/heads/main@{13}: commit: fix: eliminar cierre huerfano )} del QR modal en CheckoutModal
+[33ma0d6075[m HEAD@{27}: commit: fix: eliminar cierre huerfano )} del QR modal en CheckoutModal
+[33m98436b8[m refs/remotes/origin/main@{8}: update by push

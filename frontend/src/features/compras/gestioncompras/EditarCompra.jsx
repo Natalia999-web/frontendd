@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { getProveedores } from "../../../services/proveedoresService.js";
-import { getInsumos } from "../../../services/insumosService.js";
+import { getInsumos, getLotesInsumo } from "../../../services/insumosService.js";
 import { fmtFecha } from "../../../utils/dateUtils";
 import "./compras.css";
+
+const CANT_MAX  = 10_000;
+const TOTAL_MIN = 1_000;
+const TOTAL_MAX = 50_000_000;
 
 const METODOS_PAGO = [
   { value: "efectivo",      label: "Efectivo",      icon: "💵" },
@@ -190,6 +194,32 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
   const isView   = mode === "view";
   const isLocked = compra.stockAplicado === true;
 
+  // Estado para el tab del detalle (solo se usa en isView)
+  const [viewTab,      setViewTab]      = useState("resumen");
+  const [lotesMap,     setLotesMap]     = useState({});
+  const [lotesLoading, setLotesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isView || viewTab !== "lotes") return;
+    if (Object.keys(lotesMap).length > 0) return;
+    const ids = (compra.items || []).map(i => i.idInsumo).filter(Boolean);
+    if (!ids.length) return;
+    setLotesLoading(true);
+    Promise.all(
+      ids.map(id =>
+        getLotesInsumo(id)
+          .then(d => ({ id, lotes: Array.isArray(d) ? d : (d.lotes || []) }))
+          .catch(() => ({ id, lotes: [] }))
+      )
+    )
+      .then(res => {
+        const map = {};
+        res.forEach(({ id, lotes }) => { map[id] = lotes; });
+        setLotesMap(map);
+      })
+      .finally(() => setLotesLoading(false));
+  }, [viewTab, isView]);
+
   const [step, setStep] = useState(1);
 
   const [form, setForm] = useState({
@@ -232,11 +262,15 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
       let err = "";
       if (field === "idInsumo" && !value) err = "Selecciona un insumo";
       if (field === "cantidad") {
-        if (!value || Number(value) <= 0) err = "Cantidad inválida";
-        else if (Number(value) > 99999) err = "Máximo 99 999 por línea";
+        const n = Number(value);
+        const grupo = GRUPO_UNIDAD[Number(updated.idUnidad)];
+        const soloEntero = grupo === "und";
+        if (!value || n <= 0) err = "Cantidad inválida";
+        else if (soloEntero && !Number.isInteger(n)) err = "La cantidad debe ser un número entero";
+        else if (n > CANT_MAX) err = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
       }
       if (field === "precioUnd") {
-        if (!value || Number(value) <= 0) err = "Precio inválido";
+        if (!value || Number(value) <= 0) err = "El precio unitario debe ser mayor a $0";
       }
       const errKey = field === "idInsumo" ? `ins_${i}`
         : field === "cantidad" ? `cant_${i}`
@@ -272,12 +306,39 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
 
   const handleSave = async () => {
     if (saving) return;
-    const errCant = {};
+    const errores = {};
     detalles.forEach((d, i) => {
-      if (!d.cantidad || Number(d.cantidad) <= 0) errCant[`cant_${i}`] = "Cantidad inválida";
-      else if (Number(d.cantidad) > 99999)        errCant[`cant_${i}`] = "Máximo 99 999 por línea";
+      const n = Number(d.cantidad);
+      const grupo = GRUPO_UNIDAD[Number(d.idUnidad)];
+      const soloEntero = grupo === "und";
+      if (!d.cantidad || n <= 0)
+        errores[`cant_${i}`] = "Cantidad inválida";
+      else if (soloEntero && !Number.isInteger(n))
+        errores[`cant_${i}`] = "La cantidad debe ser un número entero";
+      else if (n > CANT_MAX)
+        errores[`cant_${i}`] = `Máximo ${CANT_MAX.toLocaleString("es-CO")} por línea`;
+      if (!d.precioUnd || Number(d.precioUnd) <= 0)
+        errores[`precio_${i}`] = "El precio unitario debe ser mayor a $0";
     });
-    if (Object.keys(errCant).length) { setErrors(errCant); return; }
+
+    // Validar total incluyendo los gastos existentes de la compra
+    const subtotalItems = detalles.reduce(
+      (s, d) => s + (Number(d.cantidad) || 0) * (Number(d.precioUnd) || 0), 0
+    );
+    const transporte = Number(compra.transporte) || 0;
+    const ivaPct     = Number(compra.ivaPorcentaje) || 0;
+    const descPct    = Number(compra.descuentoPorcentaje) || 0;
+    const otros      = Number(compra.otros) || 0;
+    const valorIva   = subtotalItems * ivaPct / 100;
+    const valorDesc  = subtotalItems * descPct / 100;
+    const totalFinal = subtotalItems + transporte + valorIva - valorDesc + otros;
+
+    if (totalFinal < TOTAL_MIN)
+      errores.total = `El total (${COP(totalFinal)}) debe ser al menos ${COP(TOTAL_MIN)} COP`;
+    else if (totalFinal > TOTAL_MAX)
+      errores.total = `El total (${COP(totalFinal)}) supera el máximo permitido de ${COP(TOTAL_MAX)} COP`;
+
+    if (Object.keys(errores).length) { setErrors(errores); return; }
     setSaving(true);
     await new Promise(r => setTimeout(r, 400));
     const detallesLimpios = detalles.map(d => ({
@@ -312,15 +373,19 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
   if (isView) {
     const _prov = getProveedorById(compra.idProveedor);
     const provNombre = compra.proveedor || _prov?.Responsable || _prov?.responsable || "—";
+    const metodo = METODOS_PAGO.find(m => m.value === compra.metodoPago);
+
     return (
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-card" onClick={e => e.stopPropagation()} style={modalStyle}>
-          <div className="modal-header" style={{ flexShrink: 0, padding: "18px 28px" }}>
+        <div className="modal-card modal-card--compra-det" onClick={e => e.stopPropagation()}>
+
+          {/* Header */}
+          <div className="modal-header" style={{ flexShrink: 0, padding: "16px 24px" }}>
             <div>
-              <p className="modal-header__eyebrow">Compras · {compra.id}</p>
+              <p className="modal-header__eyebrow">Compra #{compra.id}</p>
               <h2 className="modal-header__title">Detalle de Compra</h2>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span className={`estado-chip estado-chip--${compra.estado}`}>
                 {String(compra.estado || "").charAt(0).toUpperCase() + String(compra.estado || "").slice(1)}
               </span>
@@ -328,100 +393,205 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="modal-body" style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
-
-            {/* ── Info general ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-              {[
-                { label: "Proveedor",     value: `🏭 ${provNombre}` },
-                { label: "Fecha compra",  value: `📅 ${fmtFecha(compra.fecha)}` },
-                { label: "Método de pago",value: `${METODOS_PAGO.find(m => m.value === compra.metodoPago)?.icon || ""} ${compra.metodoPago || "—"}` },
-                compra.fecha_llegada ? { label: "Fecha llegada", value: `📦 ${fmtFecha(compra.fecha_llegada)}` } : null,
-                compra.departamento   ? { label: "Departamento",  value: `📍 ${compra.departamento}` } : null,
-                compra.ciudad         ? { label: "Ciudad",        value: compra.ciudad } : null,
-              ].filter(Boolean).map(({ label, value }) => (
-                <div key={label} style={{ background: "#f9fdf9", borderRadius: 8, padding: "8px 12px", border: "1px solid #e8f5e9" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#9e9e9e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{value}</div>
-                </div>
-              ))}
-            </div>
-            {compra.notas && (
-              <div style={{ marginBottom: 16, padding: "8px 12px", background: "#fffdf0", borderRadius: 8, border: "1px solid #ffe082", fontSize: 12, color: "#424242" }}>
-                📝 {compra.notas}
-              </div>
+          {/* Tabs */}
+          <div className="compra-det-tabs">
+            <button
+              className={`compra-det-tab${viewTab === "resumen" ? " compra-det-tab--active" : ""}`}
+              onClick={() => setViewTab("resumen")}
+            >
+              📋 Resumen
+            </button>
+            {compra.stockAplicado && (
+              <button
+                className={`compra-det-tab${viewTab === "lotes" ? " compra-det-tab--active" : ""}`}
+                onClick={() => setViewTab("lotes")}
+              >
+                📦 Lotes generados
+              </button>
             )}
+          </div>
 
-            {/* ── Insumos comprados ── */}
-            <p className="section-label" style={{ marginTop: 0, marginBottom: 8 }}>Insumos comprados</p>
-            {(compra.items || []).length === 0 ? (
-              <div style={{ padding: "20px", textAlign: "center", color: "#bdbdbd", fontSize: 13, background: "#fafafa", border: "1.5px dashed #e0e0e0", borderRadius: 10, marginBottom: 18 }}>
-                Sin insumos registrados en esta compra
-              </div>
-            ) : (
-              <div className="insumos-list" style={{ marginBottom: 18 }}>
-                {(compra.items || []).map((d, idx) => {
-                  const ins  = insumosActivos.find(i => i.id === Number(d.idInsumo));
-                  const dias = diasHasta(d.fechaVencimiento);
-                  return (
-                    <div key={d.idInsumo || idx} className="insumo-item">
-                      <div className="insumo-left">
-                        <span className="insumo-icon">📦</span>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="insumo-name">{d.nombre || ins?.nombre || "—"}</div>
-                          <div className="insumo-notes">{d.cantidad} {ins?.unidad || ""} · {COP(d.precioUnd)} c/u</div>
-                          {d.fechaVencimiento && (
-                            <div className={`insumo-venc${dias !== null && dias < 0 ? " venc-danger" : dias !== null && dias <= 7 ? " venc-warn" : ""}`}>
-                              📅 Vence: {fmtFecha(d.fechaVencimiento)}
-                              {dias !== null && dias < 0 && " ⚠️ Vencido"}
-                              {dias !== null && dias >= 0 && dias <= 7 && ` (${dias}d)`}
-                            </div>
-                          )}
+          <div className="modal-body" style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+
+            {/* ── Tab: Resumen ── */}
+            {viewTab === "resumen" && (
+              <>
+                <p className="section-label" style={{ marginTop: 0 }}>Información general</p>
+                <div className="compra-det-info-grid">
+                  <div className="compra-det-info-card compra-det-info-card--prov">
+                    <div className="compra-det-info-card__lbl">Proveedor</div>
+                    <div className="compra-det-info-card__val">🏭 {provNombre}</div>
+                  </div>
+                  <div className="compra-det-info-card">
+                    <div className="compra-det-info-card__lbl">Fecha de compra</div>
+                    <div className="compra-det-info-card__val">📅 {fmtFecha(compra.fecha)}</div>
+                  </div>
+                  <div className="compra-det-info-card">
+                    <div className="compra-det-info-card__lbl">Método de pago</div>
+                    <div className="compra-det-info-card__val">{metodo?.icon || "💳"} {metodo?.label || compra.metodoPago || "—"}</div>
+                  </div>
+                  {compra.fecha_llegada && (
+                    <div className="compra-det-info-card">
+                      <div className="compra-det-info-card__lbl">Fecha de llegada</div>
+                      <div className="compra-det-info-card__val">📦 {fmtFecha(compra.fecha_llegada)}</div>
+                    </div>
+                  )}
+                </div>
+
+                {compra.notas && (
+                  <div className="compra-det-notas">📝 {compra.notas}</div>
+                )}
+
+                <p className="section-label">Insumos comprados</p>
+                <div className="compra-det-insumos">
+                  <div className="compra-det-insumos__header">
+                    <span>Insumo</span>
+                    <span>Cantidad</span>
+                    <span>Precio/u</span>
+                    <span>Subtotal</span>
+                    <span>Vencimiento</span>
+                  </div>
+                  {(compra.items || []).length === 0 ? (
+                    <div className="compra-det-insumos__empty">Sin insumos registrados en esta compra</div>
+                  ) : (
+                    (compra.items || []).map((d, idx) => {
+                      const ins  = insumosActivos.find(i => i.id === Number(d.idInsumo));
+                      const uni  = d.unidad || ins?.unidad || "";
+                      const dias = diasHasta(d.fechaVencimiento);
+                      return (
+                        <div key={d.idInsumo || idx} className="compra-det-insumos__row">
+                          <span className="compra-det-insumos__name">
+                            {d.nombre || ins?.nombre || "—"}
+                          </span>
+                          <span className="compra-det-insumos__qty">{d.cantidad} {uni}</span>
+                          <span className="compra-det-insumos__pu">{COP(d.precioUnd)}</span>
+                          <span className="compra-det-insumos__sub">{COP(d.cantidad * d.precioUnd)}</span>
+                          <span className={`compra-det-insumos__venc${dias !== null && dias < 0 ? " venc-danger" : dias !== null && dias <= 7 ? " venc-warn" : ""}`}>
+                            {d.fechaVencimiento ? fmtFecha(d.fechaVencimiento) : "—"}
+                            {dias !== null && dias < 0 && " ⚠️"}
+                            {dias !== null && dias >= 0 && dias <= 7 && ` (${dias}d)`}
+                          </span>
                         </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <p className="section-label">Desglose de costos</p>
+                {(() => {
+                  const subtotal  = (compra.items || []).reduce((s, d) => s + d.cantidad * d.precioUnd, 0);
+                  const transporte = compra.transporte || 0;
+                  const ivaPct     = compra.ivaPorcentaje || 0;
+                  const descPct    = compra.descuentoPorcentaje || 0;
+                  const otros      = compra.otros || 0;
+                  const valorIva   = subtotal * ivaPct / 100;
+                  const valorDesc  = subtotal * descPct / 100;
+                  return (
+                    <div className="compra-det-costos">
+                      <div className="compra-det-costos__row">
+                        <span>Subtotal insumos</span><span>{COP(subtotal)}</span>
                       </div>
-                      <div className="insumo-right">
-                        <div className="insumo-price">{COP(d.cantidad * d.precioUnd)}</div>
-                        <div className="insumo-qty">{d.cantidad} {ins?.unidad || ""}</div>
+                      {transporte > 0 && (
+                        <div className="compra-det-costos__row">
+                          <span>🚚 Transporte</span><span>{COP(transporte)}</span>
+                        </div>
+                      )}
+                      {valorIva > 0 && (
+                        <div className="compra-det-costos__row">
+                          <span>🧾 IVA ({ivaPct}%)</span><span>{COP(valorIva)}</span>
+                        </div>
+                      )}
+                      {valorDesc > 0 && (
+                        <div className="compra-det-costos__row compra-det-costos__row--desc">
+                          <span>🏷️ Descuento ({descPct}%)</span><span>−{COP(valorDesc)}</span>
+                        </div>
+                      )}
+                      {otros > 0 && (
+                        <div className="compra-det-costos__row">
+                          <span>➕ Otros costos</span><span>{COP(otros)}</span>
+                        </div>
+                      )}
+                      <div className="compra-det-costos__total">
+                        <span>Total final</span><span>{COP(compra.total)}</span>
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                })()}
+              </>
             )}
 
-            {/* ── Costos ── */}
-            {(() => {
-              const subtotal   = (compra.items || []).reduce((s, d) => s + d.cantidad * d.precioUnd, 0);
-              const transporte = compra.transporte || 0;
-              const ivaPct     = compra.ivaPorcentaje || 0;
-              const descPct    = compra.descuentoPorcentaje || 0;
-              const otros      = compra.otros || 0;
-              const valorIva   = subtotal * ivaPct / 100;
-              const valorDesc  = subtotal * descPct / 100;
-              const rows = [
-                { label: "Subtotal insumos",              val: subtotal,   color: "#424242" },
-                { label: `🚚 Transporte`,                 val: transporte, color: "#2e7d32", zero: true },
-                { label: `🧾 IVA${ivaPct ? ` (${ivaPct}%)` : ""}`,       val: valorIva,  color: "#2e7d32", zero: true },
-                { label: `🏷️ Descuento${descPct ? ` (${descPct}%)` : ""}`, val: -valorDesc, color: "#c62828", zero: true },
-                { label: "➕ Otros costos",               val: otros,      color: "#2e7d32", zero: true },
-              ];
-              return (
-                <div style={{ background: "#f9fdf9", border: "1px solid #e8f5e9", borderRadius: 10, padding: "12px 16px" }}>
-                  {rows.map(({ label, val, color, zero }, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderBottom: idx < rows.length - 1 ? "1px solid #f0f0f0" : "none", opacity: zero && val === 0 ? 0.45 : 1 }}>
-                      <span style={{ color: "#757575" }}>{label}</span>
-                      <span style={{ fontWeight: 600, color: zero && val === 0 ? "#bdbdbd" : color }}>
-                        {val === 0 ? "—" : val < 0 ? `−${COP(-val)}` : COP(val)}
-                      </span>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#2e7d32", paddingTop: 10, marginTop: 4, borderTop: "2px solid #c8e6c9" }}>
-                    <span>Total final</span>
-                    <span>{COP(compra.total)}</span>
-                  </div>
+            {/* ── Tab: Lotes generados ── */}
+            {viewTab === "lotes" && (
+              <>
+                <p className="section-label" style={{ marginTop: 0 }}>Lotes generados</p>
+                <div className="compra-det-lotes-info">
+                  ✅ Compra completada el {fmtFecha(compra.fecha_llegada || compra.fecha)}. Stock aplicado al inventario.
                 </div>
-              );
-            })()}
+
+                {lotesLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#9e9e9e", fontSize: 13 }}>
+                    Cargando lotes…
+                  </div>
+                ) : (
+                  (compra.items || []).map((d, idx) => {
+                    const ins    = insumosActivos.find(i => i.id === Number(d.idInsumo));
+                    const uni    = d.unidad || ins?.unidad || "";
+                    const nombre = d.nombre || ins?.nombre || "Insumo";
+                    const lotes  = lotesMap[d.idInsumo] || [];
+
+                    return (
+                      <div key={d.idInsumo || idx} className="compra-det-lote-grupo">
+                        <div className="compra-det-lote-grupo__header">
+                          <span>📦 {nombre}</span>
+                          <span className="compra-det-lote-grupo__qty">{d.cantidad} {uni} comprados</span>
+                        </div>
+
+                        {lotes.length === 0 ? (
+                          <div className="compra-det-lotes-empty">
+                            Sin lotes registrados para este insumo
+                          </div>
+                        ) : (
+                          lotes.map(l => {
+                            const idCompraLote = l.id_compra || l.ID_Compra || null;
+                            return (
+                              <div key={l.id} className={`compra-det-lote-item${l.vencido ? " compra-det-lote-item--vencido" : ""}`}>
+                                <div className="compra-det-lote-item__main">
+                                  <div className="compra-det-lote-item__num">
+                                    Lote #{l.id}
+                                    {l.numero_lote && (
+                                      <span className="compra-det-lote-item__ref">{l.numero_lote}</span>
+                                    )}
+                                    {l.vencido && (
+                                      <span className="compra-det-lote-badge--vencido">Vencido</span>
+                                    )}
+                                  </div>
+                                  <div className="compra-det-lote-item__meta">
+                                    {l.fecha_produccion && `Producción: ${fmtFecha(l.fecha_produccion)}`}
+                                    {l.fecha_produccion && l.fecha_vencimiento && " · "}
+                                    {l.fecha_vencimiento && `Vence: ${fmtFecha(l.fecha_vencimiento)}`}
+                                  </div>
+                                  {idCompraLote && Number(idCompraLote) !== Number(compra.id) && (
+                                    <div className="compra-det-lote-item__origen">
+                                      ℹ️ Generado por compra #{idCompraLote}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="compra-det-lote-item__qty">
+                                  <span className="compra-det-lote-item__qty-num">
+                                    {l.cantidad ?? l.cantidad_inicial ?? "—"}
+                                  </span>
+                                  <span className="compra-det-lote-item__qty-unit">{uni || "uds."}</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            )}
           </div>
 
           <div className="modal-footer">
@@ -707,8 +877,9 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                                 type="number"
                                 className={`field-input ${errors[`cant_${i}`] ? "error" : ""}`}
                                 placeholder="0"
-                                min="1"
-                                max="99999"
+                                min="0.001"
+                                max={CANT_MAX}
+                                step={GRUPO_UNIDAD[Number(d.idUnidad)] === "und" ? "1" : "0.001"}
                                 value={d.cantidad}
                                 onChange={e => setDetalle(d._key, "cantidad", e.target.value)}
                                 style={{ flex: 1, minWidth: 0 }}
@@ -799,7 +970,14 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
             <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 28px 20px", borderTop: "1px solid #f5f5f5" }}>
               <div className="total-bar" style={{ margin: 0 }}>
                 <span className="total-bar__label">Total</span>
-                <span className="total-bar__value">{COP(totalActual || 0)}</span>
+                <span className="total-bar__value" style={{ color: errors.total ? "#c62828" : undefined }}>
+                  {COP(totalActual || 0)}
+                </span>
+                {errors.total && (
+                  <span className="field-error" style={{ display: "block", fontSize: 11, marginTop: 2 }}>
+                    {errors.total}
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 {step === 2

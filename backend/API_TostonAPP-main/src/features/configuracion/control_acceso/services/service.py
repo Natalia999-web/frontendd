@@ -81,16 +81,15 @@ def asignar_permisos_rol(db: Session, id_rol: int, permisos_ids: list[int]) -> d
     # Elimina todos los permisos actuales del rol
     db.query(RolXPermiso).filter(RolXPermiso.ID_Rol == id_rol).delete(synchronize_session=False)
 
-    # Asigna los nuevos permisos validando que existan
-    for id_permiso in permisos_ids:
-        permiso = db.query(Permiso).filter(Permiso.ID_Permiso == id_permiso).first()
-        if not permiso:
+    # Valida y asigna todos los permisos en batch
+    if permisos_ids:
+        encontrados = {p.ID_Permiso for p in db.query(Permiso).filter(Permiso.ID_Permiso.in_(permisos_ids)).all()}
+        faltantes = [pid for pid in permisos_ids if pid not in encontrados]
+        if faltantes:
             db.rollback()
-            raise HTTPException(
-                status_code=404,
-                detail=f"Permiso con ID {id_permiso} no encontrado"
-            )
-        db.add(RolXPermiso(ID_Rol=id_rol, ID_Permiso=id_permiso))
+            raise HTTPException(status_code=404, detail=f"Permiso(s) con ID {faltantes} no encontrado(s)")
+        for id_permiso in permisos_ids:
+            db.add(RolXPermiso(ID_Rol=id_rol, ID_Permiso=id_permiso))
 
     db.commit()
     return obtener_permisos_de_rol(db, id_rol)

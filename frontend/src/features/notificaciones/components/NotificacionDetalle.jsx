@@ -126,7 +126,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
                     Fecha estimada de entrega
                   </p>
                   <p style={{ fontSize: 17, fontWeight: 900, color: "#283593", margin: 0, lineHeight: 1.25, textTransform: "capitalize" }}>
-                    {new Date(notif.fechaEntrega + "T00:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                    {new Date(notif.fechaEntrega.slice(0, 10) + "T00:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
               )}

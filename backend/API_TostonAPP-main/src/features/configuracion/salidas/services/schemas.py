@@ -20,8 +20,10 @@ class SalidaCreate(BaseModel):
             raise ValueError("Debes especificar ID_Insumo o ID_Producto")
         if self.ID_Insumo is not None and self.ID_Producto is not None:
             raise ValueError("Solo puedes especificar ID_Insumo o ID_Producto, no ambos")
-        if self.Cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a cero")
+        if self.Cantidad < 0:
+            raise ValueError("La cantidad no puede ser negativa.")
+        if self.Cantidad == 0:
+            raise ValueError("La cantidad debe ser mayor que 0.")
         return self
 
 

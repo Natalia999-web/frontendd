@@ -86,13 +86,31 @@ class VentaResponse(BaseModel):
     Fecha_entrega:          Optional[datetime] = None
     Fecha_entrega_esperada: Optional[datetime] = None
     productos:              list[ProductoVentaResponse] = []
-    tiene_domicilio:        bool               = False
-    ID_Domicilio:           Optional[int]      = None
-    comprobante_pago:       Optional[str]      = None
+    tiene_domicilio:          bool               = False
+    ID_Domicilio:             Optional[int]      = None
+    direccion_entrega:        Optional[str]      = None
+    municipio_entrega:        Optional[str]      = None
+    departamento_entrega:     Optional[str]      = None
+    observaciones_domicilio:  Optional[str]      = None
+    nombre_domiciliario:      Optional[str]      = None
+    comprobante_pago:         Optional[str]      = None
     # Pedido especial por encima del stock: bandera y anticipo del 50%
     sobre_stock:            bool               = False
     anticipo_requerido:     Optional[Decimal]  = None
     anticipo_pagado:        Optional[Decimal]  = None
+    # Anticipo general (pedidos > $50k creados por admin)
+    requiere_anticipo:        bool               = False
+    anticipo_monto:           Optional[Decimal]  = None
+    anticipo_metodo_pago:     Optional[str]      = None
+    anticipo_comprobante_url: Optional[str]      = None
+    anticipo_registrado:      bool               = False
+    # Pago final (saldo tras anticipo)
+    pago_final_registrado:    bool               = False
+    pago_final_monto:         Optional[Decimal]  = None
+    pago_final_metodo_pago:   Optional[str]      = None
+    pago_final_comprobante_url: Optional[str]    = None
+    pago_final_fecha:         Optional[datetime] = None
+    estado_pago:              Optional[str]      = None
     # Solo los pedidos sobre stock o de producción necesitan fecha propuesta
     requiere_fecha_propuesta: bool             = False
     requiere_produccion:      bool             = False

@@ -19,19 +19,25 @@ const fmt = (n) =>
 
 const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
 
+const UMBRAL_ANTICIPO = 50000;
+
 const EMPTY_FORM = {
-  idCliente:         "",
-  productosItems:    [],
-  metodo_pago:       "",
-  comprobante:       null,
-  comprobantePreview: null,
-  domicilio:         false,
-  direccion_entrega: "",
-  departamento:      "",
-  municipio:         "",
-  notas:             "",
-  descuento:         0,
-  fecha_entrega:     "",
+  idCliente:            "",
+  productosItems:       [],
+  metodo_pago:          "",
+  comprobante:          null,
+  comprobantePreview:   null,
+  domicilio:            false,
+  direccion_entrega:    "",
+  departamento:         "",
+  municipio:            "",
+  notas:                "",
+  descuento:            0,
+  fecha_entrega:        "",
+  anticipo_metodo:      "",
+  anticipo_efectivo:    false,
+  anticipo_comprobante: null,
+  anticipo_comp_preview: null,
 };
 
 /* ─── SelectArrow ────────────────────────────────────────── */
@@ -41,6 +47,81 @@ function SelectArrow() {
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
         <polyline points="6 9 12 15 18 9" />
       </svg>
+    </div>
+  );
+}
+
+/* ─── ClienteSelect (inline — evita clipping del modal) ─────── */
+function ClienteSelect({ value, clientes, onChange, error }) {
+  const [query, setQuery] = useState("");
+  const selected = clientes.find(c => String(c.id) === String(value));
+
+  const filtered = clientes.filter(c =>
+    `${c.nombre} ${c.apellidos} ${c.cedula}`.toLowerCase().includes(query.toLowerCase())
+  );
+
+  if (selected) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "10px 14px", borderRadius: 10,
+        background: "#e8f5e9", border: `1.5px solid ${error ? "#ef5350" : "#a5d6a7"}`,
+      }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#1b5e20", flex: 1 }}>
+          {selected.nombre} {selected.apellidos}
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#4caf50", marginLeft: 8 }}>{selected.cedula}</span>
+        </span>
+        <button type="button" onClick={() => { onChange(null); setQuery(""); }}
+          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", fontSize: 16, padding: 0, lineHeight: 1 }}>
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: `1.5px solid ${error ? "#ef5350" : "#e0e0e0"}`, borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fafdf9" }}>
+        <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+        <input
+          type="text"
+          placeholder="Buscar por nombre, apellido o cédula…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "#333", fontFamily: "inherit" }}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")}
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
+            ✕
+          </button>
+        )}
+      </div>
+      <div style={{ maxHeight: 220, overflowY: "auto", borderTop: "1px solid #f0f0f0" }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: "14px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
+            {query ? `Sin resultados para "${query}"` : clientes.length === 0 ? "Cargando clientes…" : "Escribe para buscar…"}
+          </div>
+        ) : filtered.map(c => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => { onChange(c); setQuery(""); }}
+            style={{
+              width: "100%", textAlign: "left", padding: "9px 14px",
+              border: "none", borderBottom: "1px solid #f5f5f5",
+              background: "transparent", fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              fontFamily: "inherit", color: "#222",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f1f8f1"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <span style={{ fontWeight: 600 }}>{c.nombre} {c.apellidos}</span>
+            <span style={{ fontSize: 12, color: "#757575", marginLeft: 8 }}>{c.cedula}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -201,9 +282,10 @@ export default function CrearPedido({ onClose, onSave }) {
   const [productos, setProductos] = useState([]);
   const [form, setForm]     = useState({ ...EMPTY_FORM });
   const [errors, setErrors] = useState({});
-  const [saved,  setSaved]  = useState(false);
-  const [step,   setStep]   = useState(1);
+  const [saved,     setSaved]     = useState(false);
+  const [step,      setStep]      = useState(1);
   const [saveError, setSaveError] = useState(null);
+  const [pagarTodo, setPagarTodo] = useState(false);
 
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
@@ -245,6 +327,8 @@ export default function CrearPedido({ onClose, onSave }) {
   const descuento  = Number(form.descuento) || 0;
   const costoEnvio = form.domicilio ? COSTO_DOMICILIO : 0;
   const total      = Math.max(0, subtotal - descuento + costoEnvio);
+  const requiereAnticipo = total > UMBRAL_ANTICIPO;
+  const montoAnticipo    = requiereAnticipo ? (pagarTodo ? total : Math.ceil(total * 0.5)) : 0;
   const hayProductosSinStock = form.productosItems.some(
     p => !p.stockOk || p.cantidad > p.stockActual
   );
@@ -278,6 +362,14 @@ export default function CrearPedido({ onClose, onSave }) {
       if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
         e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
       }
+      if (requiereAnticipo && !pagarTodo) {
+        if (!form.anticipo_metodo)
+          e.anticipo_metodo = "Selecciona el método de pago del anticipo";
+        if (form.anticipo_metodo === "Efectivo 💵" && !form.anticipo_efectivo)
+          e.anticipo_efectivo = "Debes confirmar que el anticipo fue recibido en efectivo";
+        if (form.anticipo_metodo === "Transferencia 🏦" && !form.anticipo_comp_preview)
+          e.anticipo_comprobante = "Debes adjuntar el comprobante del anticipo";
+      }
     }
     return e;
   };
@@ -296,6 +388,18 @@ export default function CrearPedido({ onClose, onSave }) {
 
     setSaved(true);
     setSaveError(null);
+
+    let anticipoUrl = null;
+    if (form.anticipo_comprobante) {
+      try {
+        anticipoUrl = await subirImagenCloudinary(form.anticipo_comprobante);
+      } catch (cloudErr) {
+        setSaved(false);
+        setErrors(err => ({ ...err, anticipo_comprobante: cloudErr?.message || "Error al subir el comprobante del anticipo." }));
+        setStep(4);
+        return;
+      }
+    }
 
     let comprobanteUrl = null;
     if (form.comprobante) {
@@ -321,7 +425,17 @@ export default function CrearPedido({ onClose, onSave }) {
       },
       productosItems:    form.productosItems,
       metodo_pago:       form.metodo_pago,
-      comprobante:       comprobanteUrl,
+      comprobante:            comprobanteUrl,
+      requiere_anticipo:      requiereAnticipo,
+      anticipo_monto:         montoAnticipo,
+      anticipo_metodo_pago:   requiereAnticipo
+        ? (pagarTodo ? form.metodo_pago : form.anticipo_metodo)
+        : null,
+      anticipo_comprobante_url: pagarTodo ? comprobanteUrl : anticipoUrl,
+      anticipo_registrado:    requiereAnticipo && (
+        pagarTodo ? true
+        : form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
+      ),
       domicilio:         form.domicilio,
       direccion_entrega: form.domicilio ? form.direccion_entrega : null,
       departamento:      form.domicilio ? form.departamento      : null,
@@ -355,6 +469,17 @@ export default function CrearPedido({ onClose, onSave }) {
     reader.readAsDataURL(file);
   };
 
+  const handleAnticipo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setForm(f => ({ ...f, anticipo_comprobante: file, anticipo_comp_preview: ev.target.result }));
+      setErrors(err => ({ ...err, anticipo_comprobante: "" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   /* ─── Productos ─── */
   const agregarProducto = (item) => {
     setErrors(e => ({ ...e, productos: "" }));
@@ -376,7 +501,7 @@ export default function CrearPedido({ onClose, onSave }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth: 650, width: "95%" }} onClick={e => e.stopPropagation()}>
+      <div className="modal-card" style={{ maxWidth: 920, width: "95%" }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="modal-header">
@@ -393,7 +518,7 @@ export default function CrearPedido({ onClose, onSave }) {
         </div>
 
         {/* Body */}
-        <div className="modal-body" style={{ overflowY: "auto", overflowX: "hidden", minHeight: 340, padding: "20px 30px" }}>
+        <div className="modal-body" style={{ overflowY: "auto", overflowX: "hidden", padding: "20px 36px" }}>
 
           {/* ── Paso 1: Cliente ── */}
           {step === 1 && (
@@ -401,32 +526,25 @@ export default function CrearPedido({ onClose, onSave }) {
               <p className="section-label" style={{ textTransform: "none", marginTop: 0, fontSize: 16 }}>1. Selección de Cliente</p>
               <div className="field-wrap">
                 <label className="field-label">Cliente <span className="required">*</span></label>
-                <div className="select-wrap">
-                  <select
-                    className={`field-select${errors.idCliente ? " error" : ""}`}
-                    value={form.idCliente}
-                    onChange={e => {
-                      const id = e.target.value;
-                      const cli = clientes.find(c => String(c.id) === String(id));
-                      setForm(f => ({
-                        ...f,
-                        idCliente: id,
-                        departamento: cli?.departamento || "",
-                        municipio: cli?.municipio || "",
-                        direccion_entrega: cli?.direccion || ""
-                      }));
-                      setErrors(err => ({ ...err, idCliente: "" }));
-                    }}
-                  >
-                    <option value="">Seleccione un cliente…</option>
-                    {clientes.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre} {c.apellidos} — {c.cedula}
-                      </option>
-                    ))}
-                  </select>
-                  <SelectArrow />
-                </div>
+                <ClienteSelect
+                  value={form.idCliente}
+                  clientes={clientes}
+                  error={errors.idCliente}
+                  onChange={cli => {
+                    if (!cli) {
+                      setForm(f => ({ ...f, idCliente: "", departamento: "", municipio: "", direccion_entrega: "" }));
+                      return;
+                    }
+                    setForm(f => ({
+                      ...f,
+                      idCliente: String(cli.id),
+                      departamento: cli.departamento || "",
+                      municipio: cli.municipio || "",
+                      direccion_entrega: cli.direccion || "",
+                    }));
+                    setErrors(err => ({ ...err, idCliente: "" }));
+                  }}
+                />
                 {errors.idCliente && <span className="field-error">{errors.idCliente}</span>}
               </div>
 
@@ -696,6 +814,113 @@ export default function CrearPedido({ onClose, onSave }) {
                 </div>
               )}
 
+              {/* ── Anticipo obligatorio ── */}
+              {requiereAnticipo && (
+                <div className="fade-in" style={{ marginTop: 24, background: "#fff8e1", border: "1.5px solid #f9a825", borderRadius: 14, padding: 20 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
+                    <span style={{ fontSize: 24 }}>💰</span>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 800, color: "#f57f17", fontSize: 15 }}>Anticipo requerido</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#795548" }}>
+                        El total supera {fmt(UMBRAL_ANTICIPO)}. Registra el anticipo antes de confirmar.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Toggle: anticipo 50% vs pagar total ahora */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                    {[{ id: false, label: "Anticipo 50%" }, { id: true, label: "Pagar total ahora" }].map(opt => (
+                      <button key={String(opt.id)}
+                        onClick={() => { setPagarTodo(opt.id); setForm(f => ({ ...f, anticipo_metodo: "", anticipo_efectivo: false, anticipo_comprobante: null, anticipo_comp_preview: null })); setErrors(e => ({ ...e, anticipo_metodo: "", anticipo_efectivo: "", anticipo_comprobante: "" })); }}
+                        style={{
+                          padding: "10px", borderRadius: 10, border: "2px solid", fontSize: 13, cursor: "pointer", transition: "all 0.2s",
+                          borderColor: pagarTodo === opt.id ? "#f57f17" : "#ffe082",
+                          background:  pagarTodo === opt.id ? "#fff3e0" : "#fff",
+                          color:       pagarTodo === opt.id ? "#e65100" : "#999",
+                          fontWeight:  pagarTodo === opt.id ? 700 : 500,
+                        }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ background: "#fff", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "#666" }}>{pagarTodo ? "Total a pagar ahora" : "Monto del anticipo (50%)"}</span>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: "#f57f17" }}>{fmt(montoAnticipo)}</span>
+                  </div>
+
+                  {pagarTodo ? (
+                    <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#2e7d32", fontWeight: 600 }}>
+                      ✅ El total completo queda registrado como anticipo — usa el mismo método de pago principal.
+                    </div>
+                  ) : (
+                  <>
+                  <label className="field-label">Método de pago del anticipo <span className="required">*</span></label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+                    {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => { setForm(f => ({ ...f, anticipo_metodo: m, anticipo_efectivo: false, anticipo_comprobante: null, anticipo_comp_preview: null })); setErrors(e => ({ ...e, anticipo_metodo: "", anticipo_efectivo: "", anticipo_comprobante: "" })); }}
+                        style={{
+                          padding: "12px", borderRadius: "10px", border: "2px solid",
+                          fontSize: 13, transition: "all 0.2s", cursor: "pointer",
+                          borderColor: form.anticipo_metodo === m ? "#f57f17" : "#ffe082",
+                          background:  form.anticipo_metodo === m ? "#fff3e0" : "#fff",
+                          color:       form.anticipo_metodo === m ? "#e65100" : "#999",
+                          fontWeight:  form.anticipo_metodo === m ? 700 : 500,
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.anticipo_metodo && <span className="field-error">{errors.anticipo_metodo}</span>}
+
+                  {form.anticipo_metodo === "Efectivo 💵" && (
+                    <div className="fade-in" style={{ marginTop: 14 }}>
+                      <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: "#fff", padding: "12px 16px", borderRadius: 10, border: `2px solid ${form.anticipo_efectivo ? "#2e7d32" : "#e0e0e0"}` }}>
+                        <input
+                          type="checkbox"
+                          checked={form.anticipo_efectivo}
+                          onChange={e => { setForm(f => ({ ...f, anticipo_efectivo: e.target.checked })); setErrors(err => ({ ...err, anticipo_efectivo: "" })); }}
+                          style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
+                        />
+                        <span style={{ fontSize: 13, color: form.anticipo_efectivo ? "#1b5e20" : "#555", fontWeight: form.anticipo_efectivo ? 700 : 400 }}>
+                          Confirmo que recibí el anticipo de <strong>{fmt(montoAnticipo)}</strong> en efectivo
+                        </span>
+                      </label>
+                      {errors.anticipo_efectivo && <span className="field-error">{errors.anticipo_efectivo}</span>}
+                    </div>
+                  )}
+
+                  {form.anticipo_metodo === "Transferencia 🏦" && (
+                    <div className="fade-in" style={{ marginTop: 14 }}>
+                      <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 10, padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#1565c0" }}>
+                        📋 Transfiere <strong>{fmt(montoAnticipo)}</strong> a <strong>{CUENTA_TRANSFERENCIA.banco}</strong> — {CUENTA_TRANSFERENCIA.tipo} <strong>{CUENTA_TRANSFERENCIA.numero}</strong> a nombre de {CUENTA_TRANSFERENCIA.titular}
+                      </div>
+                      {form.anticipo_comp_preview ? (
+                        <div style={{ position: "relative", width: "100%", height: 140, borderRadius: 10, overflow: "hidden", background: "#000" }}>
+                          <img src={form.anticipo_comp_preview} alt="Comprobante anticipo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                          <button style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", fontSize: 12 }} onClick={() => setForm(f => ({ ...f, anticipo_comprobante: null, anticipo_comp_preview: null }))}>✕</button>
+                        </div>
+                      ) : (
+                        <label className={`comprobante-dropzone${errors.anticipo_comprobante ? " error" : ""}`} style={{ height: 110, background: "rgba(255,255,255,0.7)" }}>
+                          <input type="file" accept="image/*,application/pdf" onChange={handleAnticipo} hidden />
+                          <div style={{ textAlign: "center" }}>
+                            <span style={{ fontSize: 26 }}>📎</span>
+                            <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante del anticipo</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 10, color: "#7faade" }}>Imagen o PDF</p>
+                          </div>
+                        </label>
+                      )}
+                      {errors.anticipo_comprobante && <span className="field-error">{errors.anticipo_comprobante}</span>}
+                    </div>
+                  )}
+                  </>
+                  )}
+                </div>
+              )}
+
               <div className="discount-section" style={{ marginTop: 30, padding: "16px", background: "#fff9f0", borderRadius: "12px", border: "1px solid #ffe0b2" }}>
                 <label className="field-label" style={{ color: "#e65100" }}>¿Aplicar algún descuento manual?</label>
                 <div style={{ position: "relative", marginTop: 8 }}>
@@ -777,9 +1002,30 @@ export default function CrearPedido({ onClose, onSave }) {
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
                     💳 Pago vía: <strong>{form.metodo_pago}</strong>
                   </div>
+                  {requiereAnticipo && (
+                    <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "10px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span>💰 {pagarTodo ? "Total pagado ahora" : "Anticipo 50% registrado"}</span>
+                        <span style={{ fontWeight: 700 }}>{fmt(montoAnticipo)}</span>
+                      </div>
+                      {!pagarTodo && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+                          <span>Saldo restante al entregar</span>
+                          <span style={{ fontWeight: 700 }}>{fmt(total - montoAnticipo)}</span>
+                        </div>
+                      )}
+                      {!pagarTodo && (
+                        <div style={{ marginTop: 6, fontSize: 10, opacity: 0.85, textAlign: "center" }}>
+                          Anticipo vía {form.anticipo_metodo}
+                          {form.anticipo_metodo === "Efectivo 💵" && form.anticipo_efectivo ? " ✓ Confirmado" : ""}
+                          {form.anticipo_metodo === "Transferencia 🏦" && form.anticipo_comp_preview ? " ✓ Comprobante adjunto" : ""}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {form.productosItems.some(p => p.requiereProduccion) && (
+                {hayProductosSinStock && form.productosItems.some(p => p.requiereProduccion) && (
                   <div style={{ padding: "12px", background: "#e8eaf6", border: "1px solid #9fa8da", borderRadius: "10px", display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ fontSize: 20 }}>🏭</span>
                     <p style={{ margin: 0, fontSize: 12, color: "#283593", lineHeight: 1.4 }}>

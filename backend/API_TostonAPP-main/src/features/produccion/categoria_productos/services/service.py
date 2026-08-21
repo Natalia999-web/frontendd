@@ -47,11 +47,33 @@ def obtener_categorias(
     offset     = (pagina - 1) * por_pagina
     categorias = query.offset(offset).limit(por_pagina).all()
 
+    # Batch: cargar productos de todas las categorías en una sola query
+    cat_ids = [c.ID_Categoria for c in categorias]
+    prods_todos = (
+        db.query(Producto).filter(Producto.ID_Categoria.in_(cat_ids)).all()
+    ) if cat_ids else []
+    prods_by_cat: dict = {}
+    for p in prods_todos:
+        prods_by_cat.setdefault(p.ID_Categoria, []).append(p)
+
+    def _build_cat(cat: CategoriaProducto) -> dict:
+        pl = prods_by_cat.get(cat.ID_Categoria, [])
+        return {
+            "ID_Categoria":     cat.ID_Categoria,
+            "Nombre_Categoria": cat.Nombre_Categoria,
+            "Descripcion":      cat.Descripcion,
+            "Icono":            cat.Icono,
+            "Estado":           cat.Estado,
+            "Fecha_Creacion":   cat.Fecha_Creacion,
+            "productos":        [{"ID_Producto": p.ID_Producto, "nombre": p.nombre} for p in pl],
+            "total_productos":  len(pl),
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "categorias": [_formato_categoria(c, db) for c in categorias],
+        "categorias": [_build_cat(c) for c in categorias],
     }
 
 

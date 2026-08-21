@@ -1,5 +1,5 @@
-from sqlalchemy import or_, and_, func, case
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import or_, func
+from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime
 from src.shared.services.models import Insumo, CategoriaInsumo, UnidadMedida, LoteCompra, FichaTecnicaInsumo, OrdenProduccion, DetalleCompra
@@ -95,19 +95,15 @@ def _formato_insumo(
 
 
 def _calcular_resumen(db: Session) -> dict:
-    """Calcula las 4 tarjetas con una sola query SQL agregada."""
-    row = db.query(
-        func.count().label("total"),
-        func.sum(case([(Insumo.Stock_Actual == 0, 1)], else_=0)).label("agotados"),
-        func.sum(case(
-            [(and_(Insumo.Stock_Actual > 0, Insumo.Stock_Actual <= Insumo.Stock_Minimo), 1)],
-            else_=0
-        )).label("stock_bajo"),
-    ).select_from(Insumo).first()
-
-    total      = int(row.total      or 0)
-    agotados   = int(row.agotados   or 0)
-    stock_bajo = int(row.stock_bajo or 0)
+    """Calcula las 4 tarjetas de resumen."""
+    total      = db.query(func.count(Insumo.ID_Insumo)).scalar() or 0
+    agotados   = db.query(func.count(Insumo.ID_Insumo)).filter(
+        Insumo.Stock_Actual == 0
+    ).scalar() or 0
+    stock_bajo = db.query(func.count(Insumo.ID_Insumo)).filter(
+        Insumo.Stock_Actual > 0,
+        Insumo.Stock_Actual <= Insumo.Stock_Minimo
+    ).scalar() or 0
     return {
         "total":       total,
         "disponibles": total - agotados - stock_bajo,
@@ -138,75 +134,7 @@ def obtener_insumos(
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina
-    insumos = (
-        query
-        .options(
-            selectinload(Insumo.categoria),
-            selectinload(Insumo.unidad_medida),
-            selectinload(Insumo.lotes_compra),
-        )
-        .offset(offset)
-        .limit(por_pagina)
-        .all()
-    )
-
-    insumo_ids = [i.ID_Insumo for i in insumos]
-
-    # Pre-batch: último DetalleCompra por insumo
-    detalle_map = {}
-    if insumo_ids:
-        subq = (
-            db.query(
-                DetalleCompra.ID_Insumo,
-                func.max(DetalleCompra.ID_Detalle_Compra).label("max_id"),
-            )
-            .filter(DetalleCompra.ID_Insumo.in_(insumo_ids))
-            .group_by(DetalleCompra.ID_Insumo)
-            .subquery()
-        )
-        detalles = (
-            db.query(DetalleCompra)
-            .join(subq, DetalleCompra.ID_Detalle_Compra == subq.c.max_id)
-            .all()
-        )
-        detalle_map = {d.ID_Insumo: d for d in detalles}
-
-    # Pre-batch: qué insumos tienen ficha técnica + map ficha→insumos para órdenes
-    ficha_set = set()
-    ficha_to_insumos = {}
-    all_ficha_ids = set()
-    if insumo_ids:
-        ficha_rows = (
-            db.query(FichaTecnicaInsumo.ID_Insumo, FichaTecnicaInsumo.ID_Ficha)
-            .filter(FichaTecnicaInsumo.ID_Insumo.in_(insumo_ids))
-            .all()
-        )
-        for id_ins, id_ficha in ficha_rows:
-            ficha_set.add(id_ins)
-            ficha_to_insumos.setdefault(id_ficha, set()).add(id_ins)
-            all_ficha_ids.add(id_ficha)
-
-    # Pre-batch: qué insumos tienen orden de producción activa
-    orden_set = set()
-    if insumo_ids:
-        filters_ord = [OrdenProduccion.ID_Insumo.in_(insumo_ids)]
-        if all_ficha_ids:
-            filters_ord.append(OrdenProduccion.ID_Ficha.in_(all_ficha_ids))
-        orden_rows = (
-            db.query(OrdenProduccion.ID_Insumo, OrdenProduccion.ID_Ficha)
-            .filter(
-                or_(*filters_ord),
-                OrdenProduccion.Estado.in_([1, 13]),
-            )
-            .all()
-        )
-        insumo_ids_set = set(insumo_ids)
-        for id_ins_ord, id_ficha_ord in orden_rows:
-            if id_ins_ord is not None and id_ins_ord in insumo_ids_set:
-                orden_set.add(id_ins_ord)
-            if id_ficha_ord is not None:
-                for id_ins in ficha_to_insumos.get(id_ficha_ord, set()):
-                    orden_set.add(id_ins)
+    insumos = query.offset(offset).limit(por_pagina).all()
 
     if not insumos:
         return {
@@ -234,9 +162,14 @@ def obtener_insumos(
                    .filter(UnidadMedida.ID_Unidad_Medida.in_(unidad_ids)).all()
     } if unidad_ids else {}
 
-    # Batch 2: primer lote por insumo
+    # Batch 2: primer lote por insumo (orden ascendente de vencimiento = FEFO)
     lotes_raw: dict[int, LoteCompra] = {}
-    for lote in db.query(LoteCompra).filter(LoteCompra.ID_Insumo.in_(insumo_ids)).all():
+    for lote in (
+        db.query(LoteCompra)
+        .filter(LoteCompra.ID_Insumo.in_(insumo_ids))
+        .order_by(LoteCompra.Fecha_Vencimiento.asc())
+        .all()
+    ):
         if lote.ID_Insumo not in lotes_raw:
             lotes_raw[lote.ID_Insumo] = lote
 

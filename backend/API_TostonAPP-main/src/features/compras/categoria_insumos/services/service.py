@@ -55,11 +55,33 @@ def obtener_categorias(
     offset     = (pagina - 1) * por_pagina
     categorias = query.offset(offset).limit(por_pagina).all()
 
+    # Batch: cargar insumos de todas las categorías en una sola query
+    cat_ids    = [c.ID_Categoria for c in categorias]
+    insumos_todos = (
+        db.query(Insumo).filter(Insumo.ID_Categoria.in_(cat_ids)).all()
+    ) if cat_ids else []
+    insumos_by_cat: dict = {}
+    for ins in insumos_todos:
+        insumos_by_cat.setdefault(ins.ID_Categoria, []).append(ins)
+
+    def _build_cat(cat: CategoriaInsumo) -> dict:
+        ins_list = insumos_by_cat.get(cat.ID_Categoria, [])
+        return {
+            "ID_Categoria":     cat.ID_Categoria,
+            "Nombre_Categoria": cat.Nombre_Categoria,
+            "Descripcion":      cat.Descripcion,
+            "Icono":            cat.Icono,
+            "Estado":           cat.Estado,
+            "Fecha_creacion":   cat.Fecha_Creacion,
+            "insumos":          [{"ID_Insumo": i.ID_Insumo, "Nombre": i.Nombre} for i in ins_list],
+            "total_insumos":    len(ins_list),
+        }
+
     return {
         "total":      total,
         "pagina":     pagina,
         "por_pagina": por_pagina,
-        "categorias": [_formato_categoria(c, db) for c in categorias],
+        "categorias": [_build_cat(c) for c in categorias],
     }
 
 

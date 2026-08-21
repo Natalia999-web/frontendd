@@ -101,10 +101,12 @@ function adaptarProducto(p) {
       version:       ft.Version       ?? "",
       procedimiento: ft.Procedimiento ?? "",
       observaciones: ft.Observaciones ?? "",
-      fecha:         ft.Fecha_Creacion ? String(ft.Fecha_Creacion).split("T")[0] : "",
-      estado:        ft.Estado,
-      fotoPreview:   (p.imagenes ?? [])[0]?.url || null,
-      insumos:       (ft.insumos || []).map(i => ({
+      fecha:            ft.Fecha_Creacion ? String(ft.Fecha_Creacion).split("T")[0] : "",
+      estado:           ft.Estado,
+      fotoPreview:      (p.imagenes ?? [])[0]?.url || null,
+      vidaUtilCantidad: ft.Dias_Vida_Util != null ? String(ft.Dias_Vida_Util) : "",
+      vidaUtilUnidad:   ft.Vida_Util_Unidad || "dias",
+      insumos:          (ft.insumos || []).map(i => ({
         id:              i.ID_Ficha_Insumo || (Date.now() + Math.random()),
         idInsumo:        i.ID_Insumo,
         idCategoria:     String(i.ID_Categoria || ""),

@@ -212,6 +212,7 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
         "direccion_entrega":            domicilio.Direccion_entrega      if domicilio else None,
         "municipio_entrega":            domicilio.Municipio_entrega      if domicilio else None,
         "departamento_entrega":         domicilio.Departamento_entrega   if domicilio else None,
+        "observaciones_domicilio":      domicilio.Observaciones          if domicilio else None,
         "nombre_domiciliario":          domiciliario,
         "ID_Empleado":                  domicilio.ID_Empleado if domicilio else None,
         "ordenes_produccion_pendientes": ordenes_pendientes,
@@ -457,9 +458,10 @@ def _batch_ventas(ventas: list, db: Session) -> list:
             "comprobante_pago":             venta.Comprobante_Pago,
             "tiene_domicilio":              dom is not None,
             "ID_Domicilio":                 dom.ID_Domicilio        if dom else None,
-            "direccion_entrega":            dom.Direccion_entrega   if dom else None,
-            "municipio_entrega":            dom.Municipio_entrega   if dom else None,
+            "direccion_entrega":            dom.Direccion_entrega    if dom else None,
+            "municipio_entrega":            dom.Municipio_entrega    if dom else None,
             "departamento_entrega":         dom.Departamento_entrega if dom else None,
+            "observaciones_domicilio":      dom.Observaciones        if dom else None,
             "nombre_domiciliario":          domiciliario,
             "ID_Empleado":                  dom.ID_Empleado if dom else None,
             "ordenes_produccion_pendientes": ordenes_counts.get(venta.ID_Venta, 0),
@@ -766,6 +768,11 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         nueva_venta.Anticipo_Comprobante_Url = datos.anticipo_comprobante_url
         nueva_venta.Anticipo_Registrado      = 1 if datos.anticipo_registrado else 0
         nueva_venta.Estado_Pago              = "anticipo_pagado" if datos.anticipo_registrado else "pendiente"
+        # Si el monto registrado cubre el total completo → ya está saldado
+        if datos.anticipo_registrado and datos.anticipo_monto is not None:
+            if float(datos.anticipo_monto) >= float(nueva_venta.Total or 0):
+                nueva_venta.Pago_Final_Registrado = 1
+                nueva_venta.Estado_Pago           = "pagado_completo"
 
     db.add(DetalleVenta(
         ID_Venta    = nueva_venta.ID_Venta,

@@ -396,6 +396,7 @@ def _formato_orden(
         "Cantidad":            orden.Cantidad,
         "Fecha_inicio":        orden.Fecha_inicio,
         "Fecha_Entrega":       orden.Fecha_Entrega,
+        "Fecha_fin":           orden.Fecha_fin,
         "Estado":              orden.Estado,
         "estado_label":        estado_label,
         "Costo":               float(costo),
@@ -526,6 +527,7 @@ def obtener_ordenes(
             "Cantidad":            orden.Cantidad,
             "Fecha_inicio":        orden.Fecha_inicio,
             "Fecha_Entrega":       orden.Fecha_Entrega,
+            "Fecha_fin":           orden.Fecha_fin,
             "Estado":              orden.Estado,
             "estado_label":        estado.Estado   if estado   else None,
             "Costo":               float(costo),
@@ -727,7 +729,8 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
 
         # Al completar (11=Completada): incrementar stock del producto y crear lote
         elif nuevo_estado == ESTADO_COMPLETADA and orden.Estado == ESTADO_EN_PROCESO:
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
+            from dateutil.relativedelta import relativedelta
 
             producto = db.query(Producto).filter(Producto.ID_Producto == orden.ID_Producto).first()
             if not producto:
@@ -737,13 +740,25 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
             notificar_stock_producto(db, producto)
 
             # Crear lote de producto
-            hoy = datetime.now()
+            _TZ_LOCAL = timezone(timedelta(hours=-5))
+            hoy = datetime.now(_TZ_LOCAL).replace(tzinfo=None)
+            orden.Fecha_fin = hoy
+
             ficha = db.query(FichaTecnica).filter(
                 FichaTecnica.ID_Ficha == orden.ID_Ficha
             ).first() if orden.ID_Ficha else None
 
-            dias_vida = (ficha.Dias_Vida_Util if ficha and ficha.Dias_Vida_Util else None)
-            fecha_vencimiento = hoy + timedelta(days=dias_vida) if dias_vida else None
+            cantidad_vida = ficha.Dias_Vida_Util       if ficha and ficha.Dias_Vida_Util else None
+            unidad_vida   = (ficha.Vida_Util_Unidad or 'dias') if ficha else 'dias'
+            if cantidad_vida:
+                if unidad_vida == 'meses':
+                    fecha_vencimiento = hoy + relativedelta(months=cantidad_vida)
+                elif unidad_vida == 'semanas':
+                    fecha_vencimiento = hoy + timedelta(weeks=cantidad_vida)
+                else:
+                    fecha_vencimiento = hoy + timedelta(days=cantidad_vida)
+            else:
+                fecha_vencimiento = None
 
             numero_lote = lote_info.get('Numero_Lote') or f"LP-{orden.ID_Orden_Produccion}-{hoy.strftime('%Y%m%d')}"
             fecha_venc = lote_info.get('Fecha_Vencimiento') or fecha_vencimiento
@@ -767,12 +782,15 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
                 insumos_ficha = db.query(FichaTecnicaInsumo).filter(
                     FichaTecnicaInsumo.ID_Ficha == orden.ID_Ficha
                 ).all()
+                # Batch: precargar insumos y unidades en 2 queries
+                fi_insumo_ids = [fi.ID_Insumo for fi in insumos_ficha if fi.ID_Insumo]
+                fi_insumos_map = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(fi_insumo_ids)).all()} if fi_insumo_ids else {}
+                unidad_ids_fi  = list({i.Unidad_Medida for i in fi_insumos_map.values() if i.Unidad_Medida})
+                unidades_fi    = {u.ID_Unidad_Medida: u for u in db.query(UnidadMedida).filter(UnidadMedida.ID_Unidad_Medida.in_(unidad_ids_fi)).all()} if unidad_ids_fi else {}
                 for fi in insumos_ficha:
-                    insumo = db.query(Insumo).filter(Insumo.ID_Insumo == fi.ID_Insumo).first()
+                    insumo = fi_insumos_map.get(fi.ID_Insumo)
                     if insumo:
-                        unidad_ins = db.query(UnidadMedida).filter(
-                            UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida
-                        ).first()
+                        unidad_ins  = unidades_fi.get(insumo.Unidad_Medida)
                         simbolo_ins = unidad_ins.Simbolo if unidad_ins else None
                         devolver = _convertir(
                             float(fi.Cantidad or 0) * orden.Cantidad,

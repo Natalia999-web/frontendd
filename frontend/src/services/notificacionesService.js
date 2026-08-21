@@ -1,7 +1,7 @@
 import { apiFetch } from "../utils/api";
 
 export const getNotificacionesAdmin = () =>
-  apiFetch("/notificaciones/");
+  apiFetch("/notificaciones/", { timeout: 60000 });
 
 export const marcarLeidaAPI = (id) =>
   apiFetch(`/notificaciones/${id}/leer`, { method: "PATCH" });

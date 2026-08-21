@@ -56,13 +56,15 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
   }, []);
 
   const [form, setForm] = useState({
-    producto:   productoNombre,
-    productoId: productoIdProp ? String(productoIdProp) : "",
-    fecha: new Date().toISOString().slice(0, 10),
-    fotoPreview: null,
-    insumos: [{ id: 1, idCategoria: "", idInsumo: "", nombre: "", cantidad: "", unidad: "" }],
-    procedimiento: "",
-    observaciones: "",
+    producto:         productoNombre,
+    productoId:       productoIdProp ? String(productoIdProp) : "",
+    fecha:            new Date().toISOString().slice(0, 10),
+    fotoPreview:      null,
+    insumos:          [{ id: 1, idCategoria: "", idInsumo: "", nombre: "", cantidad: "", unidad: "" }],
+    procedimiento:    "",
+    observaciones:    "",
+    vidaUtilCantidad: "",
+    vidaUtilUnidad:   "dias",
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -225,8 +227,22 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                 )}
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Fecha</label>
-                <input type="date" className="field-input" value={form.fecha} onChange={e => set("fecha", e.target.value)} />
+                <label className="form-label">Vida útil <span style={{ fontWeight: 400, color: "#9e9e9e" }}>(opcional)</span></label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="number" min="1" className="field-input" style={{ width: 80 }}
+                    placeholder="ej. 7"
+                    value={form.vidaUtilCantidad}
+                    onChange={e => set("vidaUtilCantidad", e.target.value)} />
+                  <select
+                    className="field-input" style={{ flex: 1 }}
+                    value={form.vidaUtilUnidad}
+                    onChange={e => set("vidaUtilUnidad", e.target.value)}>
+                    <option value="dias">días</option>
+                    <option value="semanas">semanas</option>
+                    <option value="meses">meses</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>

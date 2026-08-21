@@ -186,10 +186,18 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
 
   const validate = () => {
     const e = {};
-    if (!seleccionado)                                           e.seleccionado = "Selecciona un producto o insumo";
-    if (stockActual === 0)                                       e.cantidad     = "No hay stock disponible de este insumo.";
-    else if (!cantidad || isNaN(cantidad) || Number(cantidad) <= 0) e.cantidad = "Ingresa una cantidad mayor a 0.";
-    else if (Number(cantidad) > stockActual)                    e.cantidad     = `Solo hay ${stockActual} ${unidadLabel} disponibles`;
+    if (!seleccionado) e.seleccionado = "Selecciona un producto o insumo";
+    if (stockActual === 0) {
+      e.cantidad = "No se puede registrar la salida. El producto no tiene stock disponible.";
+    } else if (!cantidad || isNaN(cantidad)) {
+      e.cantidad = "Ingresa una cantidad válida.";
+    } else if (Number(cantidad) < 0) {
+      e.cantidad = "La cantidad no puede ser negativa.";
+    } else if (Number(cantidad) === 0) {
+      e.cantidad = "La cantidad debe ser mayor que 0.";
+    } else if (Number(cantidad) > stockActual) {
+      e.cantidad = `Stock insuficiente. Solo hay ${stockActual} ${unidadLabel} disponibles.`;
+    }
     return e;
   };
 
@@ -260,7 +268,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                             setErrors(p => ({
                               ...p,
                               seleccionado: "",
-                              cantidad: agot ? "No hay stock disponible de este insumo." : "",
+                              cantidad: agot ? "No se puede registrar la salida. El producto no tiene stock disponible." : "",
                             }));
                           }}
                           style={agot ? { borderColor: "#ef9a9a", background: "#fff8f8" } : undefined}>
@@ -327,8 +335,10 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                       const v = e.target.value;
                       setCantidad(v);
                       let err = "";
-                      if (v !== "" && (isNaN(v) || Number(v) <= 0)) err = "Ingresa una cantidad mayor a 0.";
-                      else if (v !== "" && Number(v) > stockActual) err = `Solo hay ${stockActual} ${unidadLabel} disponibles`;
+                      if (v !== "" && isNaN(v)) err = "Ingresa una cantidad válida.";
+                      else if (v !== "" && Number(v) < 0) err = "La cantidad no puede ser negativa.";
+                      else if (v !== "" && Number(v) === 0) err = "La cantidad debe ser mayor que 0.";
+                      else if (v !== "" && Number(v) > stockActual) err = `Stock insuficiente. Solo hay ${stockActual} ${unidadLabel} disponibles.`;
                       setErrors(p => ({ ...p, cantidad: err }));
                     }}
                     placeholder={seleccionado ? `Máx. ${stockActual}` : "—"}

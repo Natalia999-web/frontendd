@@ -207,10 +207,16 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
         insumo = db.query(Insumo).filter(Insumo.ID_Insumo == datos.ID_Insumo).first()
         if not insumo:
             raise HTTPException(status_code=404, detail="Insumo no encontrado")
-        if (insumo.Stock_Actual or 0) < datos.Cantidad:
+        stock_disponible = insumo.Stock_Actual or 0
+        if stock_disponible == 0:
             raise HTTPException(
                 status_code=400,
-                detail=f"Stock insuficiente — disponible: {insumo.Stock_Actual or 0}"
+                detail="No se puede registrar la salida. El producto no tiene stock disponible."
+            )
+        if stock_disponible < datos.Cantidad:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
             )
         insumo.Stock_Actual -= datos.Cantidad
         _actualizar_estado_insumo(insumo)
@@ -219,10 +225,16 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
         producto = db.query(Producto).filter(Producto.ID_Producto == datos.ID_Producto).first()
         if not producto:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
-        if (producto.Stock or 0) < datos.Cantidad:
+        stock_disponible = producto.Stock or 0
+        if stock_disponible == 0:
             raise HTTPException(
                 status_code=400,
-                detail=f"Stock insuficiente — disponible: {producto.Stock or 0}"
+                detail="No se puede registrar la salida. El producto no tiene stock disponible."
+            )
+        if stock_disponible < datos.Cantidad:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
             )
         producto.Stock -= datos.Cantidad
         _actualizar_estado_producto(producto)
@@ -319,8 +331,12 @@ def procesar_lotes_vencidos(db: Session) -> dict:
         .all()
     )
 
+    # Batch: precargar insumos de todos los lotes vencidos
+    li_insumo_ids = list({l.ID_Insumo for l in lotes_insumo if l.ID_Insumo})
+    insumos_li    = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(li_insumo_ids)).all()} if li_insumo_ids else {}
+
     for lote in lotes_insumo:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == lote.ID_Insumo).first()
+        insumo = insumos_li.get(lote.ID_Insumo)
         if not insumo:
             lote.Estado = ESTADO_ANULADA
             continue
@@ -357,8 +373,12 @@ def procesar_lotes_vencidos(db: Session) -> dict:
         .all()
     )
 
+    # Batch: precargar productos de todos los lotes vencidos
+    lp_prod_ids  = list({l.ID_Producto for l in lotes_producto if l.ID_Producto})
+    productos_lp = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(lp_prod_ids)).all()} if lp_prod_ids else {}
+
     for lote in lotes_producto:
-        producto = db.query(Producto).filter(Producto.ID_Producto == lote.ID_Producto).first()
+        producto = productos_lp.get(lote.ID_Producto)
         if not producto:
             lote.Estado = ESTADO_ANULADA
             lote.Cantidad = 0
@@ -384,13 +404,13 @@ def procesar_lotes_vencidos(db: Session) -> dict:
 
     db.commit()
 
-    # Notificaciones fuera del commit principal
+    # Notificaciones: reusar objetos ya cargados
     for id_ins in insumos_afectados:
-        ins = db.query(Insumo).filter(Insumo.ID_Insumo == id_ins).first()
+        ins = insumos_li.get(id_ins)
         if ins:
             notificar_stock_insumo(db, ins)
     for id_prod in productos_afectados:
-        prod = db.query(Producto).filter(Producto.ID_Producto == id_prod).first()
+        prod = productos_lp.get(id_prod)
         if prod:
             notificar_stock_producto(db, prod)
 

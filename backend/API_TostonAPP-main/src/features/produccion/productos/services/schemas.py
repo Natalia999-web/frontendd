@@ -31,12 +31,13 @@ class FichaTecnicaInsumoResponse(BaseModel):
 
 # ── Ficha técnica opcional al crear producto ──
 class FichaTecnicaInput(BaseModel):
-    Version:        Optional[str] = None
-    Observaciones:  Optional[str] = None
-    Procedimiento:  Optional[str] = None
-    Estado:         Optional[int] = None
-    Dias_Vida_Util: Optional[int] = None
-    insumos:        Optional[list[FichaTecnicaInsumoInput]] = None
+    Version:          Optional[str] = None
+    Observaciones:    Optional[str] = None
+    Procedimiento:    Optional[str] = None
+    Estado:           Optional[int] = None
+    Dias_Vida_Util:   Optional[int] = None
+    Vida_Util_Unidad: Optional[str] = None
+    insumos:          Optional[list[FichaTecnicaInsumoInput]] = None
 
 
 # ── Crear producto ──
@@ -77,14 +78,15 @@ class ImagenResponse(BaseModel):
 
 # ── Respuesta de ficha técnica resumida ──
 class FichaTecnicaResumida(BaseModel):
-    ID_Ficha:       int
-    Version:        Optional[str] = None
-    Observaciones:  Optional[str] = None
-    Procedimiento:  Optional[str] = None
-    Estado:         Optional[int] = None
-    Fecha_Creacion: Optional[datetime] = None
-    Dias_Vida_Util: Optional[int] = None
-    insumos:        list[FichaTecnicaInsumoResponse] = []
+    ID_Ficha:         int
+    Version:          Optional[str] = None
+    Observaciones:    Optional[str] = None
+    Procedimiento:    Optional[str] = None
+    Estado:           Optional[int] = None
+    Fecha_Creacion:   Optional[datetime] = None
+    Dias_Vida_Util:   Optional[int] = None
+    Vida_Util_Unidad: Optional[str] = None
+    insumos:          list[FichaTecnicaInsumoResponse] = []
 
     class Config:
         from_attributes = True

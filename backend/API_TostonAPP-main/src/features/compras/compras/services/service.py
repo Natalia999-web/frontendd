@@ -321,21 +321,23 @@ def completar_compra(db: Session, id_compra: int, fecha_llegada=None) -> dict:
 
     detalles = db.query(DetalleCompra).filter(DetalleCompra.ID_Compra == id_compra).all()
 
+    # Batch: precargar insumos y lotes en 2 queries
+    insumo_ids_d = [d.ID_Insumo      for d in detalles if d.ID_Insumo]
+    lote_ids_d   = [d.ID_Lote_Compra for d in detalles if d.ID_Lote_Compra]
+    insumos_map  = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(insumo_ids_d)).all()} if insumo_ids_d else {}
+    lotes_map    = {l.ID_Lote_Compra: l for l in db.query(LoteCompra).filter(LoteCompra.ID_Lote_Compra.in_(lote_ids_d)).all()} if lote_ids_d else {}
+
     for detalle in detalles:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
+        insumo = insumos_map.get(detalle.ID_Insumo)
         if insumo:
             insumo.Stock_Actual = (insumo.Stock_Actual or 0) + detalle.Cantidad
             insumo.ID_Lote_Compra = detalle.ID_Lote_Compra
             _actualizar_estado_insumo(insumo)
-
-        if detalle.ID_Lote_Compra:
-            lote = db.query(LoteCompra).filter(
-                LoteCompra.ID_Lote_Compra == detalle.ID_Lote_Compra
-            ).first()
-            if lote:
-                lote.Estado = 1  # Activo — la mercancía llegó
-                if lote.Cantidad_Actual is None:
-                    lote.Cantidad_Actual = lote.Cantidad_Inicial
+        lote = lotes_map.get(detalle.ID_Lote_Compra) if detalle.ID_Lote_Compra else None
+        if lote:
+            lote.Estado = 1
+            if lote.Cantidad_Actual is None:
+                lote.Cantidad_Actual = lote.Cantidad_Inicial
 
     compra.Estado = ESTADO_COMPLETADA
     if fecha_llegada:
@@ -347,7 +349,7 @@ def completar_compra(db: Session, id_compra: int, fecha_llegada=None) -> dict:
     db.refresh(compra)
 
     for detalle in detalles:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
+        insumo = insumos_map.get(detalle.ID_Insumo)
         if insumo:
             notificar_stock_insumo(db, insumo)
     db.commit()
@@ -372,10 +374,16 @@ def anular_compra(db: Session, id_compra: int) -> dict:
 
     detalles = db.query(DetalleCompra).filter(DetalleCompra.ID_Compra == id_compra).all()
 
+    # Batch: precargar insumos y lotes en 2 queries
+    insumo_ids_a = [d.ID_Insumo      for d in detalles if d.ID_Insumo]
+    lote_ids_a   = [d.ID_Lote_Compra for d in detalles if d.ID_Lote_Compra]
+    insumos_map  = {i.ID_Insumo: i for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(insumo_ids_a)).all()} if insumo_ids_a else {}
+    lotes_map    = {l.ID_Lote_Compra: l for l in db.query(LoteCompra).filter(LoteCompra.ID_Lote_Compra.in_(lote_ids_a)).all()} if lote_ids_a else {}
+
     if compra.Estado == ESTADO_COMPLETADA:
         # Verificar que ningún insumo haya sido consumido en producción antes de revertir
         for detalle in detalles:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
+            insumo = insumos_map.get(detalle.ID_Insumo)
             if insumo and (insumo.Stock_Actual or 0) < detalle.Cantidad:
                 raise HTTPException(
                     status_code=400,
@@ -388,31 +396,25 @@ def anular_compra(db: Session, id_compra: int) -> dict:
                 )
 
         for detalle in detalles:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
+            insumo = insumos_map.get(detalle.ID_Insumo)
             if insumo:
                 insumo.Stock_Actual = max(0, (insumo.Stock_Actual or 0) - detalle.Cantidad)
                 _actualizar_estado_insumo(insumo)
-            if detalle.ID_Lote_Compra:
-                lote = db.query(LoteCompra).filter(
-                    LoteCompra.ID_Lote_Compra == detalle.ID_Lote_Compra
-                ).first()
-                if lote:
-                    lote.Estado = 12  # Anulada
+            lote = lotes_map.get(detalle.ID_Lote_Compra) if detalle.ID_Lote_Compra else None
+            if lote:
+                lote.Estado = 12  # Anulada
 
         for detalle in detalles:
-            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == detalle.ID_Insumo).first()
+            insumo = insumos_map.get(detalle.ID_Insumo)
             if insumo:
                 notificar_stock_insumo(db, insumo)
 
     elif compra.Estado == ESTADO_PENDIENTE:
         # Marcar lotes pendientes como anulados
         for detalle in detalles:
-            if detalle.ID_Lote_Compra:
-                lote = db.query(LoteCompra).filter(
-                    LoteCompra.ID_Lote_Compra == detalle.ID_Lote_Compra
-                ).first()
-                if lote and lote.Estado == 3:
-                    lote.Estado = 12  # Anulada
+            lote = lotes_map.get(detalle.ID_Lote_Compra) if detalle.ID_Lote_Compra else None
+            if lote and lote.Estado == 3:
+                lote.Estado = 12  # Anulada
 
     compra.Estado = ESTADO_ANULADA
     db.commit()

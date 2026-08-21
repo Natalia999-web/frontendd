@@ -282,15 +282,13 @@ def asignar_permisos(db: Session, id_rol: int, permisos_ids: list[int]):
         synchronize_session=False
     )
 
-    # Asigna los nuevos permisos; IDs inexistentes en la BD se omiten sin error
-    seen = set()
-    for id_permiso in permisos_ids:
-        if id_permiso in seen:
-            continue
-        seen.add(id_permiso)
-        permiso = db.query(Permiso).filter(Permiso.ID_Permiso == id_permiso).first()
-        if permiso:
-            db.add(RolXPermiso(ID_Rol=id_rol, ID_Permiso=id_permiso))
+    # Asigna los nuevos permisos en batch; IDs inexistentes se omiten sin error
+    unique_ids = list(dict.fromkeys(permisos_ids))
+    if unique_ids:
+        encontrados = {p.ID_Permiso for p in db.query(Permiso).filter(Permiso.ID_Permiso.in_(unique_ids)).all()}
+        for id_permiso in unique_ids:
+            if id_permiso in encontrados:
+                db.add(RolXPermiso(ID_Rol=id_rol, ID_Permiso=id_permiso))
 
     db.commit()
     return _formato_rol(rol, db)

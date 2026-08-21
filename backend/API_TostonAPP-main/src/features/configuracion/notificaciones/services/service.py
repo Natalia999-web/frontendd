@@ -6,15 +6,66 @@ from src.shared.services.models import Notificacion, Venta, Devolucion
 
 
 def _sincronizar_stock(db: Session) -> None:
-    """Genera notifs para insumos/productos con stock bajo que aún no tienen una notif activa."""
+    """Genera notifs para insumos/productos con stock bajo que aún no tienen una notif activa.
+    Usa 3 queries en total (batch) en vez de N+1 para evitar lentitud con latencia de BD remota.
+    """
     from src.shared.services.models import Insumo, Producto
-    from src.shared.services.notificaciones_utils import notificar_stock_insumo, notificar_stock_producto
 
-    for insumo in db.query(Insumo).filter(Insumo.Estado.in_([14, 15])).all():
-        notificar_stock_insumo(db, insumo)
-    for producto in db.query(Producto).filter(Producto.Estado.in_([14, 15])).all():
-        notificar_stock_producto(db, producto)
-    db.flush()
+    insumos   = db.query(Insumo).filter(Insumo.Estado.in_([14, 15])).all()
+    productos = db.query(Producto).filter(Producto.Estado.in_([14, 15])).all()
+
+    if not insumos and not productos:
+        return
+
+    tipos = [
+        "stock_agotado_insumo", "stock_minimo_insumo",
+        "stock_agotado_producto", "stock_minimo_producto",
+    ]
+    existentes = {
+        (n.Tipo, n.Referencia_ID)
+        for n in db.query(Notificacion.Tipo, Notificacion.Referencia_ID)
+                   .filter(Notificacion.Tipo.in_(tipos), Notificacion.Leida == False)
+                   .all()
+    }
+
+    ahora  = datetime.now()
+    nuevas = []
+
+    for ins in insumos:
+        tipo = "stock_agotado_insumo" if ins.Estado == 15 else "stock_minimo_insumo"
+        if (tipo, ins.ID_Insumo) not in existentes:
+            titulo  = "Insumo agotado" if ins.Estado == 15 else "Stock mínimo de insumo"
+            mensaje = (
+                f"El insumo '{ins.Nombre}' se ha agotado"
+                if ins.Estado == 15
+                else f"El insumo '{ins.Nombre}' tiene stock bajo ({ins.Stock_Actual or 0} unidades)"
+            )
+            nuevas.append(Notificacion(
+                Tipo=tipo, Titulo=titulo, Mensaje=mensaje,
+                Referencia_ID=ins.ID_Insumo,
+                Ruta=f"/compras/insumos/{ins.ID_Insumo}",
+                Fecha=ahora, Leida=False,
+            ))
+
+    for prod in productos:
+        tipo = "stock_agotado_producto" if prod.Estado == 15 else "stock_minimo_producto"
+        if (tipo, prod.ID_Producto) not in existentes:
+            titulo  = "Producto agotado" if prod.Estado == 15 else "Stock mínimo de producto"
+            mensaje = (
+                f"El producto '{prod.nombre}' se ha agotado"
+                if prod.Estado == 15
+                else f"El producto '{prod.nombre}' tiene stock bajo ({prod.Stock or 0} unidades)"
+            )
+            nuevas.append(Notificacion(
+                Tipo=tipo, Titulo=titulo, Mensaje=mensaje,
+                Referencia_ID=prod.ID_Producto,
+                Ruta=f"/produccion/productos/{prod.ID_Producto}",
+                Fecha=ahora, Leida=False,
+            ))
+
+    if nuevas:
+        db.add_all(nuevas)
+        db.flush()
 
 
 def obtener_notificaciones(db: Session) -> dict:

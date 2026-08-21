@@ -99,7 +99,7 @@ const OrdersPage = () => {
     setCheckoutOpen(true);
   };
 
-  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo) => {
+  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo, anticipoData) => {
     const user = getUser();
     const cart = getCart();
 
@@ -114,13 +114,24 @@ const OrdersPage = () => {
       fechaEntregaEsperada = `${deliveryInfo.date}T${t}:00`;
     }
 
-    // Subir comprobante a Cloudinary si existe
+    // Subir comprobante principal a Cloudinary si existe
     let comprobanteUrl = null;
     if (paymentMethod === 'digital' && comprobante) {
       try {
         comprobanteUrl = await subirImagenCloudinary(comprobante);
       } catch {
         showToast('Error al subir el comprobante. Intenta de nuevo.', 'error');
+        return;
+      }
+    }
+
+    // Subir comprobante del anticipo si aplica
+    let anticipoComprobanteUrl = null;
+    if (anticipoData?.requiere && anticipoData.metodo === 'digital' && anticipoData.comprobante) {
+      try {
+        anticipoComprobanteUrl = await subirImagenCloudinary(anticipoData.comprobante);
+      } catch {
+        showToast('Error al subir el comprobante del anticipo. Intenta de nuevo.', 'error');
         return;
       }
     }
@@ -134,8 +145,19 @@ const OrdersPage = () => {
       Metodo_Pago:            paymentMethod === 'digital' ? 'Transferencia' : 'Efectivo',
       A_Nombre_De:            onBehalfOf || null,
       usar_credito:           usarCredito || false,
-      comprobante_pago:       comprobanteUrl,
-      Fecha_entrega_esperada: fechaEntregaEsperada,
+      comprobante_pago:         comprobanteUrl,
+      Fecha_entrega_esperada:   fechaEntregaEsperada,
+      requiere_anticipo:        !!(anticipoData?.requiere),
+      anticipo_monto:           anticipoData?.monto ?? null,
+      anticipo_metodo_pago:     anticipoData?.requiere
+        ? (anticipoData.metodo === 'digital' ? 'Transferencia' : anticipoData.metodo === 'credito' ? 'Credito' : 'Efectivo')
+        : null,
+      anticipo_comprobante_url: anticipoComprobanteUrl,
+      anticipo_registrado:      !!(anticipoData?.requiere && (
+        anticipoData.creditoCubreAnticipo ? true
+        : anticipoData.metodo === 'efectivo' ? anticipoData.efectivo
+        : !!anticipoComprobanteUrl
+      )),
       domicilio: tieneDomicilio && direccion ? {
         Direccion_entrega:    direccion,
         Municipio_entrega:    municipio || 'Sin municipio',

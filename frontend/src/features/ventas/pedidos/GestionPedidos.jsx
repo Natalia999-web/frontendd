@@ -235,6 +235,12 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         <span className="ver-ped-field__label">Dirección</span>
                         <span className="ver-ped-field__value">{pedido.direccion_entrega || "—"}</span>
                       </div>
+                      {(pedido.municipio || pedido.departamento) && (
+                        <div className="ver-ped-field">
+                          <span className="ver-ped-field__label">Ciudad</span>
+                          <span className="ver-ped-field__value">{[pedido.municipio, pedido.departamento].filter(Boolean).join(", ")}</span>
+                        </div>
+                      )}
                       <div className="ver-ped-field">
                         <span className="ver-ped-field__label">Domiciliario</span>
                         <span className="ver-ped-field__value">
@@ -243,6 +249,15 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                             || (pedido.estado === "Entregado" ? "Sin información" : "Sin asignar")}
                         </span>
                       </div>
+                      {pedido.observaciones_domicilio && (
+                        <div className="info-box info-box--warn" style={{ marginTop: 4 }}>
+                          <span className="info-box__icon">📝</span>
+                          <div>
+                            <span className="info-box__label">Observaciones del cliente</span>
+                            <span className="info-box__text" style={{ display: "block" }}>{pedido.observaciones_domicilio}</span>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="ver-ped-field">
@@ -325,7 +340,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 </div>
                 {pedido.descuento > 0 && (
                   <div className="totales-row totales-row--descuento">
-                    <span>Descuento</span>
+                    <span>💳 Crédito aplicado</span>
                     <span>− {fmt(pedido.descuento)}</span>
                   </div>
                 )}

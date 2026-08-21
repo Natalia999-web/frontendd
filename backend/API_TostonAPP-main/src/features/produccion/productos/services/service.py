@@ -84,8 +84,9 @@ def _formato_producto(producto: Producto, db: Session) -> dict:
             "Observaciones":  ficha.Observaciones,
             "Procedimiento":  ficha.Procedimiento,
             "Estado":         ficha.Estado,
-            "Fecha_Creacion": ficha.Fecha_Creacion,
-            "Dias_Vida_Util": getattr(ficha, "Dias_Vida_Util", None),
+            "Fecha_Creacion":   ficha.Fecha_Creacion,
+            "Dias_Vida_Util":   getattr(ficha, "Dias_Vida_Util", None),
+            "Vida_Util_Unidad": getattr(ficha, "Vida_Util_Unidad", None),
             "insumos": [
                 {
                     "ID_Ficha_Insumo":  fi.ID_Ficha_Insumo,
@@ -95,6 +96,7 @@ def _formato_producto(producto: Producto, db: Session) -> dict:
                     "nombre_categoria": (fi.insumo.categoria.Nombre_Categoria if fi.insumo and fi.insumo.categoria else None),
                     "Cantidad":         fi.Cantidad,
                     "Unidad":           fi.Unidad,
+                    "Stock_Actual":     float(fi.insumo.Stock_Actual or 0) if fi.insumo else None,
                 }
                 for fi in (ficha.insumos_ficha if ficha else [])
             ],
@@ -245,8 +247,9 @@ def obtener_productos(
                 "Observaciones":  ficha.Observaciones,
                 "Procedimiento":  ficha.Procedimiento,
                 "Estado":         ficha.Estado,
-                "Fecha_Creacion": ficha.Fecha_Creacion,
-                "Dias_Vida_Util": getattr(ficha, "Dias_Vida_Util", None),
+                "Fecha_Creacion":   ficha.Fecha_Creacion,
+                "Dias_Vida_Util":   getattr(ficha, "Dias_Vida_Util", None),
+                "Vida_Util_Unidad": getattr(ficha, "Vida_Util_Unidad", None),
                 "insumos": [
                     {
                         "ID_Ficha_Insumo":  fi.ID_Ficha_Insumo,
@@ -258,6 +261,7 @@ def obtener_productos(
                                              else None),
                         "Cantidad":         fi.Cantidad,
                         "Unidad":           fi.Unidad,
+                        "Stock_Actual":     float(insumos_fi[fi.ID_Insumo].Stock_Actual or 0) if fi.ID_Insumo in insumos_fi else None,
                     }
                     for fi in fis
                 ],
@@ -408,13 +412,15 @@ def crear_producto(db: Session, datos: ProductoCreate) -> dict:
     # Crea la ficha técnica si viene en el body
     if datos.ficha_tecnica:
         ficha = FichaTecnica(
-            ID_Producto    = nuevo.ID_Producto,
-            ID_Categoria   = datos.ID_Categoria,
-            Version        = datos.ficha_tecnica.Version or "1.0",
-            Observaciones  = datos.ficha_tecnica.Observaciones,
-            Procedimiento  = datos.ficha_tecnica.Procedimiento,
-            Estado         = estado_id,
-            Fecha_Creacion = datetime.now(),
+            ID_Producto      = nuevo.ID_Producto,
+            ID_Categoria     = datos.ID_Categoria,
+            Version          = datos.ficha_tecnica.Version or "1.0",
+            Observaciones    = datos.ficha_tecnica.Observaciones,
+            Procedimiento    = datos.ficha_tecnica.Procedimiento,
+            Estado           = estado_id,
+            Fecha_Creacion   = datetime.now(),
+            Dias_Vida_Util   = datos.ficha_tecnica.Dias_Vida_Util,
+            Vida_Util_Unidad = datos.ficha_tecnica.Vida_Util_Unidad,
         )
         db.add(ficha)
 

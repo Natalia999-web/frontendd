@@ -5,6 +5,10 @@ from decimal import Decimal
 
 METODOS_PAGO_COMPRA = {"Efectivo", "Transferencia", "Crédito", "Cheque"}
 
+CANT_MAX   = Decimal("10000")
+TOTAL_MIN  = Decimal("1000")
+TOTAL_MAX  = Decimal("50000000")
+
 
 # ── Completar compra (body opcional) ──
 class CompletarCompraInput(BaseModel):
@@ -31,7 +35,7 @@ class CompraUpdate(BaseModel):
 # ── Detalle de un ítem dentro de la compra ──
 class DetalleCompraInput(BaseModel):
     ID_Insumo:         int
-    Cantidad:          int
+    Cantidad:          Decimal   # Decimal para soportar kg, g, L, mL
     Precio_Und:        Decimal
     Notas:             Optional[str] = None
     Fecha_Vencimiento: Optional[datetime] = None  # para crear el LoteCompra
@@ -56,20 +60,36 @@ class CompraCreate(BaseModel):
             raise ValueError(f"Método de pago inválido. Opciones: {opciones}")
         if not self.detalles:
             raise ValueError("La compra debe tener al menos un ítem en detalles")
+
         for d in self.detalles:
             if d.Cantidad <= 0:
                 raise ValueError(f"La cantidad del insumo {d.ID_Insumo} debe ser mayor a cero")
-            # Techo 100 000 unidades: una mipyme no compra más que esto en un pedido
-            if d.Cantidad > 100_000:
-                raise ValueError(f"La cantidad del insumo {d.ID_Insumo} supera el máximo permitido (100 000)")
+            if d.Cantidad > CANT_MAX:
+                raise ValueError(
+                    f"La cantidad del insumo {d.ID_Insumo} supera el máximo permitido "
+                    f"({int(CANT_MAX):,} unidades por línea)"
+                )
             if d.Precio_Und <= 0:
                 raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} debe ser mayor a cero")
-            # Piso $50 COP: cualquier insumo cuesta al menos esto en Colombia
-            if d.Precio_Und < Decimal("50"):
-                raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} debe ser al menos $50 COP")
-            # Techo $10 000 000 COP/unit: superar esto es un error de digitación
-            if d.Precio_Und > Decimal("10000000"):
-                raise ValueError(f"El precio unitario del insumo {d.ID_Insumo} supera el máximo permitido ($10 000 000 COP)")
+
+        # Recalcular total en el backend — no confiar en el valor enviado por el frontend
+        subtotal  = sum(d.Cantidad * d.Precio_Und for d in self.detalles)
+        transporte = Decimal(str(self.Costo_Transporte or 0))
+        iva_val   = subtotal * Decimal(str(self.IVA_Porcentaje or 0)) / 100
+        desc_val  = subtotal * Decimal(str(self.Descuento_Porcentaje or 0)) / 100
+        otros     = Decimal(str(self.Otros_Costos or 0))
+        total     = subtotal + transporte + iva_val - desc_val + otros
+
+        if total < TOTAL_MIN:
+            raise ValueError(
+                f"El total de la compra (${total:,.0f} COP) debe ser al menos "
+                f"${int(TOTAL_MIN):,} COP"
+            )
+        if total > TOTAL_MAX:
+            raise ValueError(
+                f"El total de la compra (${total:,.0f} COP) supera el máximo permitido "
+                f"(${int(TOTAL_MAX):,} COP)"
+            )
         return self
 
 
@@ -79,7 +99,7 @@ class DetalleCompraResponse(BaseModel):
     ID_Insumo:         Optional[int]     = None
     nombre_insumo:     Optional[str]     = None
     ID_Lote_Compra:    Optional[int]     = None
-    Cantidad:          Optional[int]     = None
+    Cantidad:          Optional[Decimal]  = None
     Precio_Und:        Optional[Decimal] = None
     Notas:             Optional[str]     = None
     Fecha_Vencimiento: Optional[str]     = None

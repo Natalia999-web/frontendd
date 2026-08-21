@@ -61,6 +61,7 @@ class OrdenResponse(BaseModel):
     Cantidad:            Optional[int]      = None
     Fecha_inicio:        Optional[datetime] = None
     Fecha_Entrega:       Optional[datetime] = None
+    Fecha_fin:           Optional[datetime] = None
     Estado:              Optional[int]      = None
     estado_label:        Optional[str]      = None
     Costo:               Optional[float]    = None

@@ -135,6 +135,11 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
                       : `Vence: ${fmtFecha(fv)}`)
                   : "Sin fecha de vencimiento"}
               </div>
+              {(l.id_compra || l.ID_Compra) && (
+                <div style={{ fontSize: 11, color: "#1565c0", marginTop: 3, fontWeight: 600 }}>
+                  🛒 Compra de origen: #{l.id_compra || l.ID_Compra}
+                </div>
+              )}
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "#2e7d32" }}>

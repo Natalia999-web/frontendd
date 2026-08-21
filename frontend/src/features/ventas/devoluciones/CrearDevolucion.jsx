@@ -25,7 +25,7 @@ function SelectArrow() {
 }
 
 /* ─── BARRA DE PASOS ─────────────────────────────────────── */
-const STEPS = ["Pedido", "Detalles devolución"];
+const STEPS = ["Pedido", "Productos", "Detalles"];
 
 function StepsBar({ current }) {
   return (
@@ -48,6 +48,116 @@ function StepsBar({ current }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── PedidoSelect (inline — evita clipping del modal) ──────── */
+function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
+  const [query, setQuery] = useState("");
+  const selected = pedidos.find(p => String(p.id) === String(value));
+
+  const filtered = pedidos.filter(p =>
+    `${p.numero} ${p.cliente?.nombre || ""}`.toLowerCase().includes(query.toLowerCase())
+  );
+
+  if (selected) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "10px 14px", borderRadius: 10,
+        background: "#e8f5e9", border: `1.5px solid ${error ? "#ef5350" : "#a5d6a7"}`,
+      }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#1b5e20" }}>
+          {selected.numero} — {selected.cliente?.nombre}
+        </span>
+        <button type="button" onClick={() => { onChange(""); setQuery(""); }}
+          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", fontSize: 16, padding: 0, lineHeight: 1 }}>
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: `1.5px solid ${error ? "#ef5350" : "#e0e0e0"}`, borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fafdf9" }}>
+        <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+        <input
+          type="text"
+          placeholder={disabled ? "Cargando pedidos…" : "Buscar por número o nombre de cliente…"}
+          value={query}
+          disabled={disabled}
+          onChange={e => setQuery(e.target.value)}
+          style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "#333", fontFamily: "inherit" }}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")}
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
+            ✕
+          </button>
+        )}
+      </div>
+      {!disabled && (
+        <div style={{ maxHeight: 220, overflowY: "auto", borderTop: "1px solid #f0f0f0" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "14px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
+              {query ? `Sin resultados para "${query}"` : pedidos.length === 0 ? "Sin pedidos entregados disponibles" : "Escribe para buscar…"}
+            </div>
+          ) : filtered.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => { onChange(String(p.id)); setQuery(""); }}
+              style={{
+                width: "100%", textAlign: "left", padding: "9px 14px",
+                border: "none", borderBottom: "1px solid #f5f5f5",
+                background: "transparent", fontSize: 13, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                fontFamily: "inherit", color: "#222",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f1f8f1"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <span style={{ fontWeight: 700 }}>{p.numero}</span>
+              <span style={{ fontSize: 12, color: "#757575", marginLeft: 8 }}>{p.cliente?.nombre}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── RESUMEN DEL PEDIDO (paso 1) ────────────────────────── */
+function ResumenPedido({ pedido }) {
+  return (
+    <div className="resumen-pedido">
+      <div className="resumen-pedido__head">
+        <span className="resumen-pedido__num">{pedido.numero}</span>
+        <span className="resumen-pedido__cliente">{pedido.cliente?.nombre}</span>
+      </div>
+      <div className="resumen-pedido__meta">
+        <span>{pedido.metodo_pago || "—"}</span>
+        {pedido.fecha_pedido && (
+          <span>{new Date(pedido.fecha_pedido).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}</span>
+        )}
+      </div>
+
+      <div className="resumen-pedido__lista">
+        {(pedido.productosItems || []).map((p, i) => (
+          <div key={i} className="resumen-prod-row">
+            <span className="resumen-prod-row__name">{p.nombre}</span>
+            <span className="resumen-prod-row__qty">×{p.cantidad}</span>
+            <span className="resumen-prod-row__price">{fmt(p.precio * p.cantidad)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="resumen-pedido__total">
+        <span>Total pagado</span>
+        <span className="resumen-pedido__total-val">{fmt(pedido.total)}</span>
+      </div>
     </div>
   );
 }
@@ -88,13 +198,7 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
         )}
         <div className="evidencia-preview__bar">
           <span className="evidencia-preview__name">📎 {evidencia.nombre}</span>
-          <button
-            className="evidencia-preview__remove"
-            onClick={() => onEvidencia(null)}
-            data-tooltip="Quitar evidencia adjunta"
-          >
-            ✕
-          </button>
+          <button className="evidencia-preview__remove" onClick={() => onEvidencia(null)}>✕</button>
         </div>
       </div>
     );
@@ -124,7 +228,7 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
   );
 }
 
-/* ─── ITEM DE PRODUCTO ───────────────────────────────────── */
+/* ─── ITEM DE PRODUCTO (paso 2) ──────────────────────────── */
 function ProdItem({ item, idx, onSet }) {
   return (
     <div className="prod-dev-row">
@@ -167,12 +271,18 @@ function ProdItem({ item, idx, onSet }) {
 export default function CrearDevolucion({ onClose, onSave, saving }) {
   const [pedidosEntregados, setPedidosEntregados] = useState([]);
   const [loadError,         setLoadError]         = useState("");
+  const [loadingPedidos,    setLoadingPedidos]    = useState(true);
 
-  useEffect(() => {
-    getPedidos({ porPagina: 100, estado: 8 })
+  const cargarPedidos = () => {
+    setLoadError("");
+    setLoadingPedidos(true);
+    getPedidos({ porPagina: 100, estado: 8, timeout: 90000 })
       .then(data => setPedidosEntregados(data.pedidos || []))
-      .catch(err => setLoadError(err?.message || "Error al cargar pedidos entregados"));
-  }, []);
+      .catch(err => setLoadError(err?.message || "Error al cargar pedidos entregados"))
+      .finally(() => setLoadingPedidos(false));
+  };
+
+  useEffect(() => { cargarPedidos(); }, []);
 
   const [idPedido,   setIdPedido]   = useState("");
   const [motivo,     setMotivo]     = useState("");
@@ -186,14 +296,14 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
 
   const handleSelectPedido = (val) => {
     setIdPedido(val);
-    setErrors((e) => ({ ...e, idPedido: val ? "" : "Debes seleccionar un pedido para registrar la devolución" }));
+    setErrors((e) => ({ ...e, idPedido: val ? "" : "Debes seleccionar un pedido" }));
     const ped = pedidosEntregados.find((p) => String(p.id) === String(val));
     if (ped) {
       setItems(
         (ped.productosItems || []).map((p) => ({
           idProducto: p.idProducto,
           nombre:     p.nombre,
-          precio:     p.precio,
+          precio:     Number(p.precio) || 0,
           cantMax:    p.cantidad,
           cantidad:   0,
         }))
@@ -209,7 +319,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
       const arr = [...prev];
       arr[idx] = { ...arr[idx], cantidad: n };
       const hasAny = arr.some(i => i.cantidad > 0);
-      setErrors((e) => ({ ...e, items: hasAny ? "" : "Selecciona al menos un producto y la cantidad a devolver" }));
+      setErrors((e) => ({ ...e, items: hasAny ? "" : "Selecciona al menos un producto a devolver" }));
       return arr;
     });
   };
@@ -220,15 +330,13 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
   const validateStep = (s) => {
     const e = {};
     if (s === 1 && !idPedido) {
-      e.idPedido = "Debes seleccionar un pedido para registrar la devolución";
+      e.idPedido = "Debes seleccionar un pedido";
     }
-    if (s === 2) {
-      if (!motivo) {
-        e.motivo = "Selecciona el motivo de la devolución";
-      }
-      if (itemsSeleccionados.length === 0) {
-        e.items = "Selecciona al menos un producto y la cantidad a devolver";
-      }
+    if (s === 2 && itemsSeleccionados.length === 0) {
+      e.items = "Selecciona al menos un producto a devolver";
+    }
+    if (s === 3 && !motivo) {
+      e.motivo = "Selecciona el motivo de la devolución";
     }
     return e;
   };
@@ -242,16 +350,16 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
   const handleBack = () => setStep((s) => s - 1);
 
   const handleSave = () => {
-    const e = validateStep(2);
+    const e = validateStep(3);
     if (Object.keys(e).length) { setErrors(e); return; }
-    const payload = {
+    onSave({
       idPedido:     pedidoSel.id,
       numeroPedido: pedidoSel.numero,
       idCliente:    pedidoSel.idCliente,
       cliente:      pedidoSel.cliente,
       motivo,
       comentario,
-      productos:    itemsSeleccionados.map((i) => ({
+      productos: itemsSeleccionados.map((i) => ({
         idProducto:     i.idProducto,
         nombre:         i.nombre,
         cantidad:       i.cantidad,
@@ -260,20 +368,18 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
       })),
       totalDevuelto: totalDevolucion,
       evidencia:     evidencia || null,
-    };
-
-    onSave(payload);
+    });
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card modal-devolucion" style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="modal-header">
+        <div className="modal-header modal-header--red" style={{ padding: "12px 20px" }}>
           <div>
             <p className="modal-header__eyebrow">Devoluciones</p>
-            <h2 className="modal-header__title" style={{ color: "#c62828" }}>
+            <h2 className="modal-header__title" style={{ fontSize: "1.2rem" }}>
               Registrar devolución
             </h2>
           </div>
@@ -281,130 +387,114 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
         </div>
 
         {/* Steps */}
-        <div style={{ padding: "16px 24px 0" }}>
+        <div style={{ padding: "8px 20px 0" }}>
           <StepsBar current={step} />
         </div>
 
-        <div className="modal-body" style={{ overflowY: "auto" }}>
+        <div className="modal-body" style={{ overflowY: "auto", minHeight: 0 }}>
 
-          {/* ── Paso 1: Pedido ── */}
+          {/* ── Paso 1: Seleccionar pedido ── */}
           {step === 1 && (
             <>
-              <p className="section-label" style={{ textTransform: "none", marginTop: 0 }}>
-                Seleccionar Pedido
+              <p className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>
+                Pedido entregado
               </p>
+
               {loadError && (
-                <div style={{ padding: "10px 14px", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 10, color: "#c62828", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-                  ⚠️ {loadError}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 10, color: "#c62828", fontSize: 13, fontWeight: 600 }}>
+                  <span>⚠️ El servidor tardó en responder.</span>
+                  <button
+                    onClick={cargarPedidos}
+                    style={{ background: "#c62828", color: "#fff", border: "none", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Reintentar
+                  </button>
                 </div>
               )}
+
               <div className="field-wrap">
                 <label className="field-label">
-                  Pedido entregado <span className="required">*</span>
+                  Selecciona un pedido <span className="required">*</span>
                 </label>
-                <div className="select-wrap">
-                  <select
-                    className={`field-select${errors.idPedido ? " error" : ""}`}
-                    value={idPedido}
-                    onChange={(e) => handleSelectPedido(e.target.value)}
-                  >
-                    <option value="">
-                      {pedidosEntregados.length === 0 && !loadError
-                        ? "Cargando pedidos…"
-                        : pedidosEntregados.length === 0
-                        ? "Sin pedidos entregados disponibles"
-                        : "Seleccione un pedido…"}
-                    </option>
-                    {pedidosEntregados.map((p) => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.numero} — {p.cliente?.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <SelectArrow />
-                </div>
-                {errors.idPedido && (
-                  <span className="field-error">{errors.idPedido}</span>
-                )}
+                <PedidoSelect
+                  value={idPedido}
+                  pedidos={pedidosEntregados}
+                  error={errors.idPedido}
+                  disabled={loadingPedidos}
+                  onChange={handleSelectPedido}
+                />
+                {errors.idPedido && <span className="field-error">{errors.idPedido}</span>}
               </div>
 
-              {pedidoSel && (
-                <div className="info-box info-box--info" style={{ marginTop: 16 }}>
-                  <span className="info-box__icon">📦</span>
-                  <div className="info-box__text">
-                    <span className="info-box__label">
-                      {pedidoSel.numero} · {pedidoSel.cliente?.nombre}
-                    </span>
-                    Total pagado: {fmt(pedidoSel.total)} · {pedidoSel.metodo_pago}
-                  </div>
-                </div>
-              )}
+              {pedidoSel && <ResumenPedido pedido={pedidoSel} />}
             </>
           )}
 
-          {/* ── Paso 2: Detalles ── */}
+          {/* ── Paso 2: Productos a devolver ── */}
           {step === 2 && (
             <>
-              {/* Productos */}
-              <p className="section-label" style={{ textTransform: "none", marginTop: 0 }}>
-                Productos a devolver
+              <p className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>
+                ¿Qué productos quieres devolver?
               </p>
 
               <div className="prod-dev-list">
-                {/* Encabezado de columnas */}
                 <div className="prod-dev-list__header">
                   <span>Producto</span>
                   <span style={{ textAlign: "center" }}>Cantidad</span>
                   <span style={{ textAlign: "right" }}>Subtotal</span>
                 </div>
-
-                {items.map((item, idx) => (
-                  <ProdItem key={idx} item={item} idx={idx} onSet={setCantidad} />
-                ))}
+                {items.length === 0 ? (
+                  <div style={{ padding: "14px", textAlign: "center", fontSize: 13, color: "#bdbdbd" }}>
+                    Sin productos disponibles
+                  </div>
+                ) : (
+                  items.map((item, idx) => (
+                    <ProdItem key={idx} item={item} idx={idx} onSet={setCantidad} />
+                  ))
+                )}
               </div>
 
-              {errors.items && (
-                <p className="field-error" style={{ marginTop: 6 }}>{errors.items}</p>
+              {errors.items && <p className="field-error">{errors.items}</p>}
+
+              {totalDevolucion > 0 && (
+                <div className="dev-subtotal-bar">
+                  <span>Subtotal a devolver</span>
+                  <span className="dev-subtotal-bar__val">{fmt(totalDevolucion)}</span>
+                </div>
               )}
+            </>
+          )}
 
-              {/* Total + Motivo */}
-              <div className="form-grid-2" style={{ marginTop: 16 }}>
-                <div className="field-wrap">
-                  <label className="field-label">
-                    Motivo <span className="required">*</span>
-                  </label>
-                  <div className="select-wrap">
-                    <select
-                      className={`field-select${errors.motivo ? " error" : ""}`}
-                      value={motivo}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setMotivo(val);
-                        setErrors((prev) => ({ ...prev, motivo: val ? "" : "Selecciona el motivo de la devolución" }));
-                      }}
-                    >
-                      <option value="">Seleccione…</option>
-                      {MOTIVOS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    <SelectArrow />
-                  </div>
-                  {errors.motivo && (
-                    <span className="field-error">{errors.motivo}</span>
-                  )}
-                </div>
+          {/* ── Paso 3: Motivo y detalles ── */}
+          {step === 3 && (
+            <>
+              <p className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>
+                Motivo de la devolución
+              </p>
 
-                <div className="field-wrap">
-                  <label className="field-label">Total a devolver</label>
-                  <div className="total-devolucion-val">
-                    {fmt(totalDevolucion)}
-                  </div>
+              <div className="field-wrap">
+                <label className="field-label">
+                  Motivo <span className="required">*</span>
+                </label>
+                <div className="select-wrap">
+                  <select
+                    className={`field-select${errors.motivo ? " error" : ""}`}
+                    value={motivo}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setMotivo(val);
+                      setErrors((prev) => ({ ...prev, motivo: "" }));
+                    }}
+                  >
+                    <option value="">Seleccione…</option>
+                    {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <SelectArrow />
                 </div>
+                {errors.motivo && <span className="field-error">{errors.motivo}</span>}
               </div>
 
-              {/* Comentario */}
-              <div className="field-wrap" style={{ marginTop: 12 }}>
+              <div className="field-wrap">
                 <label className="field-label">Comentario (opcional)</label>
                 <textarea
                   className="field-textarea"
@@ -415,36 +505,47 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
                 />
               </div>
 
-              {/* Evidencia */}
-              <div className="field-wrap" style={{ marginTop: 12 }}>
+              <div className="field-wrap">
                 <label className="field-label">Evidencia (opcional)</label>
                 <EvidenciaUpload evidencia={evidencia} onEvidencia={setEvidencia} />
+              </div>
+
+              <div className="dev-resumen-final">
+                <div className="dev-resumen-final__row">
+                  <span>Productos a devolver</span>
+                  <span>{itemsSeleccionados.length} ítem{itemsSeleccionados.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="dev-resumen-final__row dev-resumen-final__row--total">
+                  <span>Total a devolver</span>
+                  <span>{fmt(totalDevolucion)}</span>
+                </div>
               </div>
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ justifyContent: "space-between" }}>
+        <div className="modal-footer" style={{ justifyContent: "space-between", padding: "10px 20px" }}>
           {step > 1 ? (
             <button className="btn-ghost" onClick={handleBack}>← Atrás</button>
           ) : (
             <button className="btn-ghost" onClick={onClose}>Cancelar</button>
           )}
-          <div style={{ display: "flex", gap: 10 }}>
-            {step < 2 ? (
-              <button className="btn-save" onClick={handleNext}>Siguiente →</button>
-            ) : (
-              <button
-                className="btn-save"
-                style={{ background: "#c62828" }}
-                onClick={handleSave}
-                disabled={saving || totalDevolucion === 0}
-              >
-                {saving ? "Guardando…" : "Registrar"}
-              </button>
-            )}
-          </div>
+
+          {step < 3 ? (
+            <button className="btn-save" onClick={handleNext}>
+              Siguiente →
+            </button>
+          ) : (
+            <button
+              className="btn-save"
+              style={{ background: "#c62828" }}
+              onClick={handleSave}
+              disabled={saving || totalDevolucion === 0}
+            >
+              {saving ? "Guardando…" : "Registrar devolución"}
+            </button>
+          )}
         </div>
 
       </div>

@@ -12,9 +12,11 @@ const adaptFicha = (producto) => {
     version:       f.Version || "v1.0",
     estado:        f.Estado === 1,
     fecha:         fmtFecha(f.Fecha_Creacion),
-    fotoPreview:   (producto.imagenes || [])[0]?.url || null,
-    procedimiento: f.Procedimiento || "",
-    observaciones: f.Observaciones || "",
+    fotoPreview:      (producto.imagenes || [])[0]?.url || null,
+    procedimiento:    f.Procedimiento || "",
+    observaciones:    f.Observaciones || "",
+    vidaUtilCantidad: f.Dias_Vida_Util != null ? String(f.Dias_Vida_Util) : "",
+    vidaUtilUnidad:   f.Vida_Util_Unidad || "dias",
     insumos: (f.insumos || []).map(i => ({
       id:              i.ID_Ficha_Insumo || (Date.now() + Math.random()),
       idInsumo:        i.ID_Insumo,
@@ -49,10 +51,12 @@ export const crearFicha = async (payload) => {
   const data = await apiFetch(`/productos/${idProducto}/ficha`, {
     method: "POST",
     body: JSON.stringify({
-      Version:       payload.version       || null,
-      Observaciones: payload.observaciones || null,
-      Procedimiento: payload.procedimiento || null,
-      insumos:       buildInsumos(payload.insumos),
+      Version:          payload.version       || null,
+      Observaciones:    payload.observaciones || null,
+      Procedimiento:    payload.procedimiento || null,
+      Dias_Vida_Util:   payload.vidaUtilCantidad ? Number(payload.vidaUtilCantidad) : null,
+      Vida_Util_Unidad: payload.vidaUtilCantidad ? (payload.vidaUtilUnidad || "dias") : null,
+      insumos:          buildInsumos(payload.insumos),
     }),
   });
   return adaptFicha(data);
@@ -62,10 +66,12 @@ export const editarFicha = async (productoId, payload) => {
   const data = await apiFetch(`/productos/${productoId}/ficha`, {
     method: "PUT",
     body: JSON.stringify({
-      Version:       payload.version       || null,
-      Observaciones: payload.observaciones || null,
-      Procedimiento: payload.procedimiento || null,
-      insumos:       buildInsumos(payload.insumos),
+      Version:          payload.version       || null,
+      Observaciones:    payload.observaciones || null,
+      Procedimiento:    payload.procedimiento || null,
+      Dias_Vida_Util:   payload.vidaUtilCantidad ? Number(payload.vidaUtilCantidad) : null,
+      Vida_Util_Unidad: payload.vidaUtilCantidad ? (payload.vidaUtilUnidad || "dias") : null,
+      insumos:          buildInsumos(payload.insumos),
     }),
   });
   return adaptFicha(data);
