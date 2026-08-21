@@ -218,12 +218,24 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
         "requiere_produccion":           requiere_produccion,
         # Pedido especial por encima del stock + anticipo del 50% (calculado y
         # verificado en backend al crear la venta).
-        "sobre_stock":        bool(getattr(venta, "Sobre_Stock", 0)),
-        "anticipo_requerido": getattr(venta, "Anticipo_Requerido", None),
-        "anticipo_pagado":    getattr(venta, "Anticipo_Pagado", None),
+        "sobre_stock":             bool(getattr(venta, "Sobre_Stock", 0)),
+        "anticipo_requerido":      getattr(venta, "Anticipo_Requerido", None),
+        "anticipo_pagado":         getattr(venta, "Anticipo_Pagado", None),
+        "requiere_anticipo":       bool(getattr(venta, "Requiere_Anticipo", 0)),
+        "anticipo_monto":          getattr(venta, "Anticipo_Monto", None),
+        "anticipo_metodo_pago":    getattr(venta, "Anticipo_Metodo_Pago", None),
+        "anticipo_comprobante_url": getattr(venta, "Anticipo_Comprobante_Url", None),
+        "anticipo_registrado":       bool(getattr(venta, "Anticipo_Registrado", 0)),
+        "pago_final_registrado":     bool(getattr(venta, "Pago_Final_Registrado", 0)),
+        "pago_final_monto":          getattr(venta, "Pago_Final_Monto", None),
+        "pago_final_metodo_pago":    getattr(venta, "Pago_Final_Metodo_Pago", None),
+        "pago_final_comprobante_url": getattr(venta, "Pago_Final_Comprobante_Url", None),
+        "pago_final_fecha":          getattr(venta, "Pago_Final_Fecha", None),
+        "estado_pago":               getattr(venta, "Estado_Pago", "pendiente"),
         # True solo en los pedidos a los que hay que proponerles fecha
         # (sobre stock o producción). Los normales no la necesitan.
         "requiere_fecha_propuesta": requiere_fecha_propuesta(db, venta),
+        "fecha_rechazada": getattr(venta, "Fecha_Rechazada", None),
     }
 
 
@@ -452,9 +464,20 @@ def _batch_ventas(ventas: list, db: Session) -> list:
             "ID_Empleado":                  dom.ID_Empleado if dom else None,
             "ordenes_produccion_pendientes": ordenes_counts.get(venta.ID_Venta, 0),
             "requiere_produccion":           requiere_produccion,
-            "sobre_stock":        bool(getattr(venta, "Sobre_Stock", 0)),
-            "anticipo_requerido": getattr(venta, "Anticipo_Requerido", None),
-            "anticipo_pagado":    getattr(venta, "Anticipo_Pagado", None),
+            "sobre_stock":             bool(getattr(venta, "Sobre_Stock", 0)),
+            "anticipo_requerido":      getattr(venta, "Anticipo_Requerido", None),
+            "anticipo_pagado":         getattr(venta, "Anticipo_Pagado", None),
+            "requiere_anticipo":       bool(getattr(venta, "Requiere_Anticipo", 0)),
+            "anticipo_monto":          getattr(venta, "Anticipo_Monto", None),
+            "anticipo_metodo_pago":    getattr(venta, "Anticipo_Metodo_Pago", None),
+            "anticipo_comprobante_url": getattr(venta, "Anticipo_Comprobante_Url", None),
+            "anticipo_registrado":       bool(getattr(venta, "Anticipo_Registrado", 0)),
+            "pago_final_registrado":     bool(getattr(venta, "Pago_Final_Registrado", 0)),
+            "pago_final_monto":          getattr(venta, "Pago_Final_Monto", None),
+            "pago_final_metodo_pago":    getattr(venta, "Pago_Final_Metodo_Pago", None),
+            "pago_final_comprobante_url": getattr(venta, "Pago_Final_Comprobante_Url", None),
+            "pago_final_fecha":          getattr(venta, "Pago_Final_Fecha", None),
+            "estado_pago":               getattr(venta, "Estado_Pago", "pendiente"),
             "requiere_fecha_propuesta": rfp,
         })
 
@@ -735,6 +758,15 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     else:
         nueva_venta.Sobre_Stock = 0
 
+    # Anticipo del 50% por total > $50.000 (regla general — lo registra el admin al crear)
+    if datos.requiere_anticipo:
+        nueva_venta.Requiere_Anticipo        = 1
+        nueva_venta.Anticipo_Monto           = datos.anticipo_monto
+        nueva_venta.Anticipo_Metodo_Pago     = datos.anticipo_metodo_pago
+        nueva_venta.Anticipo_Comprobante_Url = datos.anticipo_comprobante_url
+        nueva_venta.Anticipo_Registrado      = 1 if datos.anticipo_registrado else 0
+        nueva_venta.Estado_Pago              = "anticipo_pagado" if datos.anticipo_registrado else "pendiente"
+
     db.add(DetalleVenta(
         ID_Venta    = nueva_venta.ID_Venta,
         A_Nombre_De = datos.A_Nombre_De,
@@ -818,6 +850,49 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     return _formato_venta(nueva_venta, db)
 
 
+def registrar_pago_final(db: Session, id_venta: int, datos) -> dict:
+    """Registra el cobro del saldo restante al momento de entrega.
+
+    Precondiciones:
+    - La venta debe existir y requerir anticipo (Requiere_Anticipo == 1).
+    - La venta no puede estar ya en Entregado (8) ni en Cancelado (5).
+    """
+    from .schemas import PagoFinalCreate  # importación local para evitar circular
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+
+    if venta.Estado in (EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO):
+        raise HTTPException(
+            status_code=400,
+            detail="El pedido no está en un estado válido para registrar el pago final",
+        )
+
+    if not getattr(venta, "Requiere_Anticipo", 0):
+        raise HTTPException(
+            status_code=400,
+            detail="Este pedido no requiere anticipo; el pago final no aplica",
+        )
+
+    if datos.metodo_pago.lower() in ("transferencia", "digital") and not datos.comprobante_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Se requiere comprobante para pago por transferencia",
+        )
+
+    venta.Pago_Final_Monto           = datos.monto
+    venta.Pago_Final_Metodo_Pago     = datos.metodo_pago
+    venta.Pago_Final_Comprobante_Url = datos.comprobante_url
+    venta.Pago_Final_Fecha           = _now()
+    venta.Pago_Final_Registrado      = 1
+    venta.Estado_Pago                = "pagado_completo"
+
+    db.commit()
+    db.refresh(venta)
+    return _formato_venta(venta, db)
+
+
 def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
     venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
     if not venta:
@@ -841,6 +916,15 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
                     "No se puede marcar como Listo: la producción de este pedido aún no está "
                     "completada. Completá la orden de producción primero."
                 ),
+            )
+
+    # Bloquear paso a ENTREGADO si el pedido requiere anticipo y el saldo no fue registrado.
+    # No afecta pedidos donde Requiere_Anticipo == 0 (flujo normal sin anticipo).
+    if nuevo_estado == EstadoPedido.ENTREGADO and getattr(venta, "Requiere_Anticipo", 0):
+        if not getattr(venta, "Pago_Final_Registrado", 0):
+            raise HTTPException(
+                status_code=400,
+                detail="Debe registrar el pago final antes de marcar el pedido como entregado",
             )
 
     # Comprobante obligatorio para marcar como entregado SOLO si el pago fue por
@@ -1035,6 +1119,7 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
     descartar_notificacion(db, "pedido_sobre_stock",   id_venta)
     venta.Estado = EstadoPedido.FECHA_PROPUESTA
     venta.Fecha_entrega_esperada = fecha_entrega
+    venta.Fecha_Rechazada = None
     notificar(
         db, "fecha_propuesta", "Fecha de entrega propuesta",
         f"El administrador propuso una fecha de entrega para tu pedido #{id_venta}",
@@ -1059,34 +1144,39 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
 def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> None:
     """Crea órdenes de producción para los productos que requieren producción."""
     items_venta = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
+    if not items_venta:
+        return
+
+    # Batch: precargar productos, fichas y templates en 3 queries
+    prod_ids     = [item.ID_Producto for item in items_venta]
+    productos_m  = {p.ID_Producto: p for p in db.query(Producto).filter(Producto.ID_Producto.in_(prod_ids)).all()}
+    req_ids      = [pid for pid, p in productos_m.items() if getattr(p, "Requiere_Produccion", 0)]
+
+    fichas_m: dict = {}
+    templates_m: dict = {}
+    if req_ids:
+        for f in (db.query(FichaTecnica)
+                    .filter(FichaTecnica.ID_Producto.in_(req_ids), FichaTecnica.Estado == 1)
+                    .order_by(FichaTecnica.ID_Ficha.desc()).all()):
+            fichas_m.setdefault(f.ID_Producto, f)
+        for t in (db.query(OrdenProduccion)
+                    .filter(OrdenProduccion.ID_Producto.in_(req_ids),
+                            OrdenProduccion.ID_Insumo != None,
+                            OrdenProduccion.Estado != 5)
+                    .order_by(OrdenProduccion.ID_Orden_Produccion.desc()).all()):
+            templates_m.setdefault(t.ID_Producto, t)
+
     for item in items_venta:
-        prod = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
+        prod = productos_m.get(item.ID_Producto)
         if not prod or not getattr(prod, "Requiere_Produccion", 0):
             continue
-
-        cantidad = (item.Cantidad or 0)
+        cantidad = item.Cantidad or 0
         if cantidad <= 0:
             continue
-
-        ficha = (
-            db.query(FichaTecnica)
-            .filter(FichaTecnica.ID_Producto == item.ID_Producto, FichaTecnica.Estado == 1)
-            .order_by(FichaTecnica.ID_Ficha.desc())
-            .first()
-        )
-        template = (
-            db.query(OrdenProduccion)
-            .filter(
-                OrdenProduccion.ID_Producto == item.ID_Producto,
-                OrdenProduccion.ID_Insumo   != None,
-                OrdenProduccion.Estado      != 5,
-            )
-            .order_by(OrdenProduccion.ID_Orden_Produccion.desc())
-            .first()
-        )
+        ficha    = fichas_m.get(item.ID_Producto)
+        template = templates_m.get(item.ID_Producto)
         id_ficha  = ficha.ID_Ficha     if ficha    else (template.ID_Ficha  if template else None)
         id_insumo = template.ID_Insumo if template else None
-
         db.add(OrdenProduccion(
             ID_Venta      = id_venta,
             ID_Producto   = item.ID_Producto,
@@ -1160,6 +1250,7 @@ def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
     if tiene_domicilio:
         venta.Estado = EstadoPedido.PENDIENTE
         venta.Fecha_entrega_esperada = None
+        venta.Fecha_Rechazada = _now()
         notificar(
             db, "fecha_rechazada", "Fecha rechazada por el cliente",
             f"El cliente rechazó la fecha del pedido #{id_venta}. Propone una nueva fecha.",
@@ -1171,6 +1262,7 @@ def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
 
     # Pedidos de producción (sin domicilio): flujo existente → se cancela y se
     # devuelve el crédito usado.
+    venta.Fecha_Rechazada = _now()
     venta.Estado = EstadoPedido.CANCELADO
     notificar(
         db, "fecha_rechazada", "Fecha rechazada por el cliente",

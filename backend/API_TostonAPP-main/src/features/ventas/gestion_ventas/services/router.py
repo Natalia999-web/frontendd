@@ -4,11 +4,12 @@ from typing import Optional
 
 from src.shared.services.database import get_db
 from src.features.auth.services.dependencies import requiere_permiso, obtener_usuario_actual
-from .schemas import VentaCreate, VentaEstado, VentaResponse, VentaListResponse, FechaEntregaInput
+from .schemas import VentaCreate, VentaEstado, VentaResponse, VentaListResponse, FechaEntregaInput, PagoFinalCreate
 from .service import (
     obtener_ventas, obtener_venta, obtener_mi_venta, crear_venta, cambiar_estado,
     obtener_mis_ventas, obtener_mi_credito,
     proponer_fecha, aceptar_fecha, rechazar_fecha,
+    registrar_pago_final,
 )
 
 router = APIRouter(prefix="/ventas", tags=["Gestión de Ventas"])
@@ -121,6 +122,17 @@ def aceptar_fecha_endpoint(
 ):
     """El cliente acepta la fecha propuesta → pedido pasa a Confirmado (4)."""
     return aceptar_fecha(db, id_venta, actual)
+
+
+@router.post("/{id_venta}/registrar-pago-final", response_model=VentaResponse)
+def registrar_pago_final_endpoint(
+    id_venta: int,
+    datos:    PagoFinalCreate,
+    db:       Session = Depends(get_db),
+    _:        dict    = Depends(requiere_permiso("editar_ventas")),
+):
+    """Registra el pago del saldo restante al momento de entrega. Solo para pedidos con anticipo."""
+    return registrar_pago_final(db, id_venta, datos)
 
 
 @router.patch("/{id_venta}/rechazar-fecha", response_model=VentaResponse)

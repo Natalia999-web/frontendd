@@ -29,9 +29,21 @@ class VentaCreate(BaseModel):
     codigo_descuento:       Optional[str]       = None
     usar_credito:           bool                = False
     domicilio:              Optional[DomicilioVentaInput] = None
-    comprobante_pago:       Optional[str]       = None
-    Fecha_entrega_esperada: Optional[datetime]  = None      # cuándo quiere recibir/recoger el pedido
-    creado_por_admin:       bool                = False     # si True: nace en Confirmado (4) con orden de producción
+    comprobante_pago:         Optional[str]       = None
+    Fecha_entrega_esperada:   Optional[datetime]  = None
+    creado_por_admin:         bool                = False
+    requiere_anticipo:        bool                = False
+    anticipo_monto:           Optional[float]     = None
+    anticipo_metodo_pago:     Optional[str]       = None
+    anticipo_comprobante_url: Optional[str]       = None
+    anticipo_registrado:      bool                = False
+
+
+# ── Registrar pago del saldo final al entregar ──
+class PagoFinalCreate(BaseModel):
+    monto:           float
+    metodo_pago:     str            # "Efectivo" | "Transferencia"
+    comprobante_url: Optional[str]  = None  # requerido solo para Transferencia
 
 
 # ── Cambiar estado de venta ──
