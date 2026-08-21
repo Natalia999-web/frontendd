@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import { getInsumos, getLotesInsumo } from "../../../services/insumosService.js";
 import { fmtFecha } from "../../../utils/dateUtils";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./compras.css";
 
 const CANT_MAX  = 10_000;
@@ -629,18 +630,16 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
               <div className="field-grid-2">
                 <div className="field-wrap">
                   <label className="field-label">Método de pago</label>
-                  <div className="select-wrap">
-                    <select
-                      className="field-select"
-                      value={form.metodoPago}
-                      onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
-                    >
-                      {METODOS_PAGO.map(m => (
-                        <option key={m.value} value={m.value}>{m.icon} {m.label}</option>
-                      ))}
-                    </select>
-                    <span className="select-arrow">▾</span>
-                  </div>
+                  <SearchableSelect
+                    options={METODOS_PAGO}
+                    value={form.metodoPago}
+                    onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
+                    getValue={m => m.value}
+                    getLabel={m => `${m.icon} ${m.label}`}
+                    placeholder="— Seleccionar —"
+                    searchPlaceholder="🔍 Método…"
+                    className="field-select"
+                  />
                 </div>
                 <div />
               </div>

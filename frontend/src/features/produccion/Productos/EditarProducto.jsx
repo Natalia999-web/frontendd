@@ -11,6 +11,7 @@
 import { useState, useRef } from "react";
 import { tieneLetras } from "../../../utils/inputFilters";
 import CharCount from "../../../shared/components/CharCount";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { ModalOverlay } from "./ui.jsx";
 import {
   editarProducto as apiEditarProducto,
@@ -112,9 +113,9 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
     imagenesPreview: (product.imagenesApi ?? []).map((img) => img.url).filter(Boolean),
   }));
 
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [step,   setStep]   = useState(1);
+  const [errors,    setErrors]    = useState({});
+  const [saving,    setSaving]    = useState(false);
+  const [step,      setStep]      = useState(1);
   const fileRef = useRef();
 
   /* ── Costos ── */
@@ -337,19 +338,16 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
 
             <div className="form-group">
               <label className="form-label">Categoría</label>
-              <select
-                className={`field-input${errors.idCategoria ? " field-input--error" : ""}`}
+              <SearchableSelect
+                options={categorias}
                 value={form.idCategoria}
-                onChange={(e) => set("idCategoria", e.target.value)}
-                style={{ cursor: "pointer" }}
-              >
-                <option value="">— Seleccionar —</option>
-                {categorias.map((c) => (
-                  <option key={c.ID_Categoria} value={c.ID_Categoria}>
-                    {c.Icono ?? "📦"} {c.Nombre_Categoria}
-                  </option>
-                ))}
-              </select>
+                onChange={e => set("idCategoria", e.target.value)}
+                getValue={c => c.ID_Categoria}
+                getLabel={c => `${c.Icono ?? "📦"} ${c.Nombre_Categoria}`}
+                placeholder="— Seleccionar —"
+                searchPlaceholder="🔍 Buscar categoría…"
+                className={`field-input${errors.idCategoria ? " field-input--error" : ""}`}
+              />
               {errors.idCategoria && (
                 <p className="field-error">{errors.idCategoria}</p>
               )}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { getCategorias } from "../../../../services/categoriasInsumosService.js";
 import { getInsumos } from "../../../../services/insumosService.js";
 import { getProductos } from "../../../../services/productosService.js";
+import SearchableSelect from "../../../../shared/components/SearchableSelect.jsx";
 import "./FichasTecnicas.css";
 
 const UNIDADES = ["kg","g","l","ml","unidad","taza","cucharada","cucharadita"];
@@ -207,21 +208,23 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                   </div>
                 ) : (
                   <>
-                    <select
-                      className={`field-input${errors.producto ? " field-input--error" : ""}`}
+                    <SearchableSelect
+                      options={productosDisponibles}
                       value={form.productoId}
+                      getValue={p => p.id}
+                      getLabel={p => p.nombre}
+                      placeholder="— Selecciona un producto —"
+                      searchPlaceholder="🔍 Buscar producto…"
+                      className={`field-input${errors.producto ? " field-input--error" : ""}`}
+                      error={!!errors.producto}
                       onChange={e => {
                         const id = e.target.value;
                         const found = productosDisponibles.find(p => String(p.id) === String(id));
                         set("productoId", id);
                         set("producto", found?.nombre || "");
                         if (!id) setErrors(p => ({ ...p, producto: "Selecciona un producto" }));
-                      }}>
-                      <option value="">— Selecciona un producto —</option>
-                      {productosDisponibles.map(p => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                      ))}
-                    </select>
+                      }}
+                    />
                     {errors.producto && <p className="field-error">{errors.producto}</p>}
                   </>
                 )}
@@ -280,21 +283,30 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                     {form.insumos.map((ins, idx) => (
                       <tr key={ins.id} className={idx % 2 === 0 ? "ficha-insumos-tbl__row" : "ficha-insumos-tbl__row ficha-insumos-tbl__row--alt"}>
                         <td>
-                          <select className="ficha-select" value={ins.idCategoria}
-                            onChange={e => setInsumo(ins.id, "idCategoria", e.target.value)}>
-                            <option value="">— Categoría —</option>
-                            {categoriasInsumosActivas.map(c => <option key={c.id} value={c.id}>{c.icon} {c.nombre}</option>)}
-                          </select>
+                          <SearchableSelect
+                            className="ficha-select"
+                            options={categoriasInsumosActivas}
+                            value={ins.idCategoria}
+                            onChange={e => setInsumo(ins.id, "idCategoria", e.target.value)}
+                            getValue={c => c.id}
+                            getLabel={c => `${c.icon || ""} ${c.nombre}`}
+                            placeholder="— Categoría —"
+                            searchPlaceholder="🔍 Categoría…"
+                          />
                         </td>
                         <td>
-                          <select className="ficha-select" value={ins.idInsumo}
+                          <SearchableSelect
+                            className="ficha-select"
+                            options={insumosPorCategoriaId[String(ins.idCategoria)] || []}
+                            value={ins.idInsumo}
                             onChange={e => setInsumo(ins.id, "idInsumo", e.target.value)}
-                            disabled={!ins.idCategoria} style={{ opacity: ins.idCategoria ? 1 : 0.45 }}>
-                            <option value="">— Insumo —</option>
-                            {(insumosPorCategoriaId[String(ins.idCategoria)] || []).map(insumo =>
-                              <option key={insumo.id} value={insumo.id}>{insumo.nombre}</option>
-                            )}
-                          </select>
+                            getValue={i => i.id}
+                            getLabel={i => i.nombre}
+                            placeholder="— Insumo —"
+                            searchPlaceholder="🔍 Insumo…"
+                            disabled={!ins.idCategoria}
+                            style={{ opacity: ins.idCategoria ? 1 : 0.45 }}
+                          />
                         </td>
                         <td>
                           <input className="ficha-input-num" type="number" min="0" placeholder="0"

@@ -175,6 +175,29 @@ def migrate_db():
                 _log.error("migración pago_final FALLÓ — %s", exc, exc_info=True)
                 raise
 
+    # ── Necesita_Produccion: flag guardado al crear la venta (stock snapshot) ───
+    # Evita que el cálculo dinámico de requiere_fecha_propuesta sea incorrecto
+    # cuando el stock cambia después de que el pedido fue creado.
+    with engine.connect() as conn:
+        existe = conn.execute(text(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() "
+            "  AND TABLE_NAME   = 'Ventas' "
+            "  AND COLUMN_NAME  = 'Necesita_Produccion'"
+        )).scalar()
+        if not existe:
+            try:
+                conn.execute(text(
+                    "ALTER TABLE Ventas ADD COLUMN Necesita_Produccion TINYINT(1) NOT NULL DEFAULT 0"
+                ))
+                conn.commit()
+                _log.info("migración necesita_produccion: columna creada")
+            except Exception as exc:
+                _log.error("migración necesita_produccion FALLÓ — %s", exc, exc_info=True)
+                raise
+        else:
+            _log.info("migración necesita_produccion: ya existe, sin cambios")
+
     # Migrar FK de Domicilios.ID_Empleado: Empleados → Usuarios
     # El código usa Usuarios.ID_Usuario pero la DB de producción aún apunta a Empleados
     with engine.connect() as conn:

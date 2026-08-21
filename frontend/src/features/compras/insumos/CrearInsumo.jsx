@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./GestionInsumos.css";
 import { soloLetras, esRepetitivo } from "../../../utils/inputFilters";
 
@@ -33,9 +34,9 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
   const [form, setForm] = useState({
     nombre: "", idCategoria: "", idUnidad: "", stockMinimo: "",
   });
-  const [errors, setSErrors] = useState({});
-  const [saving, setSaving]  = useState(false);
-  const [step, setStep]      = useState(1);
+  const [errors, setSErrors]  = useState({});
+  const [saving, setSaving]   = useState(false);
+  const [step, setStep]       = useState(1);
 
   const set = (k, v) => {
     setForm(p => ({ ...p, [k]: v }));
@@ -134,13 +135,16 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
               <div className="form-grid-2">
                 <div className="form-group">
                   <label className="form-label">Categoría <span className="required">*</span></label>
-                  <select
+                  <SearchableSelect
+                    options={categorias}
+                    value={form.idCategoria}
+                    onChange={e => set("idCategoria", e.target.value)}
+                    getValue={c => c.id}
+                    getLabel={c => `${c.icon || ""} ${c.nombre}`}
+                    placeholder="— Seleccionar —"
+                    searchPlaceholder="🔍 Buscar categoría…"
                     className={`field-input${errors.idCategoria ? " error" : ""}`}
-                    value={form.idCategoria} onChange={e => set("idCategoria", e.target.value)}
-                  >
-                    <option value="">— Seleccionar —</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.icon} {c.nombre}</option>)}
-                  </select>
+                  />
                   {errors.idCategoria && <p className="field-error">{errors.idCategoria}</p>}
                 </div>
                 <div className="form-group">

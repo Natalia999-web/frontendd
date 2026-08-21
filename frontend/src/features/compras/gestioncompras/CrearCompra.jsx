@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import { getInsumos } from "../../../services/insumosService.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./compras.css";
 
 const METODOS_PAGO = [
@@ -426,21 +427,17 @@ export default function CrearCompra({ onClose, onSave }) {
             <>
               <div className="field-wrap">
                 <label className="field-label">Proveedor <span className="required">*</span></label>
-                <div className="select-wrap">
-                  <select
-                    className={`field-select ${errors.idProveedor ? "error" : ""}`}
-                    value={form.idProveedor}
-                    onChange={e => set("idProveedor", e.target.value)}
-                  >
-                    <option value="">— Seleccionar proveedor —</option>
-                    {proveedores.map(p => (
-                      <option key={p.ID_Proveedor || p.id} value={p.ID_Proveedor || p.id}>
-                        {p.Responsable || p.responsable} · {p.Municipio || p.ciudad}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="select-arrow">▾</span>
-                </div>
+                <SearchableSelect
+                  options={proveedores}
+                  value={form.idProveedor}
+                  onChange={e => set("idProveedor", e.target.value)}
+                  getValue={p => p.ID_Proveedor || p.id}
+                  getLabel={p => `${p.Responsable || p.responsable || ""} · ${p.Municipio || p.ciudad || ""}`}
+                  placeholder="— Seleccionar proveedor —"
+                  searchPlaceholder="🔍 Buscar proveedor…"
+                  className="field-select"
+                  error={!!errors.idProveedor}
+                />
                 {errors.idProveedor && <span className="field-error">{errors.idProveedor}</span>}
               </div>
 
@@ -458,19 +455,16 @@ export default function CrearCompra({ onClose, onSave }) {
                 </div>
                 <div className="field-wrap">
                   <label className="field-label">Método de pago <span className="required">*</span></label>
-                  <div className="select-wrap">
-                    <select
-                      className={`field-select ${errors.metodoPago ? "error" : ""}`}
-                      value={form.metodoPago}
-                      onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
-                    >
-                      <option value="">— Seleccionar método —</option>
-                      {METODOS_PAGO.map(m => (
-                        <option key={m.value} value={m.value}>{m.icon} {m.label}</option>
-                      ))}
-                    </select>
-                    <span className="select-arrow">▾</span>
-                  </div>
+                  <SearchableSelect
+                    options={METODOS_PAGO}
+                    value={form.metodoPago}
+                    onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
+                    getValue={m => m.value}
+                    getLabel={m => `${m.icon} ${m.label}`}
+                    placeholder="— Seleccionar método —"
+                    searchPlaceholder="🔍 Método…"
+                    className={`field-select ${errors.metodoPago ? "error" : ""}`}
+                  />
                   {errors.metodoPago && <span className="field-error">{errors.metodoPago}</span>}
                 </div>
               </div>

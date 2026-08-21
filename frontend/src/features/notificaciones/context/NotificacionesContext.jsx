@@ -25,6 +25,7 @@ export const TIPOS = {
   DEVOLUCION_RECHAZADA:      "devolucion_rechazada",
   PEDIDO_EN_PRODUCCION:      "pedido_en_produccion",
   FECHA_PROPUESTA:           "fecha_propuesta",
+  FECHA_RECHAZADA:           "fecha_rechazada",
 };
 
 export const TIPO_LABELS = {
@@ -43,6 +44,7 @@ export const TIPO_LABELS = {
   [TIPOS.DEVOLUCION_RECHAZADA]: "Devolución",
   [TIPOS.PEDIDO_EN_PRODUCCION]: "Producción",
   [TIPOS.FECHA_PROPUESTA]:      "Fecha propuesta",
+  [TIPOS.FECHA_RECHAZADA]:      "Fecha rechazada",
 };
 
 export const TIPO_ICONS = {
@@ -61,6 +63,7 @@ export const TIPO_ICONS = {
   [TIPOS.DEVOLUCION_RECHAZADA]: "❌",
   [TIPOS.PEDIDO_EN_PRODUCCION]: "🏭",
   [TIPOS.FECHA_PROPUESTA]:      "📅",
+  [TIPOS.FECHA_RECHAZADA]:      "❌",
 };
 
 export const TIPO_COLORS = {
@@ -79,6 +82,7 @@ export const TIPO_COLORS = {
   [TIPOS.DEVOLUCION_RECHAZADA]: "#c62828",
   [TIPOS.PEDIDO_EN_PRODUCCION]: "#1565c0",
   [TIPOS.FECHA_PROPUESTA]:      "#283593",
+  [TIPOS.FECHA_RECHAZADA]:      "#c62828",
 };
 
 // Tipos backend → tipos frontend
@@ -93,6 +97,7 @@ const BACKEND_TYPE_MAP = {
   devolucion_pendiente:   TIPOS.DEVOLUCION_PENDIENTE,
   pedido_en_produccion:   TIPOS.PEDIDO_EN_PRODUCCION,
   fecha_propuesta:        TIPOS.FECHA_PROPUESTA,
+  fecha_rechazada:        TIPOS.FECHA_RECHAZADA,
 };
 
 // Tipos propios de notificaciones de cliente (no van a localStorage de admin)

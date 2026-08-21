@@ -125,6 +125,19 @@ def editar_pedido(db: Session, id_venta: int, datos: dict) -> dict:
         if datos.get("Subtotal") is not None:
             detalle.SubTotal = datos["Subtotal"]
 
+    # Registrar anticipo (cuando el admin confirma que ya recibió el 50%)
+    if datos.get("Anticipo_Registrado"):
+        pedido.Anticipo_Registrado = 1
+        if datos.get("Anticipo_Monto") is not None:
+            pedido.Anticipo_Monto = datos["Anticipo_Monto"]
+        if datos.get("Anticipo_Metodo_Pago"):
+            pedido.Anticipo_Metodo_Pago = datos["Anticipo_Metodo_Pago"]
+        if datos.get("Anticipo_Comprobante_Url"):
+            pedido.Anticipo_Comprobante_Url = datos["Anticipo_Comprobante_Url"]
+        _ep = (getattr(pedido, "Estado_Pago", None) or "pendiente").strip()
+        if _ep not in ("pagado_completo", "efectivo_recibido"):
+            pedido.Estado_Pago = "anticipo_pagado"
+
     quiere_domicilio = datos.get("Domicilio")
     domicilio = db.query(Domicilio).filter(Domicilio.ID_Venta == id_venta).first()
 

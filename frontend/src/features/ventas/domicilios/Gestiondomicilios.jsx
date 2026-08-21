@@ -5,6 +5,7 @@ import { getUsuarios, toggleEstadoUsuario, crearEmpleado, editarUsuario } from "
 import { getUser } from "../../../services/authService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./Domicilios.css";
 
 function SkeletonRows({ cols = 9, rows = 5 }) {
@@ -657,22 +658,16 @@ function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
 
           <div>
             <label className="form-label">Nuevo domiciliario <span className="required">*</span></label>
-            <div className="select-wrap">
-              <select
-                className={`field-select${error ? " error" : ""}`}
-                value={empId}
-                onChange={e => { setEmpId(e.target.value); setError(""); }}
-              >
-                <option value="">Seleccione…</option>
-                {empleados.map(e => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre} {e.apellidos}
-                    {e.id === pedido.idEmpleado ? " (actual)" : ""}
-                  </option>
-                ))}
-              </select>
-              <SelectArrow />
-            </div>
+            <SearchableSelect
+              className={`field-select${error ? " error" : ""}`}
+              options={empleados}
+              value={empId}
+              onChange={e => { setEmpId(e.target.value); setError(""); }}
+              getValue={e => e.id}
+              getLabel={e => `${e.nombre} ${e.apellidos}${e.id === pedido.idEmpleado ? " (actual)" : ""}`}
+              placeholder="Seleccione…"
+              searchPlaceholder="🔍 Buscar domiciliario…"
+            />
             {error && <p className="field-error">{error}</p>}
           </div>
         </div>

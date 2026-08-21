@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotificaciones, TIPO_ICONS, TIPO_LABELS, TIPO_COLORS, TIPOS } from "../context/NotificacionesContext";
+
 import { fmtFechaHora as fmtFechaCompleta } from "../../../utils/dateUtils.js";
 import { aceptarFechaProduccion, rechazarFechaProduccion } from "../../../services/pedidosService.js";
 import "./notificaciones.css";
@@ -23,6 +24,7 @@ const RUTA_MAP = {
   [TIPOS.DEVOLUCION_RECHAZADA]: "/cliente/devoluciones",
   [TIPOS.PEDIDO_EN_PRODUCCION]: "/cliente/pedidos",
   [TIPOS.FECHA_PROPUESTA]:      "/cliente/pedidos",
+  [TIPOS.FECHA_RECHAZADA]:      "/admin/pedidos",
 };
 
 export default function NotificacionDetalle({ notif, onClose }) {

@@ -10,6 +10,7 @@
 import { useState, useRef } from "react";
 import { tieneLetras } from "../../../utils/inputFilters";
 import CharCount from "../../../shared/components/CharCount";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import CrearFicha from "./ficha_tecnica/CrearFicha.jsx";
 import {
   crearProducto as apiCrearProducto,
@@ -291,18 +292,16 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
                   <label className="form-label">
                     Categoría <span className="required">*</span>
                   </label>
-                  <select
-                    className={`field-input${errors.idCategoria ? " error" : ""}`}
+                  <SearchableSelect
+                    options={categorias}
                     value={form.idCategoria}
-                    onChange={(e) => set("idCategoria", e.target.value)}
-                  >
-                    <option value="">— Seleccionar —</option>
-                    {categorias.map((c) => (
-                      <option key={c.ID_Categoria} value={c.ID_Categoria}>
-                        {c.Icono ?? "📦"} {c.Nombre_Categoria}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={e => set("idCategoria", e.target.value)}
+                    getValue={c => c.ID_Categoria}
+                    getLabel={c => `${c.Icono ?? "📦"} ${c.Nombre_Categoria}`}
+                    placeholder="— Seleccionar —"
+                    searchPlaceholder="🔍 Buscar categoría…"
+                    className={`field-input${errors.idCategoria ? " error" : ""}`}
+                  />
                   {errors.idCategoria && (
                     <p className="field-error">{errors.idCategoria}</p>
                   )}

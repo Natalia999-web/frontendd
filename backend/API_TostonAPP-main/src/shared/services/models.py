@@ -399,6 +399,10 @@ class Venta(Base):
     Pago_Final_Fecha         = Column(DateTime,                          nullable=True)
     Estado_Pago              = Column(String(30),   default="pendiente", nullable=True)
     Fecha_Rechazada          = Column(DateTime,                          nullable=True)
+    # Guardado al crear la venta: True si algún producto de producción no tenía stock suficiente.
+    # Usar este valor (snapshot) evita que el botón "proponer fecha" aparezca incorrectamente
+    # cuando el stock cambia después de crear el pedido.
+    Necesita_Produccion      = Column(Integer,      default=0,           nullable=True)
 
     usuario            = relationship("Usuario", back_populates="ventas")
     productos          = relationship("VentaXProducto", back_populates="venta")

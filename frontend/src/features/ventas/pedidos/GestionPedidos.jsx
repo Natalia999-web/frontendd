@@ -11,6 +11,7 @@ import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import CrearPedido from "./CrearPedido.jsx";
 import EditarPedido from "./EditarPedido.jsx";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   Trash2, Truck, Package,
   RotateCcw, X, AlertCircle,
@@ -937,22 +938,16 @@ function ModalAsignarDomiciliario({ pedido, empleados, onClose, onConfirm }) {
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Seleccionar Nuevo Repartidor <span className="text-red-500">*</span></label>
-            <div className="relative">
-              <select
-                className={`w-full bg-gray-50 border-2 rounded-2xl py-4 px-4 text-sm font-bold text-gray-700 outline-none transition-all appearance-none ${
-                  error ? "border-red-500 bg-red-50" : "border-transparent focus:border-green-600 focus:bg-white"
-                }`}
-                value={empId}
-                onChange={e => { setEmpId(e.target.value); setError(""); }}
-              >
-                <option value="">— Elegir de la lista —</option>
-                {empleados.map(e => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre} {e.apellidos}{e.id === pedido.idEmpleado ? " (actual)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              options={empleados}
+              value={empId}
+              onChange={e => { setEmpId(e.target.value); setError(""); }}
+              getValue={e => e.id}
+              getLabel={e => `${e.nombre} ${e.apellidos}${e.id === pedido.idEmpleado ? " (actual)" : ""}`}
+              placeholder="— Elegir de la lista —"
+              searchPlaceholder="🔍 Buscar repartidor…"
+              className={`field-input${error ? " error" : ""}`}
+            />
             {error && <p className="text-[10px] font-bold text-red-500 px-2 flex items-center gap-1"><AlertCircle size={10} /> {error}</p>}
           </div>
         </div>

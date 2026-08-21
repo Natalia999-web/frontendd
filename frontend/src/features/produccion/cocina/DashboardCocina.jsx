@@ -72,6 +72,8 @@ export default function DashboardCocina() {
   const [errorCarga,    setErrorCarga]    = useState(null);
   const [errorAccion,   setErrorAccion]   = useState(null);
   const [selectedPedido, setSelectedPedido] = useState(null);
+  const [search,        setSearch]        = useState("");
+  const [filterEstado,  setFilterEstado]  = useState("todos");
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -95,6 +97,15 @@ export default function DashboardCocina() {
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   const cocinaPedidos        = pedidos.filter(p => ESTADOS_ACTIVOS_COCINA.includes(p.estado));
+
+  const q = search.trim().toLowerCase();
+  const pedidosFiltrados = cocinaPedidos.filter(p => {
+    const matchEstado  = filterEstado === "todos" || p.estado === filterEstado;
+    const matchSearch  = !q
+      || String(p.numero || "").toLowerCase().includes(q)
+      || (p.cliente?.nombre || "").toLowerCase().includes(q);
+    return matchEstado && matchSearch;
+  });
   const pedidosPendientes    = cocinaPedidos.filter(p => p.estado === "Pendiente");
   const pedidosConfirmados   = cocinaPedidos.filter(p => p.estado === "Confirmado");
   const pedidosEnPreparacion = cocinaPedidos.filter(p => p.estado === "En producción");
@@ -251,10 +262,47 @@ export default function DashboardCocina() {
           </div>
           <span className="ck-tag">Total {cocinaPedidos.length}</span>
         </div>
+
+        {/* Barra de búsqueda y filtro de estado */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160 }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#9e9e9e", pointerEvents: "none" }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar pedido o cliente…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: "100%", padding: "8px 10px 8px 30px",
+                border: "1.5px solid #e0e0e0", borderRadius: 8,
+                fontSize: 13, fontFamily: "inherit", outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          {["todos", "Pendiente", "Confirmado", "En producción", "Listo"].map(est => (
+            <button
+              key={est}
+              onClick={() => setFilterEstado(est)}
+              style={{
+                padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                border: filterEstado === est ? "1.5px solid #4caf50" : "1.5px solid #e0e0e0",
+                background: filterEstado === est ? "#e8f5e9" : "#fafafa",
+                color: filterEstado === est ? "#2e7d32" : "#616161",
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              {est === "todos" ? "Todos" : est}
+            </button>
+          ))}
+        </div>
+
         <div className="pedido-cards-grid">
-          {cocinaPedidos.length === 0 ? (
-            <div className="cocina-empty-state">No hay pedidos activos en cocina.</div>
-          ) : cocinaPedidos.map(pedido => (
+          {pedidosFiltrados.length === 0 ? (
+            <div className="cocina-empty-state">
+              {cocinaPedidos.length === 0 ? "No hay pedidos activos en cocina." : "Sin resultados para esa búsqueda."}
+            </div>
+          ) : pedidosFiltrados.map(pedido => (
             <article
               key={pedido.id}
               className={`pedido-card ${ESTADO_CARD_CLASS[pedido.estado] || ""}`}

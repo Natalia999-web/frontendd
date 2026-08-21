@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { getUsuarios, editarUsuario } from "../../../services/usuariosService.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { getProductos } from "../../../services/productosService.js";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
-import { registrarPagoFinal } from "../../../services/pedidosService.js";
+import { registrarPagoFinal, editarPedido } from "../../../services/pedidosService.js";
 import "./Pedidos.css";
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -276,6 +277,13 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const [saved,           setSaved]           = useState(false);
   const [editandoCliente, setEditandoCliente] = useState(false);
 
+  // Anticipo: registrar que fue recibido (cuando no se confirmó al crear)
+  const [apMetodo,   setApMetodo]   = useState("");
+  const [apEfectivo, setApEfectivo] = useState(false);
+  const [apSaving,   setApSaving]   = useState(false);
+  const [apOk,       setApOk]       = useState(pedido.anticipo_registrado || false);
+  const [apErrors,   setApErrors]   = useState({});
+
   // Pago final (saldo del anticipo al entregar)
   const [pfMetodo,   setPfMetodo]   = useState("");
   const [pfEfectivo, setPfEfectivo] = useState(false);
@@ -427,6 +435,27 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
     setForm(f => ({ ...f, productosItems: f.productosItems.filter((_, i) => i !== idx) }));
 
   const saldoAnticipo = Math.max(0, (pedido.total ?? 0) - (pedido.anticipo_monto ?? pedido.anticipo_requerido ?? 0));
+  const montoAnticipo = pedido.anticipo_monto ?? pedido.anticipo_requerido ?? 0;
+
+  const handleRegistrarAnticipo = async () => {
+    const e = {};
+    if (!apMetodo) e.metodo = "Selecciona el método de pago del anticipo";
+    if (apMetodo === "Efectivo 💵" && !apEfectivo) e.efectivo = "Confirma que recibiste el anticipo en efectivo";
+    if (Object.keys(e).length) { setApErrors(e); return; }
+    setApSaving(true);
+    try {
+      await editarPedido(pedido.id, {
+        Anticipo_Registrado:  true,
+        Anticipo_Monto:       montoAnticipo,
+        Anticipo_Metodo_Pago: apMetodo.includes("Transferencia") ? "Transferencia" : "Efectivo",
+      });
+      setApOk(true);
+    } catch (err) {
+      setApErrors(x => ({ ...x, metodo: err.message || "Error al registrar el anticipo" }));
+    } finally {
+      setApSaving(false);
+    }
+  };
 
   const handlePagoFinal = async () => {
     const e = {};
@@ -511,6 +540,61 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
             <div className="info-box info-box--warn">
               <span className="info-box__icon">⚠️</span>
               <span className="info-box__text">{restriccionesMsg[pedido.estado]}</span>
+            </div>
+          )}
+
+          {/* ── Anticipo del 50% ── */}
+          {pedido.requiere_anticipo && !apOk && (
+            <div style={{ border: "2px solid #ff9800", borderRadius: 14, background: "#fff8e1", padding: "16px 18px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 10 }}>⚠️ Registrar anticipo del 50%</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                <div style={{ background: "#fff3e0", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#f57c00", fontWeight: 700, textTransform: "uppercase" }}>Total pedido</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#333" }}>{fmt(pedido.total ?? 0)}</div>
+                </div>
+                <div style={{ background: "#e8f5e9", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#4caf50", fontWeight: 700, textTransform: "uppercase" }}>Anticipo (50%)</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#2e7d32" }}>{fmt(montoAnticipo)}</div>
+                </div>
+              </div>
+              <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método de pago del anticipo <span style={{ color: "#e53935" }}>*</span></p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                  <button key={m} type="button" onClick={() => { setApMetodo(m); setApEfectivo(false); setApErrors({}); }}
+                    style={{ padding: "10px 8px", borderRadius: 10, border: `2px solid ${apMetodo === m ? "#f57c00" : "#e0e0e0"}`, background: apMetodo === m ? "#fff3e0" : "#fff", color: apMetodo === m ? "#e65100" : "#888", fontWeight: apMetodo === m ? 700 : 500, fontSize: 12, cursor: "pointer" }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              {apMetodo === "Efectivo 💵" && (
+                <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: apEfectivo ? "#f1f8f1" : "#fafafa", padding: "10px 12px", borderRadius: 8, border: `2px solid ${apEfectivo ? "#2e7d32" : "#e0e0e0"}`, marginBottom: 8 }}>
+                  <input type="checkbox" checked={apEfectivo} onChange={e => { setApEfectivo(e.target.checked); setApErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 16, height: 16, accentColor: "#2e7d32" }} />
+                  <span style={{ fontSize: 12, color: apEfectivo ? "#1b5e20" : "#555", fontWeight: apEfectivo ? 700 : 400 }}>
+                    Confirmo que recibí <strong>{fmt(montoAnticipo)}</strong> en efectivo
+                  </span>
+                </label>
+              )}
+              {apMetodo === "Transferencia 🏦" && (
+                <p style={{ fontSize: 11, color: "#666", background: "#f5f5f5", padding: "8px 10px", borderRadius: 6, marginBottom: 8 }}>
+                  Sube el comprobante usando el botón 📎 de la tabla después de guardar.
+                </p>
+              )}
+              {(apErrors.metodo || apErrors.efectivo) && (
+                <p style={{ fontSize: 11, color: "#e53935", margin: "0 0 8px" }}>{apErrors.metodo || apErrors.efectivo}</p>
+              )}
+              <button type="button" onClick={handleRegistrarAnticipo} disabled={apSaving}
+                style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: apSaving ? "#bdbdbd" : "#ff9800", color: "#fff", fontWeight: 800, fontSize: 13, cursor: apSaving ? "not-allowed" : "pointer" }}>
+                {apSaving ? "Registrando…" : `Confirmar anticipo ${fmt(montoAnticipo)}`}
+              </button>
+            </div>
+          )}
+          {pedido.requiere_anticipo && apOk && (
+            <div style={{ border: "1.5px solid #a5d6a7", borderRadius: 12, background: "#e8f5e9", padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#2e7d32" }}>Anticipo registrado</div>
+                <div style={{ fontSize: 11, color: "#4caf50" }}>50% — {fmt(montoAnticipo)}</div>
+              </div>
             </div>
           )}
 

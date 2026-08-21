@@ -13,6 +13,7 @@ function adaptarOrden(o) {
   const label = o.estado_label || "";
   return {
     id:             o.ID_Orden_Produccion,
+    idVenta:        o.ID_Venta        || o.id_venta        || null,
     idProducto:     o.ID_Producto,
     nombreProducto: o.nombre_producto,
     idInsumo:       o.ID_Insumo,

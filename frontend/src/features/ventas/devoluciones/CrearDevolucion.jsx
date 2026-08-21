@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { getPedidos } from "../../../services/pedidosService.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./Devoluciones.css";
 
 const fmt = (n) =>

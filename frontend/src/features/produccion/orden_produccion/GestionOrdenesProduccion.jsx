@@ -7,6 +7,8 @@ import {
 } from "../../../services/ordenesProduccionService.js";
 import { getProducto, getProductos } from "../../../services/productosService.js";
 import { getInsumos }   from "../../../services/insumosService.js";
+import { cambiarEstadoVenta } from "../../../services/pedidosService.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./OrdenesProduccion.css";
 
 const PER_PAGE = 5;
@@ -151,8 +153,8 @@ function ModalDetallesOrden({ orden, onClose }) {
         }));
         setFichaInsumos(mapped);
 
-        // Cargar stock y precio de insumos
-        getInsumos({ porPagina: 1000 })
+        // Cargar stock y precio de insumos (max 100 por límite del backend)
+        getInsumos({ porPagina: 100 })
           .then(res => {
             if (!active) return;
             const map = {};
@@ -440,17 +442,18 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
     setStockLoading(true);
     Promise.all([
       getProducto(orden.idProducto),
-      getInsumos({ porPagina: 1000 }),
+      getInsumos({ porPagina: 100 }),
     ]).then(([prod, insData]) => {
       if (!active) return;
       const fichaInsumos = (prod?.ficha_tecnica?.insumos || []).map(i => ({
-        idInsumo: i.ID_Insumo || null,
-        nombre:   i.nombre_insumo || "",
+        idInsumo:    i.ID_Insumo || null,
+        nombre:      i.nombre_insumo || "",
         cantidadUnitaria: Number(i.Cantidad ?? 0),
-        unidad:   i.Unidad || "",
+        unidad:      i.Unidad || "",
+        stockActual: i.Stock_Actual ?? null,  // ya viene del backend en getProducto
       }));
 
-      // Mapa: idInsumo → { stock, simbolo }
+      // Mapa: idInsumo → { stock, simbolo } — solo para símbolo y respaldo de stock
       const stockMap = {};
       (insData.insumos || []).forEach(ins => {
         stockMap[ins.ID_Insumo] = {
@@ -464,7 +467,8 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
       // Calcula necesario con conversión a unidad base (misma lógica que el backend)
       const fichaConCheck = fichaInsumos.map(item => {
         const entry = stockMap[item.idInsumo] || {};
-        const stock = entry.stock ?? 0;
+        // Stock_Actual del producto tiene prioridad; getInsumos como respaldo
+        const stock = item.stockActual !== null ? item.stockActual : (entry.stock ?? 0);
         const simIns   = (entry.simbolo || "").toLowerCase();
         const simFicha = (item.unidad  || "").toLowerCase();
         const fi = FACTOR_CONV[simFicha] ?? 1;
@@ -912,6 +916,10 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
           const estadoNum = ESTADO_TO_NUM[form.estado];
           const loteData = form.estado === "Completada" ? { Fecha_Produccion: today } : {};
           await cambiarEstadoOrden(orden.id, estadoNum, loteData);
+          // Si se completa y hay pedido asociado, moverlo a "Listo" automáticamente
+          if (form.estado === "Completada" && orden.idVenta) {
+            try { await cambiarEstadoVenta(orden.idVenta, 11); } catch (_) {}
+          }
         }
       } else {
         await crearOrden(payload);
@@ -941,22 +949,16 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
           {/* Producto */}
           <div className="form-group">
             <label className="form-label">Producto <span className="required">*</span></label>
-            <div className="select-wrap">
-              <select
-                className={`field-input${errors.idProducto ? " error" : ""}`}
-                style={{ appearance: "none", paddingRight: 32 }}
-                value={form.idProducto}
-                onChange={e => set("idProducto", e.target.value)}
-              >
-                <option value="">Seleccione un producto…</option>
-                {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-              <div className="select-arrow">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </div>
+            <SearchableSelect
+              options={productos}
+              value={form.idProducto}
+              onChange={e => set("idProducto", e.target.value)}
+              getValue={p => p.id}
+              getLabel={p => p.nombre}
+              placeholder="Seleccione un producto…"
+              searchPlaceholder="🔍 Buscar producto…"
+              error={!!errors.idProducto}
+            />
             {errors.idProducto && <span className="field-error">{errors.idProducto}</span>}
           </div>
 
@@ -1201,6 +1203,14 @@ export default function GestionOrdenesProduccion() {
     setActionSaving(true);
     try {
       await cambiarEstadoOrden(idOrden, estadoNum, loteData);
+
+      // Si la orden se completa y tiene pedido asociado, pasar el pedido a "Listo" (estado 11)
+      if (nuevoEstado === "Completada" && ordenActual?.idVenta) {
+        try {
+          await cambiarEstadoVenta(ordenActual.idVenta, 11);
+        } catch (_) { /* Si falla no interrumpir el flujo normal */ }
+      }
+
       showToast(`Estado cambiado a "${nuevoEstado}"`);
       setModal(null);
       await cargarDatos();

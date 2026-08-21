@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
@@ -313,7 +314,7 @@ export default function CrearPedido({ onClose, onSave }) {
     if (k === "metodo_pago"       && !v)        err = "Selecciona un método de pago";
     if (k === "fecha_entrega") {
       if (!v) err = form.domicilio ? "Selecciona la fecha de entrega" : "Selecciona la fecha de recogida";
-      else if (new Date(v) < new Date(new Date().toDateString())) err = "La fecha no puede ser en el pasado";
+      else if (new Date(v + "T00:00:00") < new Date(new Date().toDateString())) err = "La fecha no puede ser en el pasado";
     }
     if (k === "descuento" && Number(v) < 0) {
       err = "El descuento no puede ser negativo";
@@ -347,7 +348,7 @@ export default function CrearPedido({ onClose, onSave }) {
     if (s === 3) {
       if (!form.fecha_entrega)
         e.fecha_entrega = form.domicilio ? "Selecciona la fecha de entrega" : "Selecciona la fecha de recogida";
-      else if (new Date(form.fecha_entrega) < new Date(new Date().toDateString()))
+      else if (new Date(form.fecha_entrega + "T00:00:00") < new Date(new Date().toDateString()))
         e.fecha_entrega = "La fecha no puede ser en el pasado";
       if (form.domicilio) {
         if (!form.direccion_entrega.trim()) e.direccion_entrega = "Ingresa la dirección de entrega";

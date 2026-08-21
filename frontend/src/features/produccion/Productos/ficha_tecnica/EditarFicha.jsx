@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { getCategorias } from "../../../../services/categoriasInsumosService.js";
 import { getInsumos } from "../../../../services/insumosService.js";
+import SearchableSelect from "../../../../shared/components/SearchableSelect.jsx";
 import "./FichasTecnicas.css";
 
   const UNIDADES = ["kg","g","l","ml","unidad","taza","cucharada","cucharadita"];
@@ -223,24 +224,33 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                         <td>
                           {isView
                             ? <span className="ficha-cell-text">{ins.nombreCategoria || ins.idCategoria || "—"}</span>
-                            : <select className="ficha-select" value={ins.idCategoria}
-                                onChange={e => setInsumo(ins.id, "idCategoria", e.target.value)}>
-                                <option value="">— Categoría —</option>
-                                {categoriasInsumosActivas.map(c => <option key={c.id} value={c.id}>{c.icon} {c.nombre}</option>)}
-                              </select>
+                            : <SearchableSelect
+                                className="ficha-select"
+                                options={categoriasInsumosActivas}
+                                value={ins.idCategoria}
+                                onChange={e => setInsumo(ins.id, "idCategoria", e.target.value)}
+                                getValue={c => c.id}
+                                getLabel={c => `${c.icon || ""} ${c.nombre}`}
+                                placeholder="— Categoría —"
+                                searchPlaceholder="🔍 Categoría…"
+                              />
                           }
                         </td>
                         <td>
                           {isView
                             ? <span className="ficha-cell-text ficha-cell-text--bold">{ins.nombre}</span>
-                            : <select className="ficha-select" value={ins.idInsumo}
+                            : <SearchableSelect
+                                className="ficha-select"
+                                options={insumosPorCategoriaId[String(ins.idCategoria)] || []}
+                                value={ins.idInsumo}
                                 onChange={e => setInsumo(ins.id, "idInsumo", e.target.value)}
-                                disabled={!ins.idCategoria} style={{ opacity: ins.idCategoria ? 1 : 0.45 }}>
-                                <option value="">— Insumo —</option>
-                                {(insumosPorCategoriaId[String(ins.idCategoria)] || []).map(insumo =>
-                                  <option key={insumo.id} value={insumo.id}>{insumo.nombre}</option>
-                                )}
-                              </select>
+                                getValue={i => i.id}
+                                getLabel={i => i.nombre}
+                                placeholder="— Insumo —"
+                                searchPlaceholder="🔍 Insumo…"
+                                disabled={!ins.idCategoria}
+                                style={{ opacity: ins.idCategoria ? 1 : 0.45 }}
+                              />
                           }
                         </td>
                         <td>

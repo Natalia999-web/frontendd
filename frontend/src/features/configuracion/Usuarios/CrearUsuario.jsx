@@ -5,6 +5,7 @@ import { GB, getRolStyle, EMPTY_FORM, TIPO_DOC, validatePassword, validateCedula
 import { Ic } from "./usuariosIcons.jsx";
 import { crearEmpleado, crearCliente, editarUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
+import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./Usuarios.css";
 
 const ROL_ICONS_BASE = {
@@ -110,32 +111,24 @@ function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDep
     <>
       <div className="field-wrap">
         <label className="field-label">Departamento {!optional && <span className="required">*</span>}</label>
-        <div className="select-wrap">
-          <select
-            value={departamento || "Antioquia"}
-            onChange={e => { onDepto(e.target.value); onMunicipio(""); }}
-            className={`field-select${errDepto ? " error" : ""}`}
-          >
-            <option value="Antioquia">Antioquia</option>
-          </select>
-          <div className="select-arrow">{SVG}</div>
+        <div className={`field-select${errDepto ? " error" : ""}`} style={{ display: "flex", alignItems: "center", color: "#1a1a1a", cursor: "default" }}>
+          Antioquia
         </div>
         {errDepto && <span className="field-error">{errDepto}</span>}
       </div>
 
       <div className="field-wrap">
         <label className="field-label">Municipio {!optional && <span className="required">*</span>}</label>
-        <div className="select-wrap">
-          <select
-            value={municipio}
-            onChange={e => onMunicipio(e.target.value)}
-            className={`field-select${errMunicipio ? " error" : ""}`}
-          >
-            <option value="">Seleccione…</option>
-            {opciones.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <div className="select-arrow">{SVG}</div>
-        </div>
+        <SearchableSelect
+          options={opciones.map(m => ({ value: m, label: m }))}
+          value={municipio}
+          onChange={e => onMunicipio(e.target.value)}
+          getValue={o => o.value}
+          getLabel={o => o.label}
+          placeholder="Seleccione…"
+          searchPlaceholder="🔍 Buscar municipio…"
+          className={`field-select${errMunicipio ? " error" : ""}`}
+        />
         {errMunicipio && <span className="field-error">{errMunicipio}</span>}
       </div>
     </>
@@ -429,20 +422,16 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                 value={form.correo} onChange={e => set("correo", e.target.value)} error={errors.correo} />
               <div className="field-grid-2">
                 <Field required label="Tipo Doc.">
-                  <div className="select-wrap">
-                    <select
-                      value={form.tipoDocumento}
-                      onChange={e => set("tipoDocumento", e.target.value)}
-                      className="field-select"
-                    >
-                      {TIPO_DOC.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <div className="select-arrow">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
-                  </div>
+                  <SearchableSelect
+                    options={TIPO_DOC.map(t => ({ value: t, label: t }))}
+                    value={form.tipoDocumento}
+                    onChange={e => set("tipoDocumento", e.target.value)}
+                    getValue={o => o.value}
+                    getLabel={o => o.label}
+                    placeholder="Seleccione…"
+                    searchPlaceholder="🔍 Tipo…"
+                    className="field-select"
+                  />
                 </Field>
                 <Field required label="Cédula" placeholder="Ej: 1023456789" value={form.cedula} onChange={e => set("cedula", e.target.value)} error={errors.cedula} />
               </div>
@@ -532,22 +521,16 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
 
               <div className="field-wrap">
                 <label className="field-label">Rol <span className="required">*</span></label>
-                <div className="select-wrap">
-                  <select value={form.rol} onChange={e => set("rol", e.target.value)}
-                    className={`field-select${errors.rol ? " error" : ""}`}>
-                    <option value="">Seleccione un rol…</option>
-                    {rolesDisponibles.map(r => (
-                      <option key={r.id} value={r.nombre}>
-                        {r.icono && !r.iconoPreview ? `${r.icono} ` : ""}{r.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="select-arrow">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                </div>
+                <SearchableSelect
+                  className={`field-select${errors.rol ? " error" : ""}`}
+                  options={rolesDisponibles}
+                  value={form.rol}
+                  onChange={e => set("rol", e.target.value)}
+                  getValue={r => r.nombre}
+                  getLabel={r => `${r.icono && !r.iconoPreview ? r.icono + " " : ""}${r.nombre}`}
+                  placeholder="Seleccione un rol…"
+                  searchPlaceholder="🔍 Buscar rol…"
+                />
                 {errors.rol && <span className="field-error">{errors.rol}</span>}
 
                 {form.rol && (() => {

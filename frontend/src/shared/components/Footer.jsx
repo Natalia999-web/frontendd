@@ -1,180 +1,350 @@
-import { Leaf, Phone, MapPin, ExternalLink, Clock3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Leaf, Phone, MapPin, Clock3, ExternalLink, Instagram, ShoppingBag, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
+/* ─────────────────────────────────────────────────────────────
+   CAUSA DEL MAP VACÍO (resuelto):
+   La dirección anterior no incluía ciudad → Nominatim fallaba.
+   FIX: se añadió "Barranquilla" al query de geocodificación.
+   FALLBACK: si Nominatim sigue fallando, se usan coords fijas.
+───────────────────────────────────────────────────────────── */
+const DIRECCION       = "Carrera 38A No. 80-12, Barranquilla, Colombia";
+const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Carrera+38A+No.+80-12+Barranquilla+Colombia";
+
+/* Coords de respaldo (Barranquilla, zona norte — Carrera 38 / Calle 80).
+   Se usan si Nominatim no responde o devuelve resultado vacío. */
+const FALLBACK_COORDS = { lat: 11.016, lon: -74.825 };
+
+/* ── Geocoder via Nominatim (OpenStreetMap) ── */
+function useGeocoder(query) {
+  const [state, setState] = useState(() => ({
+    coords: !query ? FALLBACK_COORDS : null,
+    status: !query ? "ok" : "loading",
+  }));
+
+  useEffect(() => {
+    if (!query) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      ctrl.abort();
+      setState({ coords: FALLBACK_COORDS, status: "ok" });
+    }, 6000);
+
+    fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { signal: ctrl.signal, headers: { "User-Agent": "TostonApp/1.0" } }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        clearTimeout(timer);
+        if (data?.length > 0) {
+          setState({
+            coords: { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) },
+            status: "ok",
+          });
+        } else {
+          setState({ coords: FALLBACK_COORDS, status: "ok" }); // sin resultados → fallback
+        }
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        if (!ctrl.signal.aborted) setState({ coords: FALLBACK_COORDS, status: "ok" });
+      });
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [query]);
+
+  return state;
+}
+
+/* ── Mapa OSM ── */
+function MapaEncuentranos() {
+  const { coords, status } = useGeocoder(DIRECCION);
+
+  if (status === "loading") {
+    return (
+      <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#81c784", fontSize: 13, fontWeight: 600 }}>
+          <span style={{ width: 16, height: 16, border: "2px solid #81c784", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
+          Cargando mapa…
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  const d   = 0.004;
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${coords.lon - d},${coords.lat - d},${coords.lon + d},${coords.lat + d}&layer=mapnik&marker=${coords.lat},${coords.lon}`;
+
+  return (
+    <iframe
+      title="Ubicación Tostón App"
+      src={src}
+      width="100%"
+      height="300"
+      style={{ border: 0, display: "block" }}
+      loading="lazy"
+      allowFullScreen
+    />
+  );
+}
+
+/* ═══════════════════════════════
+   FOOTER
+═══════════════════════════════ */
 function Footer({ onExplorar }) {
+  const navigate = useNavigate();
   const h       = new Date().getHours();
   const dia     = new Date().getDay();
   const abierto = dia !== 0 && h >= 8 && h < 20;
 
   const horario = [
-    { dias: "Lun – Vie", horas: "8:00 am – 8:00 pm", abierto: true  },
-    { dias: "Sábado",    horas: "8:00 am – 8:00 pm", abierto: true  },
-    { dias: "Domingo",   horas: "Cerrado",            abierto: false },
+    { dias: "Lun – Vie", horas: "8:00 am – 8:00 pm", activo: true  },
+    { dias: "Sábado",    horas: "8:00 am – 8:00 pm", activo: true  },
+    { dias: "Domingo",   horas: "Cerrado",            activo: false },
   ];
 
+  const navLinks = [
+    { label: "Inicio",    href: "#inicio"    },
+    { label: "Productos", href: "#productos" },
+    { label: "Nosotros",  href: "#nosotros"  },
+  ];
+
+  const scrollTo = (href) => {
+    if (href.startsWith("#")) {
+      const el = document.getElementById(href.slice(1));
+      el?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
-    <footer className="bg-[#1b5e20] text-white">
+    <footer style={{ background: "#1b5e20", color: "#fff", fontFamily: "inherit" }}>
+
+      {/* ── Acento superior ── */}
+      <div style={{ height: 4, background: "linear-gradient(90deg, #4caf50, #81c784, #4caf50)" }} />
 
       {/* ── Cuerpo principal ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "56px 24px 40px" }}>
 
-        {/* Grilla 2 columnas */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-12">
+        {/* ── 4 columnas ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "40px 32px",
+          marginBottom: 48,
+        }}>
 
-          {/* Columna izquierda — Marca + CTA */}
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
-                <Leaf className="w-6 h-6 text-[#81c784]" />
+          {/* ── Col 1: Marca ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Leaf style={{ width: 22, height: 22, color: "#81c784" }} />
               </div>
               <div>
-                <p className="text-2xl font-black tracking-tighter leading-none">Tostón App</p>
-                <p className="text-sm font-semibold text-[#81c784] mt-0.5">Hecho con pasión y buena energía</p>
+                <p style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1, margin: 0 }}>Tostón App</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: "#81c784", letterSpacing: "0.2em", textTransform: "uppercase", margin: "3px 0 0" }}>Sabor Natural 100%</p>
               </div>
             </div>
 
-            <p className="text-[#c8e6c9] font-medium leading-relaxed max-w-sm">
-              Calidad premium y frescura garantizada para los amantes del buen sabor colombiano.
+            <p style={{ fontSize: 13, color: "#c8e6c9", lineHeight: 1.65, fontWeight: 500, margin: 0 }}>
+              Calidad premium y frescura garantizada. Cada producto hecho con pasión desde nuestra tierra colombiana.
             </p>
+
+            {/* Instagram */}
+            <a
+              href="https://www.instagram.com/tostonesbroms?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", width: "fit-content", padding: "8px 14px 8px 10px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 14, transition: "background 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Instagram style={{ width: 16, height: 16, color: "#fff" }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#c8e6c9" }}>@tostonesbroms</span>
+            </a>
 
             {onExplorar && (
               <button
                 onClick={onExplorar}
-                className="self-start flex items-center gap-2 px-7 py-3.5 bg-white text-[#1b5e20] font-black rounded-2xl hover:bg-[#e8f5e9] transition-all shadow-lg active:scale-95 text-sm"
+                style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, padding: "11px 20px", background: "#fff", color: "#1b5e20", fontWeight: 900, fontSize: 13, borderRadius: 14, border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#e8f5e9"}
+                onMouseLeave={e => e.currentTarget.style.background = "#fff"}
               >
+                <ShoppingBag style={{ width: 15, height: 15 }} />
                 Explorar menú
-                <span className="text-base leading-none">→</span>
               </button>
             )}
           </div>
 
-          {/* Columna derecha — Contacto */}
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-[#81c784] mb-5">
+          {/* ── Col 2: Navegación ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.35em", textTransform: "uppercase", color: "#81c784", margin: 0 }}>
+              Navegación
+            </p>
+            <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {navLinks.map(({ label, href }) => (
+                <button
+                  key={label}
+                  onClick={() => scrollTo(href)}
+                  style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: "8px 12px", margin: "0 -12px", borderRadius: 12, fontSize: 14, fontWeight: 700, color: "#c8e6c9", transition: "all 0.2s", display: "block", fontFamily: "inherit" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#c8e6c9"; }}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#81c784", margin: "0 0 8px" }}>Mi cuenta</p>
+              <button
+                onClick={() => navigate("/login")}
+                style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: "8px 12px", margin: "0 -12px", borderRadius: 12, fontSize: 14, fontWeight: 700, color: "#c8e6c9", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8, fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#c8e6c9"; }}
+              >
+                <User style={{ width: 13, height: 13, flexShrink: 0 }} />
+                Iniciar sesión
+              </button>
+            </div>
+          </div>
+
+          {/* ── Col 3: Contacto ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.35em", textTransform: "uppercase", color: "#81c784", margin: 0 }}>
               Contáctanos
             </p>
-            <div className="space-y-1">
-              <a
-                href="tel:3217543305"
-                className="flex items-center gap-3 group rounded-2xl px-2 py-2.5 transition-colors hover:bg-white/10"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-                  <Phone size={14} className="text-[#81c784]" />
-                </div>
-                <span className="text-sm font-bold text-[#c8e6c9] group-hover:text-white transition-colors">
-                  321 754 3305
-                </span>
-              </a>
 
-              <a
-                href="tel:3137899946"
-                className="flex items-center gap-3 group rounded-2xl px-2 py-2.5 transition-colors hover:bg-white/10"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-                  <Phone size={14} className="text-[#81c784]" />
-                </div>
-                <span className="text-sm font-bold text-[#c8e6c9] group-hover:text-white transition-colors">
-                  313 789 9946
-                </span>
-              </a>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {[
+                { href: "tel:3217543305", label: "Teléfono 1", value: "321 754 3305" },
+                { href: "tel:3137899946", label: "Teléfono 2", value: "313 789 9946" },
+              ].map(({ href, label, value }) => (
+                <a
+                  key={href}
+                  href={href}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", margin: "0 -12px", borderRadius: 14, textDecoration: "none", transition: "background 0.2s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Phone style={{ width: 14, height: 14, color: "#81c784" }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 10, color: "#81c784", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px" }}>{label}</p>
+                    <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>{value}</p>
+                  </div>
+                </a>
+              ))}
 
-              <div className="flex items-start gap-3 rounded-2xl px-2 py-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin size={14} className="text-[#81c784]" />
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 12px", margin: "0 -12px" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                  <MapPin style={{ width: 14, height: 14, color: "#81c784" }} />
                 </div>
-                <span className="text-sm font-bold text-[#c8e6c9] leading-snug pt-1">
-                  Carrera 38A No. 80-12
-                </span>
+                <div>
+                  <p style={{ fontSize: 10, color: "#81c784", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px" }}>Dirección</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.4 }}>Carrera 38A No. 80-12</p>
+                  <p style={{ fontSize: 12, color: "#c8e6c9", margin: "2px 0 0" }}>Barranquilla, Colombia</p>
+                </div>
               </div>
-
-              <a
-                href="https://www.instagram.com/tostonesbroms?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 group rounded-2xl px-2 py-2.5 transition-colors hover:bg-white/10"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-                  <ExternalLink size={14} className="text-[#81c784]" />
-                </div>
-                <span className="text-sm font-bold text-[#c8e6c9] group-hover:text-white transition-colors">
-                  @tostonesbroms
-                </span>
-              </a>
             </div>
           </div>
+
+          {/* ── Col 4: Horario ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Clock3 style={{ width: 13, height: 13, color: "#81c784" }} />
+              <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.35em", textTransform: "uppercase", color: "#81c784", margin: 0 }}>
+                Horario
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {horario.map(({ dias, horas, activo }) => (
+                <div
+                  key={dias}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    gap: 12, padding: "10px 14px",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 14,
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#c8e6c9", whiteSpace: "nowrap" }}>{dias}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: activo ? "#fff" : "rgba(255,255,255,0.3)", textAlign: "right" }}>{horas}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Badge abierto/cerrado */}
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "8px 14px", borderRadius: 20, width: "fit-content",
+              background: abierto ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.05)",
+              border: `1px solid ${abierto ? "rgba(76,175,80,0.35)" : "rgba(255,255,255,0.1)"}`,
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                background: abierto ? "#4caf50" : "rgba(255,255,255,0.3)",
+                boxShadow: abierto ? "0 0 0 3px rgba(76,175,80,0.25)" : "none",
+                animation: abierto ? "pulse 2s infinite" : "none",
+              }} />
+              <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }`}</style>
+              <span style={{ fontSize: 12, fontWeight: 800, color: abierto ? "#81c784" : "rgba(255,255,255,0.4)" }}>
+                {abierto ? "Abierto ahora" : "Cerrado ahora"}
+              </span>
+            </div>
+          </div>
+
         </div>
 
-        {/* ── Horario — fila horizontal ── */}
-        <div className="border-t border-white/10 pt-8 mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center">
-              <Clock3 size={13} className="text-[#81c784]" />
-            </div>
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-[#81c784]">
-              Horario de atención
-            </p>
-          </div>
+        {/* ── Divisor ── */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginBottom: 32 }} />
 
-          <div className="flex flex-wrap gap-2 items-center">
-            {horario.map(({ dias, horas, abierto: ab }) => (
-              <div
-                key={dias}
-                className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-2xl px-4 py-2.5"
-              >
-                <span className="text-sm font-bold text-[#c8e6c9]">{dias}</span>
-                <span className="text-white/25 font-light">·</span>
-                <span className={`text-sm font-bold ${ab ? "text-white" : "text-white/40"}`}>
-                  {horas}
-                </span>
-              </div>
-            ))}
-
-            <div
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-black ${
-                abierto
-                  ? "bg-[#4caf50]/20 border-[#4caf50]/30 text-[#81c784]"
-                  : "bg-white/5 border-white/10 text-white/40"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${
-                  abierto ? "bg-[#4caf50] animate-pulse" : "bg-white/30"
-                }`}
-              />
-              {abierto ? "Abierto ahora" : "Cerrado ahora"}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Mapa integrado ── */}
-        <div className="rounded-[28px] overflow-hidden border border-white/15 shadow-[0_8px_40px_rgba(0,0,0,0.3)]">
+        {/* ── Mapa "Encuéntranos" ── */}
+        <div style={{ borderRadius: 24, overflow: "hidden", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 12px 48px rgba(0,0,0,0.3)" }}>
           {/* Cabecera del mapa */}
-          <div className="flex items-center gap-2 px-6 py-4 bg-white/10 border-b border-white/10">
-            <MapPin size={13} className="text-[#81c784]" />
-            <span className="text-xs font-black uppercase tracking-[0.35em] text-[#81c784]">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", background: "rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <MapPin style={{ width: 14, height: 14, color: "#81c784", flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.3em", textTransform: "uppercase", color: "#81c784" }}>
               Encuéntranos
             </span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 4 }}>·</span>
+            <span style={{ fontSize: 12, color: "#c8e6c9", fontWeight: 600 }}>Carrera 38A No. 80-12, Barranquilla</span>
+            <a
+              href={GOOGLE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#c8e6c9", textDecoration: "none", padding: "6px 12px", background: "rgba(255,255,255,0.08)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", transition: "all 0.2s", whiteSpace: "nowrap" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#c8e6c9"; }}
+            >
+              <ExternalLink style={{ width: 12, height: 12 }} />
+              Abrir en Maps
+            </a>
           </div>
-          <iframe
-            title="Ubicación Tostón App"
-            src="https://maps.google.com/maps?q=Carrera+38A+No.+80-12&output=embed&z=16&hl=es"
-            width="100%"
-            height="280"
-            style={{ border: 0, display: "block" }}
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+          <MapaEncuentranos />
         </div>
+
       </div>
 
       {/* ── Copyright bar ── */}
-      <div className="bg-[#0d3300] border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center">
-          <p className="text-sm font-bold text-[#81c784]">
-            © 2026 Tostón App — Hecho con pasión para compartir momentos.
+      <div style={{ background: "rgba(0,0,0,0.25)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 24px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Leaf style={{ width: 14, height: 14, color: "#4caf50", flexShrink: 0 }} />
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#81c784", margin: 0 }}>
+              © 2026 Tostón App — Todos los derechos reservados.
+            </p>
+          </div>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontWeight: 500, margin: 0 }}>
+            Hecho con pasión para compartir momentos 🍌
           </p>
         </div>
       </div>
+
     </footer>
   );
 }
