@@ -1228,7 +1228,6 @@ export default function GestionPedidos() {
       return;
     }
     const esTransferencia = (ped.metodo_pago || "").toLowerCase().includes("transfer");
-    const ESTADOS_PAGO_OK = new Set(["efectivo_recibido","pagado_completo","anticipo_pagado","no_recibido","pendiente_validacion"]);
     const estadoPago = ped.estado_pago || "pendiente";
     // Transferencia sin comprobante adjunto
     if (esTransferencia && !ped.comprobante) {
