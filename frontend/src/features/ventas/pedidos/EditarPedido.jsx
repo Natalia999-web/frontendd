@@ -36,8 +36,8 @@ const PERMISOS_POR_ESTADO = {
   "Listo": {
     cliente:           false,
     productos:         false,
-    metodo_pago:       false,
-    domicilio:         false,
+    metodo_pago:       true,
+    domicilio:         true,
     direccion_entrega: true,
     notas:             true,
     descuento:         false,
