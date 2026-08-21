@@ -952,96 +952,28 @@ function ModalCancelarPedido({ pedido, saving, onClose, onConfirm }) {
 /* ═══════════════════════════════════════════════════════════
    MENÚ DE ACCIONES POR FILA
    ═══════════════════════════════════════════════════════════ */
-function AccionesMenu({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-
-  useEffect(() => {
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
+function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha }) {
   const necesitaProduccion  = ped.requiereFechaPropuesta;
+  const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
+  const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
   const canMarcarListo      = ped.estado === "Confirmado";
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
+  const canEntregar         = ped.estado === "En camino";
   const canCancel           = !["Entregado", "Cancelado"].includes(ped.estado);
-  const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
-  const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
-  const hasMenu             = canEdit || canAdvance || canMarcarListo || canEntregarTienda || canAsignarDomicilio || canCancel || canProponerFecha;
 
   return (
-    <div className="flex items-center gap-1" ref={ref}>
-      <button
-        className="act-btn act-btn--view bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all p-1.5 rounded-lg border border-green-100"
-        onClick={() => onVer(ped)}
-        data-tooltip="Ver detalle del pedido"
-      >👁</button>
-
-      {hasMenu && (
-        <div className="relative">
-          <button
-            className="act-btn bg-gray-100 text-gray-500 hover:bg-gray-700 hover:text-white transition-all p-1.5 rounded-lg border border-gray-200 text-xs font-black leading-none"
-            onClick={() => setOpen(v => !v)}
-            disabled={saving}
-            data-tooltip="Más acciones"
-          >⋮</button>
-
-          {open && (
-            <div className="absolute right-0 top-full mt-1 bg-white shadow-2xl rounded-2xl z-[9999] py-2 min-w-[200px] border border-gray-100 overflow-hidden">
-              {canEdit && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onEditar(ped); setOpen(false); }}>
-                  <span className="text-amber-500 text-sm">✎</span> Editar pedido
-                </button>
-              )}
-              {canAdvance && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onConfirmar(ped); setOpen(false); }}>
-                  <span className="text-sm">✔</span> Confirmar pedido
-                </button>
-              )}
-              {canProponerFecha && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onProponerFecha(ped); setOpen(false); }}>
-                  <span className="text-sm">📅</span> Proponer fecha de entrega
-                </button>
-              )}
-              {canMarcarListo && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-green-700 hover:bg-green-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onMarcarListo(ped); setOpen(false); }}>
-                  <span className="text-sm">📦</span> Marcar como listo
-                </button>
-              )}
-              {canEntregarTienda && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-green-700 hover:bg-green-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onEntregar(ped); setOpen(false); }}>
-                  <span className="text-sm">🏪</span> Entregar en tienda
-                </button>
-              )}
-              {canAsignarDomicilio && (
-                <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 flex items-center gap-3 transition-colors"
-                  onClick={() => { onAsignarDomicilio(ped); setOpen(false); }}>
-                  <span className="text-sm">🛵</span> Asignar domiciliario
-                </button>
-              )}
-              {canCancel && (
-                <>
-                  {(canEdit || canAdvance || canMarcarListo || canEntregarTienda || canAsignarDomicilio) && (
-                    <div className="border-t border-gray-100 my-1" />
-                  )}
-                  <button className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
-                    onClick={() => { onCancelar(ped); setOpen(false); }}>
-                    <span className="text-sm">✕</span> Cancelar pedido
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+    <div className="actions-cell">
+      <button className="act-btn act-btn--view"   data-tooltip="Ver detalle"           onClick={() => onVer(ped)}>👁</button>
+      {canEdit          && <button className="act-btn act-btn--edit"    data-tooltip="Editar pedido"          disabled={saving} onClick={() => onEditar(ped)}>✎</button>}
+      {canAdvance       && <button className="act-btn act-btn--success" data-tooltip="Confirmar pedido"       disabled={saving} onClick={() => onConfirmar(ped)}>✔</button>}
+      {canProponerFecha && <button className="act-btn act-btn--info"    data-tooltip="Proponer fecha entrega" disabled={saving} onClick={() => onProponerFecha(ped)}>📅</button>}
+      {canMarcarListo   && <button className="act-btn act-btn--success" data-tooltip="Marcar como listo"      disabled={saving} onClick={() => onMarcarListo(ped)}>📦</button>}
+      {canEntregarTienda   && <button className="act-btn act-btn--success" data-tooltip="Entregar en tienda"     disabled={saving} onClick={() => onEntregar(ped)}>🏪</button>}
+      {canAsignarDomicilio && <button className="act-btn act-btn--info"    data-tooltip="Asignar domiciliario"   disabled={saving} onClick={() => onAsignarDomicilio(ped)}>🛵</button>}
+      {canEntregar         && <button className="act-btn act-btn--success" data-tooltip="Registrar entrega"      disabled={saving} onClick={() => onEntregar(ped)}>🚚</button>}
+      {canCancel           && <button className="act-btn act-btn--delete"  data-tooltip="Cancelar pedido"        disabled={saving} onClick={() => onCancelar(ped)}>✕</button>}
     </div>
   );
 }
@@ -1651,7 +1583,7 @@ export default function GestionPedidos() {
                             onClick={() => setModal({ type: "ver", pedido: ped })}
                           >Ver detalles</button>
                         ) : (
-                          <AccionesMenu
+                          <AccionesCell
                             ped={ped}
                             saving={actionSaving}
                             onVer={ped => setModal({ type: "ver", pedido: ped })}
