@@ -1391,6 +1391,12 @@ export default function GestionPedidos() {
   };
 
   const handleEditarPedido = async (formData) => {
+    if (formData?._pagoFinal) {
+      setModal(null);
+      cargarDatos().catch(() => {});
+      showToast("Pago final registrado");
+      return;
+    }
     try {
       const payload = {
         Metodo_Pago:          (formData.metodo_pago || "").split(" ")[0] || null,

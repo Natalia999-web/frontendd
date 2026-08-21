@@ -4,6 +4,7 @@ import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { getProductos } from "../../../services/productosService.js";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
+import { registrarPagoFinal } from "../../../services/pedidosService.js";
 import "./Pedidos.css";
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -275,6 +276,15 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const [saved,           setSaved]           = useState(false);
   const [editandoCliente, setEditandoCliente] = useState(false);
 
+  // Pago final (saldo del anticipo al entregar)
+  const [pfMetodo,   setPfMetodo]   = useState("");
+  const [pfEfectivo, setPfEfectivo] = useState(false);
+  const [pfArchivo,  setPfArchivo]  = useState(null);
+  const [pfPreview,  setPfPreview]  = useState(null);
+  const [pfErrors,   setPfErrors]   = useState({});
+  const [pfSaving,   setPfSaving]   = useState(false);
+  const [pfOk,       setPfOk]       = useState(false);
+
   const clienteActual = clientes.find(c => c.id === form.idCliente);
   const [datosCliente, setDatosCliente] = useState(null);
 
@@ -416,6 +426,38 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const quitarProducto  = (idx) =>
     setForm(f => ({ ...f, productosItems: f.productosItems.filter((_, i) => i !== idx) }));
 
+  const saldoAnticipo = Math.max(0, (pedido.total ?? 0) - (pedido.anticipo_monto ?? pedido.anticipo_requerido ?? 0));
+
+  const handlePagoFinal = async () => {
+    const e = {};
+    if (!pfMetodo) e.metodo = "Selecciona el método de pago";
+    if (pfMetodo === "Efectivo 💵" && !pfEfectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
+    if (pfMetodo === "Transferencia 🏦" && !pfPreview) e.archivo = "Adjunta el comprobante del saldo";
+    if (Object.keys(e).length) { setPfErrors(e); return; }
+
+    setPfSaving(true);
+    let comprobanteUrl = null;
+    if (pfArchivo) {
+      try {
+        comprobanteUrl = await subirImagenCloudinary(pfArchivo);
+      } catch {
+        setPfErrors(x => ({ ...x, archivo: "Error al subir el comprobante. Intenta de nuevo." }));
+        setPfSaving(false);
+        return;
+      }
+    }
+    try {
+      const metodo_pago = pfMetodo.includes("Transferencia") ? "Transferencia" : "Efectivo";
+      await registrarPagoFinal(pedido.id, { monto: saldoAnticipo, metodo_pago, comprobante_url: comprobanteUrl });
+      setPfOk(true);
+      onSave({ _pagoFinal: true });
+    } catch (err) {
+      setPfErrors({ _api: err.message || "No se pudo registrar el pago final." });
+    } finally {
+      setPfSaving(false);
+    }
+  };
+
   const ec = ESTADO_CFG[pedido.estado] || {};
   const restriccionesMsg = {
     "En producción": "Productos y cantidades no editables — ya están en fabricación.",
@@ -469,6 +511,81 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
             <div className="info-box info-box--warn">
               <span className="info-box__icon">⚠️</span>
               <span className="info-box__text">{restriccionesMsg[pedido.estado]}</span>
+            </div>
+          )}
+
+          {/* ── Pago final (saldo del anticipo) ── */}
+          {pedido.requiere_anticipo && !pedido.pago_final_registrado && !pfOk && (
+            <div style={{ border: "2px solid #f9a825", borderRadius: 14, background: "#fffdf0", padding: "16px 18px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 12 }}>
+                💳 Registrar pago del saldo restante
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                <div style={{ background: "#f5f5f5", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#999", fontWeight: 700, textTransform: "uppercase" }}>Total</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#333" }}>{fmt(pedido.total ?? 0)}</div>
+                </div>
+                <div style={{ background: "#e8f5e9", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#4caf50", fontWeight: 700, textTransform: "uppercase" }}>Anticipo</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#2e7d32" }}>{fmt(pedido.anticipo_monto ?? pedido.anticipo_requerido ?? 0)}</div>
+                </div>
+              </div>
+              <div style={{ background: "#fff3e0", border: "1.5px solid #f9a825", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#e65100" }}>Saldo a cobrar</span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: "#e65100" }}>{fmt(saldoAnticipo)}</span>
+              </div>
+
+              <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método <span style={{ color: "#e53935" }}>*</span></p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                  <button key={m} type="button"
+                    onClick={() => { setPfMetodo(m); setPfEfectivo(false); setPfArchivo(null); setPfPreview(null); setPfErrors({}); }}
+                    style={{ padding: "10px 8px", borderRadius: 8, border: `2px solid ${pfMetodo === m ? "#f9a825" : "#e0e0e0"}`, background: pfMetodo === m ? "#fff8e1" : "#fff", color: pfMetodo === m ? "#e65100" : "#888", fontWeight: pfMetodo === m ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              {pfErrors.metodo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors.metodo}</span>}
+
+              {pfMetodo === "Efectivo 💵" && (
+                <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: pfEfectivo ? "#f1f8f1" : "#fafafa", padding: "10px 12px", borderRadius: 8, border: `2px solid ${pfEfectivo ? "#2e7d32" : "#e0e0e0"}`, marginBottom: 8 }}>
+                  <input type="checkbox" checked={pfEfectivo} onChange={e => { setPfEfectivo(e.target.checked); setPfErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 16, height: 16, accentColor: "#2e7d32" }} />
+                  <span style={{ fontSize: 12, color: pfEfectivo ? "#1b5e20" : "#555", fontWeight: pfEfectivo ? 700 : 400 }}>Confirmo que recibí <strong>{fmt(saldoAnticipo)}</strong> en efectivo</span>
+                </label>
+              )}
+              {pfErrors.efectivo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors.efectivo}</span>}
+
+              {pfMetodo === "Transferencia 🏦" && (
+                pfPreview ? (
+                  <div style={{ position: "relative", height: 100, borderRadius: 8, overflow: "hidden", background: "#000", marginBottom: 8 }}>
+                    <img src={pfPreview} alt="Comprobante saldo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    <button type="button" style={{ position: "absolute", top: 5, right: 5, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer", fontSize: 11 }} onClick={() => { setPfArchivo(null); setPfPreview(null); }}>✕</button>
+                  </div>
+                ) : (
+                  <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, borderRadius: 8, border: `2px dashed ${pfErrors.archivo ? "#e53935" : "#f9a825"}`, background: "#fffdf0", cursor: "pointer", marginBottom: 8 }}>
+                    <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { setPfArchivo(f); setPfPreview(ev.target.result); setPfErrors(x => ({ ...x, archivo: "" })); }; r.readAsDataURL(f); }} hidden />
+                    <span style={{ fontSize: 20 }}>📎</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#f9a825" }}>Comprobante del saldo</span>
+                  </label>
+                )
+              )}
+              {pfErrors.archivo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors.archivo}</span>}
+              {pfErrors._api && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors._api}</span>}
+
+              <button type="button" onClick={handlePagoFinal} disabled={pfSaving}
+                style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: pfSaving ? "#bdbdbd" : "#f9a825", color: "#fff", fontWeight: 800, fontSize: 13, cursor: pfSaving ? "not-allowed" : "pointer" }}>
+                {pfSaving ? "Registrando…" : `Registrar saldo ${fmt(saldoAnticipo)}`}
+              </button>
+            </div>
+          )}
+
+          {pedido.requiere_anticipo && (pedido.pago_final_registrado || pfOk) && (
+            <div style={{ border: "1.5px solid #a5d6a7", borderRadius: 12, background: "#e8f5e9", padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#2e7d32" }}>Pago final registrado</div>
+                <div style={{ fontSize: 11, color: "#4caf50" }}>Saldo {fmt(pedido.pago_final_monto ?? saldoAnticipo)} — {pedido.pago_final_metodo_pago || "—"}</div>
+              </div>
             </div>
           )}
 
