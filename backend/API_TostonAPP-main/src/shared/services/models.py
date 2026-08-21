@@ -239,7 +239,7 @@ class DetalleCompra(Base):
     ID_Insumo         = Column(Integer, ForeignKey("Insumos.ID_Insumo"))
     ID_Lote_Compra    = Column(Integer, ForeignKey("Lote_Compra.ID_Lote_Compra"))
     Notas             = Column(Text)
-    Cantidad          = Column(Integer)
+    Cantidad          = Column(Numeric(10, 4))   # Numeric para soportar kg, g, L, mL
     Precio_Und        = Column(Numeric(30, 2))
 
     compra      = relationship("Compra", back_populates="detalles")
@@ -302,7 +302,8 @@ class FichaTecnica(Base):
     Observaciones   = Column(Text)
     Procedimiento   = Column(Text)
     Fecha_Creacion  = Column(DateTime)
-    Dias_Vida_Util  = Column(Integer, nullable=True)
+    Dias_Vida_Util   = Column(Integer, nullable=True)
+    Vida_Util_Unidad = Column(String(10), nullable=True)
 
     producto      = relationship("Producto", back_populates="fichas_tecnicas")
     categoria     = relationship("CategoriaProducto", back_populates="fichas_tecnicas")
@@ -334,6 +335,7 @@ class OrdenProduccion(Base):
     Cantidad            = Column(Integer)
     Fecha_inicio        = Column(DateTime)
     Fecha_Entrega       = Column(DateTime)
+    Fecha_fin           = Column(DateTime, nullable=True)
     Estado              = Column(Integer, ForeignKey("Estados.ID_Estados"))
     Costo               = Column(Numeric(30, 2))
 
@@ -384,6 +386,19 @@ class Venta(Base):
     # (créditos verificados en el libro mayor + transferencia con comprobante).
     Anticipo_Requerido     = Column(Numeric(30, 2), nullable=True)
     Anticipo_Pagado        = Column(Numeric(30, 2), nullable=True)
+    # Anticipo del 50% por total > $50.000 (regla general de negocio)
+    Requiere_Anticipo        = Column(Integer,      default=0,           nullable=True)
+    Anticipo_Monto           = Column(Numeric(30, 2),                    nullable=True)
+    Anticipo_Metodo_Pago     = Column(String(30),                        nullable=True)
+    Anticipo_Comprobante_Url = Column(String(500),                       nullable=True)
+    Anticipo_Registrado      = Column(Integer,      default=0,           nullable=True)
+    Pago_Final_Registrado    = Column(Integer,      default=0,           nullable=True)
+    Pago_Final_Monto         = Column(Numeric(30, 2),                    nullable=True)
+    Pago_Final_Metodo_Pago   = Column(String(30),                        nullable=True)
+    Pago_Final_Comprobante_Url = Column(String(500),                     nullable=True)
+    Pago_Final_Fecha         = Column(DateTime,                          nullable=True)
+    Estado_Pago              = Column(String(30),   default="pendiente", nullable=True)
+    Fecha_Rechazada          = Column(DateTime,                          nullable=True)
 
     usuario            = relationship("Usuario", back_populates="ventas")
     productos          = relationship("VentaXProducto", back_populates="venta")

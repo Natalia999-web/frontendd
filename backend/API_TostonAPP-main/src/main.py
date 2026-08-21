@@ -111,6 +111,20 @@ def migrate_db():
             "ALTER TABLE Ventas ADD COLUMN Sobre_Stock TINYINT(1) NOT NULL DEFAULT 0",
             "ALTER TABLE Ventas ADD COLUMN Anticipo_Requerido DECIMAL(30,2) NULL",
             "ALTER TABLE Ventas ADD COLUMN Anticipo_Pagado DECIMAL(30,2) NULL",
+            # Anticipo del 50% por total > $50.000 (regla general de negocio)
+            "ALTER TABLE Ventas ADD COLUMN Requiere_Anticipo TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Monto DECIMAL(30,2) NULL",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Metodo_Pago VARCHAR(30) NULL",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Comprobante_Url VARCHAR(500) NULL",
+            "ALTER TABLE Ventas ADD COLUMN Anticipo_Registrado TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE Ventas ADD COLUMN Pago_Final_Registrado TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE Ventas ADD COLUMN Estado_Pago VARCHAR(30) NULL DEFAULT 'pendiente'",
+            # Saldo del anticipo: monto, método, comprobante y fecha del pago final
+            """ALTER TABLE Ventas
+                 ADD COLUMN Pago_Final_Monto           DECIMAL(30,2) NULL,
+                 ADD COLUMN Pago_Final_Metodo_Pago     VARCHAR(30)   NULL,
+                 ADD COLUMN Pago_Final_Comprobante_Url VARCHAR(500)  NULL,
+                 ADD COLUMN Pago_Final_Fecha           DATETIME      NULL""",
             # Unidades de cada línea que van por encima del stock (preorden)
             "ALTER TABLE Venta_x_Producto ADD COLUMN Cantidad_Preorden INT NOT NULL DEFAULT 0",
             # Chat de domicilios persistido en BD (antes se perdía en cada reinicio)
