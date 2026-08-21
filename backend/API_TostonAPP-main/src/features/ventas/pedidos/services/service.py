@@ -106,6 +106,14 @@ def editar_pedido(db: Session, id_venta: int, datos: dict) -> dict:
 
     if datos.get("Comprobante_Pago") is not None:
         pedido.Comprobante_Pago = datos["Comprobante_Pago"]
+        # Si cambia a Transferencia con comprobante y el pago no está ya confirmado,
+        # marcar como pendiente de validación para que el admin lo apruebe.
+        _metodo_actual = (pedido.Metodo_Pago or datos.get("Metodo_Pago") or "").strip().lower()
+        _estado_pago_no_final = (getattr(pedido, "Estado_Pago", None) or "pendiente") not in (
+            "pagado_completo", "efectivo_recibido", "anticipo_pagado",
+        )
+        if "transfer" in _metodo_actual and datos["Comprobante_Pago"] and _estado_pago_no_final:
+            pedido.Estado_Pago = "pendiente_validacion"
 
     if datos.get("Total") is not None:
         pedido.Total = datos["Total"]
@@ -185,3 +193,69 @@ def cancelar_pedido(db: Session, id_venta: int, actual: dict = None) -> dict:
             raise HTTPException(status_code=403, detail="No puedes cancelar pedidos de otros clientes")
 
     return _gv_cambiar_estado(db, id_venta, EstadoPedido.CANCELADO)
+
+
+def aprobar_comprobante(db: Session, id_venta: int) -> dict:
+    """
+    Admin aprueba el comprobante de transferencia.
+    Estado_Pago: 'pendiente_validacion' → 'pagado_completo'.
+    Solo aplica si el método de pago es Transferencia.
+    """
+    pedido = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+    _metodo = (pedido.Metodo_Pago or "").strip().lower()
+    if "transfer" not in _metodo:
+        raise HTTPException(status_code=400, detail="Este pedido no es de tipo Transferencia")
+
+    if not pedido.Comprobante_Pago:
+        raise HTTPException(status_code=400, detail="El pedido no tiene comprobante adjunto")
+
+    estado_pago = (getattr(pedido, "Estado_Pago", None) or "pendiente").strip()
+    if estado_pago == "pagado_completo":
+        raise HTTPException(status_code=409, detail="El comprobante ya fue aprobado")
+
+    pedido.Estado_Pago = "pagado_completo"
+    db.commit()
+    db.refresh(pedido)
+    return _formato_venta(pedido, db)
+
+
+def rechazar_comprobante(db: Session, id_venta: int, motivo: str, id_usuario_actual: int) -> dict:
+    """
+    Admin rechaza el comprobante de transferencia.
+    Estado_Pago → 'comprobante_rechazado'. El comprobante NO se elimina.
+    El motivo se notifica al cliente; no se guarda en columna nueva.
+    """
+    from src.shared.services.notificaciones_utils import notificar
+
+    pedido = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+    _metodo = (pedido.Metodo_Pago or "").strip().lower()
+    if "transfer" not in _metodo:
+        raise HTTPException(status_code=400, detail="Este pedido no es de tipo Transferencia")
+
+    if not pedido.Comprobante_Pago:
+        raise HTTPException(status_code=400, detail="El pedido no tiene comprobante adjunto")
+
+    estado_pago = (getattr(pedido, "Estado_Pago", None) or "pendiente").strip()
+    if estado_pago == "comprobante_rechazado":
+        raise HTTPException(status_code=409, detail="El comprobante ya fue rechazado")
+
+    pedido.Estado_Pago = "comprobante_rechazado"
+
+    notificar(
+        db,
+        "comprobante_rechazado",
+        f"Comprobante rechazado — Pedido #{id_venta}",
+        f"Motivo: {motivo}",
+        id_venta,
+        "/ventas/pedidos",
+    )
+
+    db.commit()
+    db.refresh(pedido)
+    return _formato_venta(pedido, db)

@@ -9,13 +9,13 @@ from src.features.auth.services.dependencies import requiere_permiso, obtener_us
 from .schemas import (
     DomicilioCreate, DomicilioUpdate, DomicilioEstado,
     AsignarRepartidor, DomicilioResponse, DomicilioListResponse,
-    OTPVerify, MensajeCreate, MensajeResponse,
+    OTPVerify, MensajeCreate, MensajeResponse, RegistroPagoEfectivo,
 )
 from .service import (
     obtener_domicilios, obtener_domicilio, crear_domicilio,
     editar_domicilio, asignar_repartidor, cambiar_estado,
     obtener_resumen_dia, verificar_otp, obtener_mensajes, enviar_mensaje,
-    obtener_repartidores,
+    obtener_repartidores, registrar_pago_efectivo,
 )
 
 router = APIRouter(prefix="/domicilios", tags=["Domicilios"])
@@ -176,6 +176,27 @@ def enviar_mensaje_chat(
         nombre_rem  = f"{registro.Nombre} {registro.Apellidos}"
 
     return enviar_mensaje(db, id_domicilio, datos.Contenido, tipo_rem, id_rem, nombre_rem)
+
+
+@router.patch("/{id_domicilio}/registrar-pago-efectivo", response_model=DomicilioResponse)
+def registrar_cobro_efectivo(
+    id_domicilio: int,
+    datos:        RegistroPagoEfectivo,
+    db:           Session = Depends(get_db),
+    actual:       dict    = Depends(requiere_permiso("cambiar_estado_domicilios")),
+):
+    """
+    El domiciliario registra si cobró el efectivo al entregar.
+    recibido=True → monto exacto obligatorio.
+    recibido=False → motivo (≥10 chars) obligatorio → Estado_Pago='no_recibido'.
+    Idempotente: 409 si ya fue registrado.
+    """
+    registro = actual["registro"]
+    if getattr(registro, "ID_Rol", None) == 4:
+        dom = db.query(Domicilio).filter(Domicilio.ID_Domicilio == id_domicilio).first()
+        if not dom or dom.ID_Empleado != registro.ID_Usuario:
+            raise HTTPException(status_code=403, detail="Sin acceso a este domicilio")
+    return registrar_pago_efectivo(db, id_domicilio, datos, registro.ID_Usuario)
 
 
 @router.patch("/{id_domicilio}/estado", response_model=DomicilioResponse)

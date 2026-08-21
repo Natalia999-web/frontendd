@@ -97,6 +97,7 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         "total":                total,
         "metodo_pago":          metodo_pago,
         "comprobante_pago":     venta.Comprobante_Pago if venta else None,
+        "estado_pago":          venta.Estado_Pago if venta else None,
         "productos":            productos,
         "telefono_cliente":     cliente.Telefono if cliente else "",
         "otp":                  getattr(dom, "OTP", None),
@@ -513,17 +514,21 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
     if not dom:
         raise HTTPException(status_code=404, detail="Domicilio no encontrado")
 
+    _ESTADOS_PAGO_ENTREGA = {
+        "efectivo_recibido", "pagado_completo", "anticipo_pagado",
+        "no_recibido", "pendiente_validacion",
+    }
+
     ESTADO_ENTREGADO_DB = 8
     if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB) and dom.ID_Venta:
         venta_check = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
-        # Solo las transferencias requieren comprobante; el efectivo se cobra en
-        # mano y no tiene soporte, así que no se debe exigir para entregar.
-        _metodo = (venta_check.Metodo_Pago or "").strip().lower() if venta_check else ""
-        if venta_check and "transfer" in _metodo and not venta_check.Comprobante_Pago:
-            raise HTTPException(
-                status_code=400,
-                detail="Se requiere comprobante de pago para marcar el domicilio como entregado",
-            )
+        if venta_check:
+            estado_pago = (getattr(venta_check, "Estado_Pago", None) or "pendiente").strip()
+            if estado_pago not in _ESTADOS_PAGO_ENTREGA:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Debes registrar el cobro antes de marcar el pedido como entregado",
+                )
 
     if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB):
         entregado_en = _now()
@@ -576,4 +581,75 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
                 )
     except Exception:
         pass
+    return _formato_domicilio(dom, db)
+
+
+def registrar_pago_efectivo(
+    db: Session,
+    id_domicilio: int,
+    datos,          # RegistroPagoEfectivo
+    id_usuario_actual: int,
+) -> dict:
+    """
+    Registra el cobro en efectivo hecho por el domiciliario.
+    - recibido=True: monto obligatorio, debe coincidir exactamente con el total de la venta.
+    - recibido=False: motivo obligatorio (≥10 chars). Estado_Pago → 'no_recibido'.
+    - Idempotencia: si ya está 'efectivo_recibido' o 'no_recibido' → 409.
+    - Auditoría: línea estructurada en Domicilio.Observaciones.
+    """
+    dom = db.query(Domicilio).filter(Domicilio.ID_Domicilio == id_domicilio).first()
+    if not dom:
+        raise HTTPException(status_code=404, detail="Domicilio no encontrado")
+
+    if not dom.ID_Venta:
+        raise HTTPException(status_code=400, detail="Este domicilio no tiene venta asociada")
+
+    venta = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta asociada no encontrada")
+
+    _metodo = (venta.Metodo_Pago or "").strip().lower()
+    if "efectivo" not in _metodo and "contra entrega" not in _metodo:
+        raise HTTPException(
+            status_code=400,
+            detail="Este endpoint solo aplica a pedidos con método de pago Efectivo o Contra entrega",
+        )
+
+    estado_pago_actual = (getattr(venta, "Estado_Pago", None) or "pendiente").strip()
+    if estado_pago_actual in ("efectivo_recibido", "no_recibido"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"El cobro ya fue registrado (estado_pago='{estado_pago_actual}')",
+        )
+
+    if datos.recibido:
+        if datos.monto is None:
+            raise HTTPException(status_code=422, detail="El monto es obligatorio cuando recibido=true")
+        total_venta = float(venta.Total or 0)
+        if round(datos.monto, 2) != round(total_venta, 2):
+            raise HTTPException(
+                status_code=400,
+                detail=f"El monto recibido ({datos.monto}) no coincide con el total del pedido ({total_venta})",
+            )
+        venta.Estado_Pago = "efectivo_recibido"
+        audit_value = f"monto:{datos.monto}"
+    else:
+        if not datos.motivo or len(datos.motivo.strip()) < 10:
+            raise HTTPException(
+                status_code=422,
+                detail="El motivo es obligatorio y debe tener al menos 10 caracteres cuando recibido=false",
+            )
+        venta.Estado_Pago = "no_recibido"
+        audit_value = f"motivo:{datos.motivo.strip()}"
+
+    ts = _now().strftime("%Y-%m-%dT%H:%M:%S")
+    audit_line = (
+        f"[COBRO|{ts}|usuario:{id_usuario_actual}"
+        f"|recibido:{str(datos.recibido).lower()}|{audit_value}]"
+    )
+    obs_actual = dom.Observaciones or ""
+    dom.Observaciones = f"{obs_actual}\n{audit_line}".strip()
+
+    db.commit()
+    db.refresh(dom)
     return _formato_domicilio(dom, db)

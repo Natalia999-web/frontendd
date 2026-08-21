@@ -5,7 +5,11 @@ from typing import Optional
 from src.shared.services.database import get_db
 from src.features.auth.services.dependencies import requiere_permiso, obtener_usuario_actual
 from .schemas import PedidoResponse, PedidoListResponse, PedidoUpdate
-from .service import obtener_pedidos, obtener_pedido, confirmar_pedido, cancelar_pedido, editar_pedido
+from .service import (
+    obtener_pedidos, obtener_pedido, confirmar_pedido, cancelar_pedido,
+    editar_pedido, aprobar_comprobante, rechazar_comprobante,
+)
+from src.features.ventas.gestion_ventas.services.schemas import RechazoComprobante
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 
@@ -72,3 +76,25 @@ def cancelar_mi_pedido(
 ):
     """El cliente cancela su propio pedido pendiente."""
     return cancelar_pedido(db, id_venta, actual)
+
+
+@router.patch("/{id_venta}/aprobar-comprobante", response_model=PedidoResponse)
+def aprobar_comprobante_endpoint(
+    id_venta: int,
+    db:       Session = Depends(get_db),
+    actual:   dict    = Depends(requiere_permiso("editar_ventas")),
+):
+    """Admin aprueba el comprobante de transferencia → Estado_Pago='pagado_completo'."""
+    return aprobar_comprobante(db, id_venta)
+
+
+@router.patch("/{id_venta}/rechazar-comprobante", response_model=PedidoResponse)
+def rechazar_comprobante_endpoint(
+    id_venta: int,
+    datos:    RechazoComprobante,
+    db:       Session = Depends(get_db),
+    actual:   dict    = Depends(requiere_permiso("editar_ventas")),
+):
+    """Admin rechaza el comprobante → Estado_Pago='comprobante_rechazado'. El motivo queda en notificación."""
+    registro = actual["registro"]
+    return rechazar_comprobante(db, id_venta, datos.motivo, registro.ID_Usuario)

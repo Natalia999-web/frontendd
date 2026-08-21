@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -85,3 +85,24 @@ class MensajeResponse(BaseModel):
     Nombre_Remitente: Optional[str] = None
     Contenido:        str
     Fecha:            Optional[datetime] = None
+
+
+# -- Registrar cobro en efectivo (domiciliario) --
+class RegistroPagoEfectivo(BaseModel):
+    recibido: bool
+    monto:    Optional[float] = None   # requerido si recibido=True; debe ser exacto
+    motivo:   Optional[str]  = None    # requerido si recibido=False; min 10 caracteres
+
+    @field_validator("monto")
+    @classmethod
+    def monto_positivo(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("El monto debe ser mayor a 0")
+        return v
+
+    @field_validator("motivo")
+    @classmethod
+    def motivo_minimo(cls, v):
+        if v is not None and len(v.strip()) < 10:
+            raise ValueError("El motivo debe tener al menos 10 caracteres")
+        return v

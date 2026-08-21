@@ -428,14 +428,9 @@ def _batch_ventas(ventas: list, db: Session) -> list:
         domiciliario       = (f"{repartidor.Nombre} {repartidor.Apellidos}"
                               if repartidor else None)
 
-        # requiere_fecha_propuesta desde datos en memoria
-        rfp = bool(getattr(venta, "Sobre_Stock", 0))
-        if not rfp:
-            for vxp in vxp_list:
-                prod = productos.get(vxp.ID_Producto)
-                if prod and getattr(prod, "Requiere_Produccion", 0) and (vxp.Cantidad or 0) > (prod.Stock or 0):
-                    rfp = True
-                    break
+        # requiere_fecha_propuesta: usa el snapshot guardado al crear la venta,
+        # no el stock actual (que puede haber cambiado después del pedido).
+        rfp = bool(getattr(venta, "Sobre_Stock", 0)) or bool(getattr(venta, "Necesita_Produccion", 0))
 
         result.append({
             "ID_Venta":           venta.ID_Venta,
@@ -651,6 +646,13 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
 
     ESTADO_PENDIENTE = 1
 
+    _metodo_lower = (datos.Metodo_Pago or "").strip().lower()
+    _estado_pago_inicial = (
+        "pendiente_validacion"
+        if "transfer" in _metodo_lower and datos.comprobante_pago
+        else "pendiente"
+    )
+
     nueva_venta = Venta(
         ID_Usuario             = datos.ID_Usuario,
         Total                  = subtotal_bruto,
@@ -660,6 +662,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         Fecha_pedido           = _now(),
         Fecha_entrega_esperada = datos.Fecha_entrega_esperada,
         Comprobante_Pago       = datos.comprobante_pago,
+        Estado_Pago            = _estado_pago_inicial,
     )
     db.add(nueva_venta)
     db.flush()
@@ -686,6 +689,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             necesita_produccion = True
             break
 
+    nueva_venta.Necesita_Produccion = 1 if necesita_produccion else 0
     if necesita_produccion:
         notificar(
             db, "produccion_requerida", "Pedido requiere producción",
@@ -1077,27 +1081,12 @@ def obtener_mi_credito(db: Session, usuario_actual: dict) -> dict:
 def requiere_fecha_propuesta(db: Session, venta: Venta) -> bool:
     """True si el pedido necesita que el admin proponga una fecha de entrega.
 
-    Solo los pedidos que NO se pueden entregar de una:
-    - sobre stock (preorden): se pidieron más unidades de las que hay;
-    - producción: incluye productos por encargo cuyo stock no alcanza.
-
-    Los pedidos normales (con o sin domicilio) se confirman directamente.
+    Usa el snapshot guardado en Necesita_Produccion (fijado al crear la venta)
+    para evitar falsos positivos cuando el stock cambia después del pedido.
     """
     if bool(getattr(venta, "Sobre_Stock", 0)):
         return True
-
-    items = db.query(VentaXProducto).filter(
-        VentaXProducto.ID_Venta == venta.ID_Venta
-    ).all()
-    for item in items:
-        prod = db.query(Producto).filter(
-            Producto.ID_Producto == item.ID_Producto
-        ).first()
-        if not prod or not getattr(prod, "Requiere_Produccion", 0):
-            continue
-        if (item.Cantidad or 0) > (prod.Stock or 0):
-            return True
-    return False
+    return bool(getattr(venta, "Necesita_Produccion", 0))
 
 
 def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
@@ -1258,6 +1247,7 @@ def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
         venta.Estado = EstadoPedido.PENDIENTE
         venta.Fecha_entrega_esperada = None
         venta.Fecha_Rechazada = _now()
+        descartar_notificacion(db, "fecha_rechazada", id_venta)  # limpiar anterior para evitar dedup
         notificar(
             db, "fecha_rechazada", "Fecha rechazada por el cliente",
             f"El cliente rechazó la fecha del pedido #{id_venta}. Propone una nueva fecha.",
@@ -1271,6 +1261,7 @@ def rechazar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
     # devuelve el crédito usado.
     venta.Fecha_Rechazada = _now()
     venta.Estado = EstadoPedido.CANCELADO
+    descartar_notificacion(db, "fecha_rechazada", id_venta)  # limpiar anterior para evitar dedup
     notificar(
         db, "fecha_rechazada", "Fecha rechazada por el cliente",
         f"El cliente rechazó la fecha propuesta para el pedido #{id_venta}",

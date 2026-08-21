@@ -125,3 +125,8 @@ class VentaListResponse(BaseModel):
     pagina:     int
     por_pagina: int
     ventas:     list[VentaResponse]
+
+
+# ── Rechazar comprobante de transferencia ──
+class RechazoComprobante(BaseModel):
+    motivo: str
