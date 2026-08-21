@@ -1,6 +1,9 @@
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+_log = logging.getLogger(__name__)
 
 # ── Auth ──
 from src.features.auth.services.router import router as auth_router
@@ -119,12 +122,6 @@ def migrate_db():
             "ALTER TABLE Ventas ADD COLUMN Anticipo_Registrado TINYINT(1) NOT NULL DEFAULT 0",
             "ALTER TABLE Ventas ADD COLUMN Pago_Final_Registrado TINYINT(1) NOT NULL DEFAULT 0",
             "ALTER TABLE Ventas ADD COLUMN Estado_Pago VARCHAR(30) NULL DEFAULT 'pendiente'",
-            # Saldo del anticipo: monto, método, comprobante y fecha del pago final
-            """ALTER TABLE Ventas
-                 ADD COLUMN Pago_Final_Monto           DECIMAL(30,2) NULL,
-                 ADD COLUMN Pago_Final_Metodo_Pago     VARCHAR(30)   NULL,
-                 ADD COLUMN Pago_Final_Comprobante_Url VARCHAR(500)  NULL,
-                 ADD COLUMN Pago_Final_Fecha           DATETIME      NULL""",
             # Unidades de cada línea que van por encima del stock (preorden)
             "ALTER TABLE Venta_x_Producto ADD COLUMN Cantidad_Preorden INT NOT NULL DEFAULT 0",
             # Chat de domicilios persistido en BD (antes se perdía en cada reinicio)
@@ -144,6 +141,39 @@ def migrate_db():
                 conn.commit()
             except Exception:
                 pass  # ya existe
+
+    # ── Pago_Final: columnas para registrar el cobro del saldo al entregar ──────
+    # Se verifica columna a columna en information_schema antes de alterar;
+    # así el ALTER siempre es válido y los errores reales se logean — no se silencian.
+    _PAGO_FINAL_COLS = [
+        ("Pago_Final_Monto",           "DECIMAL(30,2) NULL"),
+        ("Pago_Final_Metodo_Pago",     "VARCHAR(30)   NULL"),
+        ("Pago_Final_Comprobante_Url", "VARCHAR(500)  NULL"),
+        ("Pago_Final_Fecha",           "DATETIME      NULL"),
+    ]
+    with engine.connect() as conn:
+        faltan = []
+        for col_name, col_def in _PAGO_FINAL_COLS:
+            existe = conn.execute(text(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "  AND TABLE_NAME   = 'Ventas' "
+                "  AND COLUMN_NAME  = :col"
+            ), {"col": col_name}).scalar()
+            if not existe:
+                faltan.append(f"ADD COLUMN {col_name} {col_def}")
+        if not faltan:
+            _log.info("migración pago_final: ya aplicada, sin cambios")
+        else:
+            alter_sql = "ALTER TABLE Ventas\n  " + ",\n  ".join(faltan)
+            try:
+                conn.execute(text(alter_sql))
+                conn.commit()
+                _log.info("migración pago_final: %d columna(s) creada(s): %s",
+                          len(faltan), [f.split()[2] for f in faltan])
+            except Exception as exc:
+                _log.error("migración pago_final FALLÓ — %s", exc, exc_info=True)
+                raise
 
     # Migrar FK de Domicilios.ID_Empleado: Empleados → Usuarios
     # El código usa Usuarios.ID_Usuario pero la DB de producción aún apunta a Empleados
