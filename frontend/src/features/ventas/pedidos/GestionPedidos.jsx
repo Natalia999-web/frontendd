@@ -1028,7 +1028,9 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canEdit             = !["Confirmado","Listo","Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
-  const canMarcarListo      = ped.estado === "Confirmado" && !ped.requiereProduccion;
+  // Usar orden_produccion (¿hay OPs pendientes para ESTE pedido?) no requiereProduccion
+  // (flag del tipo de producto). Si hay stock, no hay OP y se puede marcar como listo.
+  const canMarcarListo      = ped.estado === "Confirmado" && !ped.orden_produccion;
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canEntregar         = ped.estado === "En camino";
