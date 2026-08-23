@@ -437,7 +437,10 @@ def solicitar_recuperacion(db: Session, correo: str) -> None:
     """
     registro, _ = buscar_por_correo(db, correo)
     if not registro:
-        return  # no revelar
+        raise HTTPException(
+            status_code=404,
+            detail="Correo no registrado.",
+        )
 
     # No permitir recuperar contraseña si el correo no fue verificado.
     if getattr(registro, "Correo_Verificado", 1) != 1:
@@ -466,9 +469,11 @@ def solicitar_recuperacion(db: Session, correo: str) -> None:
     try:
         _enviar_email_codigo(correo, codigo, nombre)
     except Exception as e:
+        import logging
+        logging.error(f"[recuperacion] fallo al enviar email a {correo}: {e}")
         raise HTTPException(
             status_code=503,
-            detail=f"No se pudo enviar el correo de recuperacion. Configura GMAIL_USER+GMAIL_APP_PASSWORD en Render. ({e})"
+            detail="No se pudo enviar el correo de recuperación. Intenta de nuevo más tarde.",
         )
     
 
