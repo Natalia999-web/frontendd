@@ -1126,16 +1126,17 @@ export default function GestionDomicilios() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  /* ── Solo pedidos confirmados ──────────────────────────────────────────
-     El domicilio se crea junto con la venta, así que aparecía en el panel
-     mientras el pedido seguía Pendiente (1) o esperando que el cliente
-     aceptara la fecha propuesta (16). Hasta que el pedido no se confirma no
-     hay nada que gestionar aquí; es el mismo criterio de la app móvil.
+  /* ── Solo pedidos listos para salir ────────────────────────────────────
+     El domicilio se crea junto con la venta, así que el panel lo mostraba
+     desde que se hacía el pedido. No hay nada que gestionar hasta que el
+     pedido está LISTO (11): antes sigue en cocina o esperando confirmación.
+     Se incluyen los posteriores —En camino (9) y Entregado (8)— y los
+     cancelados (5), para poder cerrarlos. Mismo criterio que la app móvil.
      Si el backend no envía el estado de la venta, no se oculta nada. */
   const gestionables = domicilios.filter(
-    d => ![1, 16].includes(d.venta_estado_id)
+    d => d.venta_estado_id == null || [11, 9, 8, 5].includes(d.venta_estado_id)
   );
-  const ocultosSinConfirmar = domicilios.length - gestionables.length;
+  const ocultosNoListos = domicilios.length - gestionables.length;
 
   const pedidosPorEmpleado = empleados.reduce((acc, emp) => {
     acc[emp.id] = gestionables.filter(p => p.idEmpleado === emp.id).length;
@@ -1409,17 +1410,17 @@ export default function GestionDomicilios() {
               </div>
             </div>
 
-            {ocultosSinConfirmar > 0 && (
+            {ocultosNoListos > 0 && (
               <div
                 className="info-box"
                 style={{ marginBottom: 12, background: "#fff8e1", borderColor: "#ffe9a8" }}
               >
                 <span className="info-box__icon">⏳</span>
                 <span className="info-box__text">
-                  {ocultosSinConfirmar === 1
-                    ? "Hay 1 domicilio en espera: su pedido todavía no está confirmado."
-                    : `Hay ${ocultosSinConfirmar} domicilios en espera: sus pedidos todavía no están confirmados.`}
-                  {" "}Aparecerán aquí en cuanto se confirmen desde Gestión de pedidos.
+                  {ocultosNoListos === 1
+                    ? "Hay 1 domicilio en espera: su pedido todavía no está listo."
+                    : `Hay ${ocultosNoListos} domicilios en espera: sus pedidos todavía no están listos.`}
+                  {" "}Aparecerán aquí en cuanto se marquen como Listos en Gestión de pedidos.
                 </span>
               </div>
             )}
