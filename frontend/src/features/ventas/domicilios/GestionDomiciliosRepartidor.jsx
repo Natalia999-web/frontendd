@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getDomicilios, cambiarEstadoDomicilio } from "../../../services/domiciliosService.js";
+import { getDomicilios, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFechaHora as fmtFecha } from "../../../utils/dateUtils.js";
+import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, esDomicilioActivo, esPagoEfectivo, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const ESTADO_INFO = {
-  "Pendiente":   { color: "#f9a825", bg: "#fff8e1", border: "#ffe082", icon: "⏳" },
-  "Asignado":    { color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "📦" },
-  "Confirmado":  { color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "✅" },
-  "En proceso":  { color: "#1565c0", bg: "#e3f2fd", border: "#90caf9", icon: "🏠" },
-  "En camino":   { color: "#8e24aa", bg: "#f3e5f5", border: "#ce93d8", icon: "🛵" },
-  "Entregado":   { color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "✅" },
-  "Cancelado":   { color: "#c62828", bg: "#ffebee", border: "#ef9a9a", icon: "❌" },
+// Los colores salen de la fuente única de estados; aquí solo el icono.
+const ICONO_ESTADO = {
+  3:  "⏳",  // Pendiente
+  10: "📦",  // Asignado
+  9:  "🛵",  // En camino
+  8:  "✅",  // Entregado
+  5:  "❌",  // Cancelado
 };
 
 const ESTADO_PAGO_INFO = {
@@ -41,14 +41,18 @@ function EstadoPagoBadge({ estadoPago }) {
   );
 }
 
-// Flujo: Asignado/Confirmado → En proceso (llegué al local) → En camino → Entregado
-const PROXIMOS_ESTADOS = {
-  "Pendiente":   [{ valor: 13, label: "Llegué al local", icon: "🏠" }],
-  "Asignado":    [{ valor: 13, label: "Llegué al local", icon: "🏠" }],
-  "Confirmado":  [{ valor: 13, label: "Llegué al local", icon: "🏠" }],
-  "En proceso":  [{ valor: 9,  label: "Iniciar entrega",  icon: "🛵" }],
-  "En camino":   [{ valor: 8,  label: "Entregado",        icon: "✅" }, { valor: 5, label: "Cancelado", icon: "❌" }],
-};
+// Flujo real del domicilio: Asignado → En camino → Entregado (o Cancelado).
+// Antes había un paso "Llegué al local" que enviaba el estado 13, que es "En
+// producción" del PEDIDO, no un estado de domicilio: el backend lo rechaza.
+const ICONO_TRANSICION = { 9: "🛵", 8: "✅", 5: "❌" };
+const LABEL_TRANSICION = { 9: "Iniciar entrega", 8: "Entregado", 5: "Cancelado" };
+
+const proximosEstados = (estadoId) =>
+  transicionesDom(estadoId, true).map(t => ({
+    valor: t.id,
+    label: LABEL_TRANSICION[t.id] || t.label,
+    icon:  ICONO_TRANSICION[t.id] || "•",
+  }));
 
 function Toast({ toast }) {
   if (!toast) return null;
@@ -60,22 +64,129 @@ function Toast({ toast }) {
   );
 }
 
-function EstadoBadge({ estado }) {
-  const cfg = ESTADO_INFO[estado] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "•" };
+function EstadoBadge({ estadoId }) {
+  const cfg = ESTADO_DOM_CONFIG[estadoId] ||
+    { dot: "#757575", bg: "#f5f5f5", border: "#e0e0e0", label: "—" };
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
       padding: "4px 10px", borderRadius: 20,
       fontSize: 12, fontWeight: 700,
-      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
+      color: cfg.dot, background: cfg.bg, border: `1px solid ${cfg.border}`,
     }}>
-      <span>{cfg.icon}</span> {estado}
+      <span>{ICONO_ESTADO[estadoId] || "•"}</span> {cfg.label}
     </span>
   );
 }
 
+/* Cobro en efectivo al entregar. El repartidor es quien recibe el dinero, así
+   que registra aquí si lo cobró. El backend exige el monto exacto del pedido
+   cuando se cobró, o un motivo de 10+ caracteres cuando no. */
+function CobroEfectivoModal({ domicilio, saving, onClose, onConfirm }) {
+  const [recibido, setRecibido] = useState(null);
+  const [motivo,   setMotivo]   = useState("");
+  const [error,    setError]    = useState(null);
+
+  const confirmar = () => {
+    if (recibido === null) return setError("Indica si recibiste el efectivo.");
+    if (!recibido && motivo.trim().length < 10) {
+      return setError("Explica por qué no se cobró (mínimo 10 caracteres).");
+    }
+    setError(null);
+    onConfirm({ recibido, motivo: motivo.trim() });
+  };
+
+  const opcion = (valor, icono, titulo, color) => (
+    <button
+      type="button"
+      onClick={() => { setRecibido(valor); setError(null); }}
+      style={{
+        flex: 1, minWidth: 130, padding: "12px 14px", borderRadius: 10,
+        cursor: "pointer", fontWeight: 700, fontSize: 13,
+        border: `${recibido === valor ? 2 : 1.5}px solid ${recibido === valor ? color : "#e0e0e0"}`,
+        background: recibido === valor ? `${color}14` : "#fafafa",
+        color: recibido === valor ? color : "#616161",
+      }}
+    >
+      <span style={{ marginRight: 6 }}>{icono}</span>{titulo}
+    </button>
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        style={{
+          background: "#fff", borderRadius: 16, padding: "24px 28px",
+          width: "min(420px, 95vw)", boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700 }}>
+          Cobro en efectivo
+        </h2>
+
+        <div style={{
+          background: "#e8f5e9", borderRadius: 10, padding: "12px 14px", marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#66806a" }}>Total a cobrar</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: "#2e7d32" }}>{fmt(domicilio.total)}</div>
+        </div>
+
+        <p style={{ margin: "0 0 10px", fontSize: 13.5, color: "#616161" }}>
+          ¿Recibiste el pago completo del cliente?
+        </p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          {opcion(true,  "✅", "Sí, recibido", "#2e7d32")}
+          {opcion(false, "❌", "No lo recibí", "#c62828")}
+        </div>
+
+        {recibido === false && (
+          <textarea
+            rows={3}
+            value={motivo}
+            onChange={e => { setMotivo(e.target.value); setError(null); }}
+            placeholder="Ej: el cliente no tenía el efectivo completo"
+            style={{
+              width: "100%", padding: "10px 12px", borderRadius: 8,
+              border: "1.5px solid #e0e0e0", fontSize: 13, resize: "vertical",
+              fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+              marginBottom: 6,
+            }}
+          />
+        )}
+        {recibido === false && (
+          <div style={{
+            fontSize: 11, marginBottom: 12,
+            color: motivo.trim().length < 10 ? "#c62828" : "#9e9e9e",
+          }}>
+            {motivo.trim().length}/10 caracteres mínimos
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            background: "#ffebee", color: "#c62828", borderRadius: 8,
+            padding: "9px 12px", fontSize: 12.5, marginBottom: 12,
+          }}>{error}</div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onClose} disabled={saving}
+            style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", color: "#555", fontSize: 13, cursor: "pointer" }}>
+            Cancelar
+          </button>
+          <button onClick={confirmar} disabled={saving}
+            style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: "#2e7d32", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            {saving ? "Registrando…" : "Registrar y entregar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CambiarEstadoModal({ domicilio, onClose, onSave }) {
-  const posibles = PROXIMOS_ESTADOS[domicilio.estado] || [];
+  const posibles = proximosEstados(domicilio.estadoId);
   const [nuevoEstado, setNuevoEstado] = useState(posibles[0]?.valor || "");
   const [obs, setObs] = useState(domicilio.obs_domicilio || "");
   const [saving, setSaving] = useState(false);
@@ -189,7 +300,7 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <EstadoBadge estado={domicilio.estado} />
+          <EstadoBadge estadoId={domicilio.estadoId} />
           <span style={{ fontSize: 12, color: "#9e9e9e", alignSelf: "center" }}>
             {fmtFecha(domicilio.fecha_pedido)}
           </span>
@@ -227,7 +338,7 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {PROXIMOS_ESTADOS[domicilio.estado]?.length > 0 && (
+          {proximosEstados(domicilio.estadoId).length > 0 && (
             <button
               onClick={() => { onClose(); onCambiarEstado(domicilio); }}
               style={{
@@ -267,6 +378,8 @@ export default function GestionDomiciliosRepartidor() {
   const [search,  setSearch]        = useState("");
   const [modal,   setModal]         = useState(null);
   const [toast,   setToast]         = useState(null);
+  // Entrega en efectivo pendiente de registrar el cobro.
+  const [cobrando, setCobrando]     = useState(null);
 
   const showToast = (msg, type = "success") => {
     setToast({ message: msg, type });
@@ -288,12 +401,12 @@ export default function GestionDomiciliosRepartidor() {
 
   useEffect(() => { cargar(); }, []);
 
-  const esActivo = (d) => d.estado !== "Entregado" && d.estado !== "Cancelado";
+  const esActivo = (d) => esDomicilioActivo(d.estadoId);
 
   const q = search.trim().toLowerCase();
   const filtrados = domicilios.filter(d => {
     const matchFiltro = filtro === "activos" ? esActivo(d)
-      : filtro === "entregados" ? d.estado === "Entregado"
+      : filtro === "entregados" ? d.estadoId === ESTADO_DOMICILIO.ENTREGADO
       : true;
     const matchSearch = !q
       || String(d.numero || "").toLowerCase().includes(q)
@@ -303,6 +416,18 @@ export default function GestionDomiciliosRepartidor() {
   });
 
   const handleCambiarEstado = async (id, nuevoEstado, observaciones) => {
+    // Al entregar un pedido en efectivo hay que registrar el cobro primero: el
+    // repartidor es quien recibe el dinero y el backend no acepta la entrega
+    // sin ese registro. Se pide aquí en vez de dejar que falle la llamada.
+    if (nuevoEstado === ESTADO_DOMICILIO.ENTREGADO) {
+      const dom = domicilios.find(d => d.id === id);
+      const cobroPendiente = dom && esPagoEfectivo(dom.metodo_pago) &&
+        !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(dom.estado_pago);
+      if (cobroPendiente) {
+        setCobrando({ dom, observaciones });
+        return;
+      }
+    }
     try {
       await cambiarEstadoDomicilio(id, nuevoEstado, observaciones);
       showToast("Estado actualizado");
@@ -312,9 +437,29 @@ export default function GestionDomiciliosRepartidor() {
     }
   };
 
+  // Registrar el cobro y, si salió bien, cerrar la entrega.
+  const handleCobrar = async ({ recibido, motivo }) => {
+    const { dom, observaciones } = cobrando;
+    try {
+      await registrarPagoEfectivo(dom.id, {
+        recibido,
+        monto: recibido ? dom.total : null,
+        motivo: recibido ? null : motivo,
+      });
+      await cambiarEstadoDomicilio(dom.id, ESTADO_DOMICILIO.ENTREGADO, observaciones);
+      setCobrando(null);
+      showToast(recibido
+        ? `Cobro de ${fmt(dom.total)} registrado y entrega cerrada`
+        : "Se registró que no se pudo cobrar");
+      await cargar();
+    } catch (e) {
+      showToast(e.message || "No se pudo registrar el cobro", "error");
+    }
+  };
+
   const FILTROS = [
     { val: "activos",    label: "Activos",    count: domicilios.filter(esActivo).length },
-    { val: "entregados", label: "Entregados", count: domicilios.filter(d => d.estado === "Entregado").length },
+    { val: "entregados", label: "Entregados", count: domicilios.filter(d => d.estadoId === ESTADO_DOMICILIO.ENTREGADO).length },
     { val: "todos",      label: "Todos",      count: domicilios.length },
   ];
 
@@ -401,8 +546,8 @@ export default function GestionDomiciliosRepartidor() {
         ) : (
           <div style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
             {filtrados.map(dom => {
-              const info = ESTADO_INFO[dom.estado] || ESTADO_INFO["Pendiente"];
-              const puedeCambiar = !!PROXIMOS_ESTADOS[dom.estado]?.length;
+              const info = ESTADO_DOM_CONFIG[dom.estadoId] || ESTADO_DOM_CONFIG[3];
+              const puedeCambiar = proximosEstados(dom.estadoId).length > 0;
               return (
                 <div
                   key={dom.id}
@@ -422,7 +567,7 @@ export default function GestionDomiciliosRepartidor() {
                         {dom.cliente?.nombre || "Cliente"}
                       </div>
                     </div>
-                    <EstadoBadge estado={dom.estado} />
+                    <EstadoBadge estadoId={dom.estadoId} />
                   </div>
 
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 10, color: "#616161", fontSize: 13 }}>
@@ -478,6 +623,15 @@ export default function GestionDomiciliosRepartidor() {
           domicilio={modal.dom}
           onClose={() => setModal(null)}
           onSave={handleCambiarEstado}
+        />
+      )}
+
+      {cobrando && (
+        <CobroEfectivoModal
+          domicilio={cobrando.dom}
+          saving={false}
+          onClose={() => setCobrando(null)}
+          onConfirm={handleCobrar}
         />
       )}
 

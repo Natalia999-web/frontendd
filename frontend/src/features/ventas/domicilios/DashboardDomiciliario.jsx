@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getUser } from "../../../services/authService";
 import { getDomicilios, getResumenDia } from "../../../services/domiciliosService";
+import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, esDomicilioActivo, esPagoEfectivo } from "./estadosDomicilio";
 import "./Domicilios.css";
 
 
@@ -11,7 +12,25 @@ const DISPONIBILIDAD = {
   desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", icon: "⚫" },
 };
 
-const ESTADO_ORDEN = ["En camino", "En proceso", "Asignado", "Pendiente"];
+// Prioridad para elegir el pedido en curso: primero el que ya va en ruta.
+const ESTADO_ORDEN = [
+  ESTADO_DOMICILIO.EN_CAMINO,
+  ESTADO_DOMICILIO.ASIGNADO,
+  ESTADO_DOMICILIO.PENDIENTE,
+];
+
+const fmtCOP = (n) =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })
+    .format(n || 0);
+
+const esHoy = (iso) => {
+  if (!iso) return false;
+  const d = new Date(iso);
+  const hoy = new Date();
+  return d.getFullYear() === hoy.getFullYear() &&
+         d.getMonth() === hoy.getMonth() &&
+         d.getDate() === hoy.getDate();
+};
 
 export default function DashboardDomiciliario() {
   const user = getUser();
@@ -21,6 +40,7 @@ export default function DashboardDomiciliario() {
   const [resumen, setResumen]       = useState({ activos: 0, entregados_hoy: 0, total_hoy: 0 });
   const [ordenActiva, setOrdenActiva] = useState(null);
   const [loading, setLoading]       = useState(true);
+  const [efectivoHoy, setEfectivoHoy] = useState(0);
 
   const cambiarStatus = (val) => {
     setStatus(val);
@@ -37,11 +57,23 @@ export default function DashboardDomiciliario() {
           getDomicilios({ porPagina: 100, idEmpleado: user.id }),
         ]);
         setResumen(res);
-        const activos = (doms.domicilios || []).filter(d =>
-          ["En camino", "En proceso", "Asignado", "Pendiente"].includes(d.estado)
+        const mios = doms.domicilios || [];
+        const activos = mios.filter(d => esDomicilioActivo(d.estadoId));
+        activos.sort(
+          (a, b) => ESTADO_ORDEN.indexOf(a.estadoId) - ESTADO_ORDEN.indexOf(b.estadoId)
         );
-        activos.sort((a, b) => ESTADO_ORDEN.indexOf(a.estado) - ESTADO_ORDEN.indexOf(b.estado));
         setOrdenActiva(activos[0] || null);
+
+        // Efectivo que el repartidor lleva encima: pedidos en efectivo
+        // entregados hoy con el cobro registrado.
+        setEfectivoHoy(
+          mios
+            .filter(d =>
+              esPagoEfectivo(d.metodo_pago) &&
+              d.estado_pago === "efectivo_recibido" &&
+              esHoy(d.fecha_entrega_real))
+            .reduce((suma, d) => suma + (d.total || 0), 0)
+        );
       } catch (e) {
         console.error(e);
       } finally {
@@ -108,6 +140,8 @@ export default function DashboardDomiciliario() {
             { label: "Pedidos activos",  value: resumen.activos,        color: "#1565c0", icon: "📦", bg: "#e3f2fd" },
             { label: "Entregados hoy",   value: resumen.entregados_hoy, color: "#2e7d32", icon: "✅", bg: "#e8f5e9" },
             { label: "Total del día",    value: resumen.total_hoy,      color: "#6a1b9a", icon: "📊", bg: "#f3e5f5" },
+            // Lo que debe entregar en caja al cerrar el día.
+            { label: "Efectivo recaudado", value: fmtCOP(efectivoHoy),  color: "#e65100", icon: "💵", bg: "#fff3e0" },
           ].map(stat => (
             <div key={stat.label} style={{
               background: "#fff", borderRadius: 14, padding: "20px 18px",
@@ -121,7 +155,10 @@ export default function DashboardDomiciliario() {
               }}>
                 {stat.icon}
               </div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: stat.color, lineHeight: 1 }}>
+              <div style={{
+                fontSize: typeof stat.value === "string" ? 22 : 30,
+                fontWeight: 800, color: stat.color, lineHeight: 1.1,
+              }}>
                 {loading ? "…" : stat.value}
               </div>
               <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 6, fontWeight: 600 }}>
@@ -150,11 +187,11 @@ export default function DashboardDomiciliario() {
                 </div>
                 <span style={{
                   padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-                  background: ordenActiva.estado === "En camino" ? "#f3e5f5" : "#e3f2fd",
-                  color: ordenActiva.estado === "En camino" ? "#8e24aa" : "#1565c0",
+                  background: (ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).bg || "#e3f2fd",
+                  color:      (ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).dot || "#1565c0",
                 }}>
-                  {ordenActiva.estado === "En camino"  ? "🛵 En camino" :
-                   ordenActiva.estado === "En proceso" ? "🏠 En local" : "📦 Asignado"}
+                  {ordenActiva.estadoId === ESTADO_DOMICILIO.EN_CAMINO ? "🛵 " : "📦 "}
+                  {(ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).label || ordenActiva.estado}
                 </span>
               </div>
               <div style={{ fontSize: 13, color: "#616161", marginBottom: 14 }}>

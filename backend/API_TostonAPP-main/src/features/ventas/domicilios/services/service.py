@@ -131,9 +131,20 @@ def obtener_resumen_dia(db: Session, id_empleado: int) -> dict:
 
     base = db.query(Domicilio).filter(Domicilio.ID_Empleado == id_empleado)
 
-    activos        = base.filter(Domicilio.Estado.in_([10, 13, 9])).count()
+    # Estados canónicos del domicilio (ver estados.py). Antes se contaba el 13,
+    # que es "En producción" del PEDIDO y no un estado de domicilio, y las
+    # entregas solo miraban el 8, dejando fuera el 4 que escribían las versiones
+    # viejas de la app móvil: el repartidor veía menos entregas de las hechas.
+    _ACTIVOS = [
+        int(EstadoDomicilio.PENDIENTE),
+        int(EstadoDomicilio.ASIGNADO),
+        int(EstadoDomicilio.EN_CAMINO),
+    ]
+    _ENTREGADOS = [int(EstadoDomicilio.ENTREGADO), 4]
+
+    activos        = base.filter(Domicilio.Estado.in_(_ACTIVOS)).count()
     entregados_hoy = base.filter(
-        Domicilio.Estado == 8,
+        Domicilio.Estado.in_(_ENTREGADOS),
         Domicilio.Fecha_entrega >= hoy_inicio,
         Domicilio.Fecha_entrega < hoy_fin,
     ).count()

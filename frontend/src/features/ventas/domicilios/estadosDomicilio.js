@@ -72,7 +72,8 @@ const TRANSICIONES_GESTION = {
 const TRANSICIONES_REPARTIDOR = {
   3:  [],
   10: [ESTADO_DOMICILIO.EN_CAMINO],
-  9:  [ESTADO_DOMICILIO.ENTREGADO],
+  // Ya en ruta puede cerrarla como entregada o, si no pudo, cancelarla.
+  9:  [ESTADO_DOMICILIO.ENTREGADO, ESTADO_DOMICILIO.CANCELADO],
   8:  [],
   5:  [],
 };
