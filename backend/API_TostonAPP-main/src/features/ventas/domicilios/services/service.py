@@ -289,6 +289,11 @@ def obtener_domicilios(
             "Departamento_entrega": dom.Departamento_entrega,
             "total":                total_v,
             "metodo_pago":          metodo,
+            # El listado se había quedado sin estado_pago mientras el detalle sí
+            # lo devolvía: la tabla de Gestión de domicilios lo leía como
+            # "sin cobrar" aunque el cobro estuviera registrado, así que no
+            # dejaba marcar la entrega.
+            "estado_pago":          venta.Estado_Pago if venta else None,
             "comprobante_pago":     venta.Comprobante_Pago if venta else None,
             "productos":            prods,
             "telefono_cliente":     cliente.Telefono if cliente else "",
