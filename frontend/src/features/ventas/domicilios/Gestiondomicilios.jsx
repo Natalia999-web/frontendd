@@ -1126,13 +1126,24 @@ export default function GestionDomicilios() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  /* ── Solo pedidos confirmados ──────────────────────────────────────────
+     El domicilio se crea junto con la venta, así que aparecía en el panel
+     mientras el pedido seguía Pendiente (1) o esperando que el cliente
+     aceptara la fecha propuesta (16). Hasta que el pedido no se confirma no
+     hay nada que gestionar aquí; es el mismo criterio de la app móvil.
+     Si el backend no envía el estado de la venta, no se oculta nada. */
+  const gestionables = domicilios.filter(
+    d => ![1, 16].includes(d.venta_estado_id)
+  );
+  const ocultosSinConfirmar = domicilios.length - gestionables.length;
+
   const pedidosPorEmpleado = empleados.reduce((acc, emp) => {
-    acc[emp.id] = domicilios.filter(p => p.idEmpleado === emp.id).length;
+    acc[emp.id] = gestionables.filter(p => p.idEmpleado === emp.id).length;
     return acc;
   }, {});
 
   /* ── Filtrado ── */
-  const filtered = domicilios.filter(p => {
+  const filtered = gestionables.filter(p => {
     const q   = search.toLowerCase();
     const emp = empleados.find(e => e.id === p.idEmpleado);
     const matchQ = [
@@ -1275,11 +1286,11 @@ export default function GestionDomicilios() {
   };
 
   /* ── Stats ── */
-  const totalDom   = domicilios.length;
-  const enCamino   = domicilios.filter(p => p.estado === "En camino").length;
-  const entregados = domicilios.filter(p => p.estado === "Entregado").length;
-  const conAsignar = domicilios.filter(p => p.idEmpleado).length;
-  const sinAsignar = domicilios.filter(p => !p.idEmpleado && !["Entregado", "Cancelado"].includes(p.estado)).length;
+  const totalDom   = gestionables.length;
+  const enCamino   = gestionables.filter(p => p.estado === "En camino").length;
+  const entregados = gestionables.filter(p => p.estado === "Entregado").length;
+  const conAsignar = gestionables.filter(p => p.idEmpleado).length;
+  const sinAsignar = gestionables.filter(p => !p.idEmpleado && !["Entregado", "Cancelado"].includes(p.estado)).length;
 
   // Domiciliarios solo pueden ver su propio panel
   if (getUser()?.rol === "Domiciliario") {
@@ -1397,6 +1408,21 @@ export default function GestionDomicilios() {
                 )}
               </div>
             </div>
+
+            {ocultosSinConfirmar > 0 && (
+              <div
+                className="info-box"
+                style={{ marginBottom: 12, background: "#fff8e1", borderColor: "#ffe9a8" }}
+              >
+                <span className="info-box__icon">⏳</span>
+                <span className="info-box__text">
+                  {ocultosSinConfirmar === 1
+                    ? "Hay 1 domicilio en espera: su pedido todavía no está confirmado."
+                    : `Hay ${ocultosSinConfirmar} domicilios en espera: sus pedidos todavía no están confirmados.`}
+                  {" "}Aparecerán aquí en cuanto se confirmen desde Gestión de pedidos.
+                </span>
+              </div>
+            )}
 
             <div className="card">
               <div className="tbl-wrapper">
@@ -1611,7 +1637,7 @@ export default function GestionDomicilios() {
         {tab === "historial" && (
           <div className="card" style={{ padding: 20 }}>
             <HistorialDomiciliario
-              domicilios={domicilios}
+              domicilios={gestionables}
               empleados={empleados}
               onDesactivar={handleSolicitarDesactivar}
             />
@@ -1624,7 +1650,7 @@ export default function GestionDomicilios() {
         <ModalVerDomicilio
           pedido={modal.pedido}
           emp={empleados.find(e => e.id === modal.pedido.idEmpleado)}
-          domicilios={domicilios}
+          domicilios={gestionables}
           onClose={() => setModal(null)}
           onReasignar={ped => setModal({ type: "reasignar", pedido: ped })}
           onObservaciones={ped => setModal({ type: "obs", pedido: ped })}
