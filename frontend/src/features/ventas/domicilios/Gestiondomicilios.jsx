@@ -1454,20 +1454,20 @@ export default function GestionDomicilios() {
                           className="tbl-row"
                           style={{ background: sinAsignado ? "#fffbf0" : "transparent" }}
                         >
-                          <td>
+                          <td data-label="Nº">
                             <span className="row-num">
                               {String((safePage - 1) * PER_PAGE + idx + 1).padStart(2, "0")}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Pedido">
                             <div className="pedido-num">{ped.numero}</div>
                             <div className="pedido-fecha">{fmt(ped.total)}</div>
                           </td>
-                          <td>
+                          <td data-label="Cliente">
                             <div className="client-name">{ped.cliente?.nombre || "—"}</div>
                             <div className="client-phone">{ped.cliente?.telefono || ""}</div>
                           </td>
-                          <td>
+                          <td data-label="Dirección">
                             <div
                               className="dir-main"
                               style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
@@ -1482,7 +1482,7 @@ export default function GestionDomicilios() {
                               </div>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Domiciliario">
                             {emp ? (
                               <div>
                                 <div className="emp-name">🛵 {emp.nombre} {emp.apellidos}</div>
@@ -1495,7 +1495,7 @@ export default function GestionDomicilios() {
                               <div className="emp-none">Sin asignar</div>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Fechas">
                             <div className="date-col">
                               <span className="date-row date-row--pedido">📅 {fmtFecha(ped.fecha_pedido)}</span>
                               {ped.fecha_entrega_real
@@ -1504,13 +1504,13 @@ export default function GestionDomicilios() {
                               }
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Pago">
                             {ped.venta_estado_id != null
                               ? <VentaEstadoBadge estadoId={ped.venta_estado_id} />
                               : <span style={{ color: "#bdbdbd", fontSize: 11 }}>—</span>
                             }
                           </td>
-                          <td>
+                          <td data-label="Estado venta">
                             <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                               <MetodoPagoChip metodo={ped.metodo_pago} />
                               <EstadoPagoChip estadoPago={ped.estado_pago} />
@@ -1519,7 +1519,7 @@ export default function GestionDomicilios() {
                               </span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Estado entrega">
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                               <EstadoBadge estado={ped.estado} estadoId={ped.estadoId} />
                               {/* Avisa si venta cancelada pero entrega aún abierta */}
@@ -1532,7 +1532,7 @@ export default function GestionDomicilios() {
                               <AlertaEstado pedido={ped} empleados={empleados} />
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Acciones">
                             <div className="actions-cell">
                               <button
                                 className="act-btn act-btn--view"
