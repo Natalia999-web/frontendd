@@ -19,6 +19,10 @@ import DashboardCocina from "../features/produccion/cocina/DashboardCocina";
 /* ─── VENTAS ADMIN ─── */
 import GestionClientes from "../features/ventas/clientes/GestionClientes";
 import GestionPedidos from "../features/ventas/pedidos/GestionPedidos";
+import GestionLiquidaciones from "../features/ventas/liquidaciones/GestionLiquidaciones";
+
+/* ─── REPORTES ─── */
+import Reportes from "../features/reportes/Reportes";
 import GestionDevoluciones from "../features/ventas/devoluciones/GestionDevoluciones";
 import GestionDomicilios from "../features/ventas/domicilios/Gestiondomicilios";
 import GestionDomiciliosRepartidor from "../features/ventas/domicilios/GestionDomiciliosRepartidor";
@@ -119,9 +123,11 @@ const AppRouter = () => {
             <Route path="cocina"               element={<CocinaRoute />} />
 
             {/* Ventas */}
-            <Route path="clientes"    element={<PR clave="Pedidos_ver"      el={<GestionClientes />} />} />
-            <Route path="pedidos"     element={<PR clave="Pedidos_ver"      el={<GestionPedidos />} />} />
-            <Route path="devoluciones" element={<PR clave="Devoluciones_ver" el={<GestionDevoluciones />} />} />
+            <Route path="clientes"      element={<PR clave="Pedidos_ver"      el={<GestionClientes />} />} />
+            <Route path="pedidos"       element={<PR clave="Pedidos_ver"      el={<GestionPedidos />} />} />
+            <Route path="liquidaciones" element={<PR clave="Domicilios_ver"   el={<GestionLiquidaciones />} />} />
+            <Route path="reportes"      element={<PR clave="Dashboard_ver"    el={<Reportes />} />} />
+            <Route path="devoluciones"  element={<PR clave="Devoluciones_ver" el={<GestionDevoluciones />} />} />
             <Route path="domicilios"           element={<PR clave="Domicilios_ver"            el={<GestionDomicilios />} />} />
             <Route path="mis-entregas"         element={<PR clave="Domicilios_cambiar_estado" el={<GestionDomiciliosRepartidor />} />} />
             <Route path="mi-dashboard"         element={<PR clave="Domicilios_cambiar_estado" el={<DashboardDomiciliario />} />} />

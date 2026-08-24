@@ -4,7 +4,7 @@ import EditarFicha from "./EditarFicha.jsx";
 import { getFichas, crearFicha, editarFicha, eliminarFicha, toggleEstadoFicha } from "../../../../services/fichaTecnicaService.js";
 import "./FichasTecnicas.css";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 5;
 
 function Toggle({ value, onChange, disabled }) {
   return (

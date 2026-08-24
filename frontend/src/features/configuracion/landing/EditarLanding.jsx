@@ -30,6 +30,19 @@ const FIELDS = [
       { key: "ctaDescription", label: "Descripción CTA",  type: "textarea", placeholder: LANDING_DEFAULTS.ctaDescription },
     ],
   },
+  {
+    group: "Información de contacto",
+    fields: [
+      { key: "contactPhone1",          label: "Teléfono 1",             type: "text", placeholder: LANDING_DEFAULTS.contactPhone1 },
+      { key: "contactPhone2",          label: "Teléfono 2",             type: "text", placeholder: LANDING_DEFAULTS.contactPhone2 },
+      { key: "contactAddressLine",     label: "Dirección",              type: "text", placeholder: LANDING_DEFAULTS.contactAddressLine },
+      { key: "contactCity",            label: "Ciudad y país",          type: "text", placeholder: LANDING_DEFAULTS.contactCity },
+      { key: "contactInstagramHandle", label: "Instagram (usuario)",    type: "text", placeholder: LANDING_DEFAULTS.contactInstagramHandle },
+      { key: "contactInstagramUrl",    label: "Instagram (enlace URL)", type: "text", placeholder: LANDING_DEFAULTS.contactInstagramUrl },
+      { key: "horarioLunesViernes",    label: "Horario Lun – Vie",      type: "text", placeholder: LANDING_DEFAULTS.horarioLunesViernes },
+      { key: "horarioSabado",          label: "Horario Sábado",         type: "text", placeholder: LANDING_DEFAULTS.horarioSabado },
+    ],
+  },
 ];
 
 export default function EditarLanding() {

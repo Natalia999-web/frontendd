@@ -8,7 +8,7 @@ import {
   Globe, LayoutDashboard, Settings, ShoppingCart, Layers, TrendingUp, User,
   Home, Pencil, Monitor, Shield, Users, Upload, FolderOpen, Package, Receipt,
   Building2, Tag, Box, ClipboardList, Utensils, ShoppingBag, Truck,
-  Navigation, History, Banknote, Bell, UserCircle, RotateCcw,
+  Navigation, History, Banknote, Bell, UserCircle, RotateCcw, BarChart2,
   Search, ChevronLeft, ChevronRight, ChevronDown, LogOut, MessageSquare,
 } from "lucide-react";
 import { useChat } from "../../features/chat/context/ChatContext";
@@ -30,7 +30,8 @@ const adminMenuItems = [
     section: "Dashboard",
     Icon: LayoutDashboard,
     items: [
-      { label: "Vista General", Icon: Monitor, link: "/admin", privilegioKey: "Dashboard" },
+      { label: "Vista General", Icon: Monitor,   link: "/admin",          privilegioKey: "Dashboard" },
+      { label: "Reportes",      Icon: BarChart2, link: "/admin/reportes", privilegioKey: "Dashboard" },
     ],
   },
   {
@@ -76,6 +77,7 @@ const adminMenuItems = [
       { label: "Notificaciones", Icon: Bell,           link: "/admin/mis-notificaciones",   clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
       { label: "Mi Perfil",      Icon: UserCircle,     link: "/admin/mi-perfil-repartidor", clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
       { label: "Centro de Chats",Icon: MessageSquare,  link: "/admin/chats",                privilegioKey: "Domicilios", soloAdmin: true },
+      { label: "Liquidaciones",  Icon: Banknote,       link: "/admin/liquidaciones",        privilegioKey: "Domicilios" },
       { label: "Devoluciones",   Icon: RotateCcw,      link: "/admin/devoluciones",         privilegioKey: "Devoluciones" },
     ],
   },

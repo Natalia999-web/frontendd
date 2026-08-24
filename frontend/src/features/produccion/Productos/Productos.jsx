@@ -31,7 +31,7 @@ import { registrarSalida, procesarVencidos } from "../../../services/salidasServ
 import { usePrivilegio } from "../../../context/PrivilegiosContext";
 import "./Productos.css";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 /* ══════════════════════════════════════════════════════════
    HELPERS

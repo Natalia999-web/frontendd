@@ -13,7 +13,7 @@ import {
 } from "../../../services/categoriasProductosService";
 import "./Categoriaproductos.css";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 function adaptCat(c) {
   return {

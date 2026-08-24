@@ -13,7 +13,7 @@ import {
 } from "../../../services/categoriasInsumosService.js";
 import "./CategoriaInsumos.css";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const ADAPT = raw => ({
   id:           raw.ID_Categoria,

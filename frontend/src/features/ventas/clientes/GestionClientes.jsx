@@ -12,7 +12,7 @@ import ModalEliminarValidado from "../../../ModalEliminarValidado";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./clientes.css";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 5;
 
 function Toggle({ value, onChange }) {
   return (

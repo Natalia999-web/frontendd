@@ -6,7 +6,7 @@ import EditarRol from "./EditarRol.jsx";
 import ModalEliminarValidado from "../../../ModalEliminarValidado";
 import "./Roles.css";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 5;
 
 function Toggle({ value, onChange, disabled = false }) {
   return (

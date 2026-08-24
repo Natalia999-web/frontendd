@@ -12,7 +12,7 @@ import "./GestionInsumos.css";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import { getRecordDate } from "../../../utils/dateUtils";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 export const UNIDADES = [
   { id: 1, nombre: "Kilogramo", simbolo: "kg"   },

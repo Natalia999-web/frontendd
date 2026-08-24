@@ -1,18 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Leaf, Phone, MapPin, Clock3, ExternalLink, Instagram, ShoppingBag, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getLandingConfig } from "../../services/landingConfigService";
 
-/* ─────────────────────────────────────────────────────────────
-   CAUSA DEL MAP VACÍO (resuelto):
-   La dirección anterior no incluía ciudad → Nominatim fallaba.
-   FIX: se añadió "Barranquilla" al query de geocodificación.
-   FALLBACK: si Nominatim sigue fallando, se usan coords fijas.
-───────────────────────────────────────────────────────────── */
-const DIRECCION       = "Carrera 38A No. 80-12, Barranquilla, Colombia";
-const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Carrera+38A+No.+80-12+Barranquilla+Colombia";
-
-/* Coords de respaldo (Barranquilla, zona norte — Carrera 38 / Calle 80).
-   Se usan si Nominatim no responde o devuelve resultado vacío. */
 const FALLBACK_COORDS = { lat: 11.016, lon: -74.825 };
 
 /* ── Geocoder via Nominatim (OpenStreetMap) ── */
@@ -57,8 +47,8 @@ function useGeocoder(query) {
 }
 
 /* ── Mapa OSM ── */
-function MapaEncuentranos() {
-  const { coords, status } = useGeocoder(DIRECCION);
+function MapaEncuentranos({ address }) {
+  const { coords, status } = useGeocoder(address);
 
   if (status === "loading") {
     return (
@@ -93,14 +83,15 @@ function MapaEncuentranos() {
 ═══════════════════════════════ */
 function Footer({ onExplorar }) {
   const navigate = useNavigate();
+  const cfg     = useMemo(() => getLandingConfig(), []);
   const h       = new Date().getHours();
   const dia     = new Date().getDay();
   const abierto = dia !== 0 && h >= 8 && h < 20;
 
   const horario = [
-    { dias: "Lun – Vie", horas: "8:00 am – 8:00 pm", activo: true  },
-    { dias: "Sábado",    horas: "8:00 am – 8:00 pm", activo: true  },
-    { dias: "Domingo",   horas: "Cerrado",            activo: false },
+    { dias: "Lun – Vie", horas: cfg.horarioLunesViernes, activo: true  },
+    { dias: "Sábado",    horas: cfg.horarioSabado,        activo: true  },
+    { dias: "Domingo",   horas: "Cerrado",                activo: false },
   ];
 
   const navLinks = [
@@ -151,7 +142,7 @@ function Footer({ onExplorar }) {
 
             {/* Instagram */}
             <a
-              href="https://www.instagram.com/tostonesbroms?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+              href={cfg.contactInstagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", width: "fit-content", padding: "8px 14px 8px 10px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 14, transition: "background 0.2s" }}
@@ -161,7 +152,7 @@ function Footer({ onExplorar }) {
               <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Instagram style={{ width: 16, height: 16, color: "#fff" }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#c8e6c9" }}>@tostonesbroms</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#c8e6c9" }}>{cfg.contactInstagramHandle}</span>
             </a>
 
             {onExplorar && (
@@ -218,8 +209,8 @@ function Footer({ onExplorar }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {[
-                { href: "tel:3217543305", label: "Teléfono 1", value: "321 754 3305" },
-                { href: "tel:3137899946", label: "Teléfono 2", value: "313 789 9946" },
+                { href: `tel:${cfg.contactPhone1.replace(/\s+/g, "")}`, label: "Teléfono 1", value: cfg.contactPhone1 },
+                { href: `tel:${cfg.contactPhone2.replace(/\s+/g, "")}`, label: "Teléfono 2", value: cfg.contactPhone2 },
               ].map(({ href, label, value }) => (
                 <a
                   key={href}
@@ -244,8 +235,8 @@ function Footer({ onExplorar }) {
                 </div>
                 <div>
                   <p style={{ fontSize: 10, color: "#81c784", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px" }}>Dirección</p>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.4 }}>Carrera 38A No. 80-12</p>
-                  <p style={{ fontSize: 12, color: "#c8e6c9", margin: "2px 0 0" }}>Barranquilla, Colombia</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.4 }}>{cfg.contactAddressLine}</p>
+                  <p style={{ fontSize: 12, color: "#c8e6c9", margin: "2px 0 0" }}>{cfg.contactCity}</p>
                 </div>
               </div>
             </div>
@@ -312,9 +303,9 @@ function Footer({ onExplorar }) {
               Encuéntranos
             </span>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 4 }}>·</span>
-            <span style={{ fontSize: 12, color: "#c8e6c9", fontWeight: 600 }}>Carrera 38A No. 80-12, Barranquilla</span>
+            <span style={{ fontSize: 12, color: "#c8e6c9", fontWeight: 600 }}>{cfg.contactAddressLine}, {cfg.contactCity}</span>
             <a
-              href={GOOGLE_MAPS_URL}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cfg.contactAddressLine}, ${cfg.contactCity}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#c8e6c9", textDecoration: "none", padding: "6px 12px", background: "rgba(255,255,255,0.08)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", transition: "all 0.2s", whiteSpace: "nowrap" }}
@@ -325,7 +316,7 @@ function Footer({ onExplorar }) {
               Abrir en Maps
             </a>
           </div>
-          <MapaEncuentranos />
+          <MapaEncuentranos address={`${cfg.contactAddressLine}, ${cfg.contactCity}`} />
         </div>
 
       </div>

@@ -1,6 +1,6 @@
 export const TIPOS_DOC = ["CC", "TI", "CE", "Pasaporte", "NIT", "PPT"];
 
-export const ITEMS_PER_PAGE = 10;
+export const ITEMS_PER_PAGE = 5;
 
 export const fmtTel = (raw) => {
   const d = raw.replace(/\D/g, "").slice(0, 10);

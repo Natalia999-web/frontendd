@@ -7,7 +7,7 @@ import { fmtFecha, getRecordDate } from "../../../utils/dateUtils";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./compras.css";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const COP = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);

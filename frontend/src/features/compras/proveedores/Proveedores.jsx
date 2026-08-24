@@ -12,7 +12,7 @@ import {
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import { getRecordDate } from "../../../utils/dateUtils";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const ADAPT = raw => ({
   id:                 raw.ID_Proveedor,
