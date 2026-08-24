@@ -1,29 +1,25 @@
 import { apiFetch } from "../utils/api";
-
-const ESTADO_DOM_MAP = {
-  3:  "Pendiente",
-  5:  "Cancelado",
-  8:  "Entregado",
-  9:  "En camino",
-  10: "Asignado",
-  13: "En proceso",
-};
+import { labelEstadoDom, normalizarEstadoDom } from "../features/ventas/domicilios/estadosDomicilio";
 
 const adaptDomicilio = (d) => {
-  const estadoRaw = d.estado_label || d.Estado || d.estado;
-  const estado = typeof estadoRaw === "number"
-    ? (ESTADO_DOM_MAP[estadoRaw] || "Pendiente")
-    : (estadoRaw || "Pendiente");
+  // El estado se normaliza a la numeración canónica (ver estadosDomicilio.js) y
+  // la etiqueta se deriva de ahí, para no depender de dos mapas distintos.
+  const estadoId = normalizarEstadoDom(d.Estado, Boolean(d.ID_Empleado));
   return {
     id:                 d.ID_Domicilio,
+    idVenta:            d.ID_Venta            || null,
     numero:             `DOM-${d.ID_Domicilio}`,
-    estadoId:           d.Estado || null,
-    estado,
+    estadoId,
+    estado:             labelEstadoDom(estadoId),
     idEmpleado:         d.ID_Empleado         || null,
     nombre_repartidor:  d.nombre_repartidor   || "",
     direccion_entrega:  d.Direccion_entrega   || "",
     municipio_entrega:  d.Municipio_entrega   || "",
+    departamento_entrega: d.Departamento_entrega || "",
+    // Observaciones = nota de esta entrega; indicaciones = referencia que el
+    // cliente guardó en su perfil. El backend las envía separadas.
     obs_domicilio:      d.Observaciones       || "",
+    indicaciones_cliente: d.indicaciones_cliente || "",
     fecha_pedido:       d.Fecha_asignacion    || "",
     fecha_entrega_real: d.Fecha_entrega       || null,
     total:              d.total               || 0,
@@ -31,6 +27,8 @@ const adaptDomicilio = (d) => {
     comprobante_pago:   d.comprobante_pago    || null,
     productos:          d.productos           || [],
     estado_pago:        d.estado_pago        || null,
+    // Código de entrega generado por el backend (aleatorio, no calculable).
+    otp:                d.otp                 || null,
     domicilio:          true,
     venta_estado_id:    d.venta_estado ?? null,
     cliente: {
@@ -90,10 +88,6 @@ export const actualizarDomicilio = async (id, data) => {
     body: JSON.stringify(data),
   });
 };
-
-// OTP — código determinístico (igual fórmula que el backend)
-export const computarOTP = (idDomicilio) =>
-  String((idDomicilio * 7331 + 4729) % 9000 + 1000);
 
 export const verificarOTP = async (id, codigo) => {
   return apiFetch(`/domicilios/${id}/verificar-otp`, {

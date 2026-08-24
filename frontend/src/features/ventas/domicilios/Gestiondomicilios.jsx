@@ -6,6 +6,10 @@ import { getUser } from "../../../services/authService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
+import {
+  ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, FILTRO_ESTADOS_DOM,
+  esDomicilioActivo, transicionesDom,
+} from "./estadosDomicilio";
 import "./Domicilios.css";
 
 function SkeletonRows({ cols = 9, rows = 5 }) {
@@ -25,52 +29,25 @@ const fmt = (n) =>
 const PER_PAGE = 5;
 
 // Estado del domicilio (entrega)
-const ESTADO_CONFIG = {
-  3:  { dot: "#f9a825", label: "Pendiente",      desc: "Pendiente de salida",                       bg: "#fff8e1" },
-  4:  { dot: "#43a047", label: "Confirmado",     desc: "Confirmado y listo para preparar",           bg: "#e8f5e9" },
-  13: { dot: "#1976d2", label: "En preparación", desc: "Cocinando y preparando",                     bg: "#e3f2fd" },
-  11: { dot: "#43a047", label: "Listo",          desc: "Preparado y listo para salir",              bg: "#e8f5e9" },
-  10: { dot: "#43a047", label: "Asignado",       desc: "Domiciliario asignado",                      bg: "#e8f5e9" },
-  9:  { dot: "#6a1b9a", label: "En camino",      desc: "En ruta de entrega",                        bg: "#f3e5f5" },
-  8:  { dot: "#43a047", label: "Entregado",      desc: "Entregado al cliente",                       bg: "#e8f5e9" },
-  5:  { dot: "#c62828", label: "Cancelado",      desc: "Cancelado",                                  bg: "#ffebee" },
-};
+// Los estados y transiciones del domicilio viven en estadosDomicilio.js: antes
+// esta pantalla ofrecía estados del PEDIDO (Confirmado, En preparación, Listo)
+// que el backend interpretaba como "Entregado" al recibirlos.
+const ESTADO_CONFIG = ESTADO_DOM_CONFIG;
 
-// Estado del pedido (venta)
+// Estado de la venta asociada (Ventas.Estado, tabla global Estados)
 const VENTA_ESTADO_CONFIG = {
-  1:  { dot: "#43a047", label: "Activo",         bg: "#e8f5e9" },
-  3:  { dot: "#f9a825", label: "Pendiente",      bg: "#fff8e1" },
-  4:  { dot: "#43a047", label: "Confirmado",     bg: "#e8f5e9" },
-  5:  { dot: "#c62828", label: "Cancelado",      bg: "#ffebee" },
-  8:  { dot: "#43a047", label: "Entregado",      bg: "#e8f5e9" },
-  9:  { dot: "#6a1b9a", label: "En camino",      bg: "#f3e5f5" },
-  10: { dot: "#43a047", label: "Asignado",       bg: "#e8f5e9" },
-  11: { dot: "#43a047", label: "Listo",          bg: "#e8f5e9" },
-  13: { dot: "#1976d2", label: "En preparación", bg: "#e3f2fd" },
+  1:  { dot: "#f9a825", label: "Pendiente",       bg: "#fff8e1" },
+  4:  { dot: "#43a047", label: "Confirmado",      bg: "#e8f5e9" },
+  5:  { dot: "#c62828", label: "Cancelado",       bg: "#ffebee" },
+  8:  { dot: "#43a047", label: "Entregado",       bg: "#e8f5e9" },
+  9:  { dot: "#6a1b9a", label: "En camino",       bg: "#f3e5f5" },
+  10: { dot: "#43a047", label: "Asignado",        bg: "#e8f5e9" },
+  11: { dot: "#43a047", label: "Listo",           bg: "#e8f5e9" },
+  13: { dot: "#1976d2", label: "En producción",   bg: "#e3f2fd" },
+  16: { dot: "#3949ab", label: "Fecha propuesta", bg: "#e8eaf6" },
 };
 
-const ESTADO_TRANSITIONS = {
-  3:  [{ id: 4,  label: "Confirmado" },     { id: 5, label: "Cancelado" }],
-  4:  [{ id: 13, label: "En preparación" }, { id: 8, label: "Entregado" }, { id: 5, label: "Cancelado" }],
-  13: [{ id: 11, label: "Listo" },          { id: 5, label: "Cancelado" }],
-  11: [{ id: 10, label: "Asignado" },       { id: 5, label: "Cancelado" }],
-  10: [{ id: 9,  label: "En camino" },      { id: 5, label: "Cancelado" }],
-  9:  [{ id: 8,  label: "Entregado" },      { id: 5, label: "Cancelado" }],
-};
-
-const FILTER_OPTIONS = [
-  { val: "todos",       label: "Todos",       dot: "#bdbdbd" },
-  { val: "activos",     label: "Activos",     dot: "#43a047" },
-  { val: 3,               label: "Pendiente",   dot: "#f9a825" },
-  { val: 4,               label: "Confirmado",  dot: "#43a047" },
-  { val: 13,              label: "En preparación", dot: "#1976d2" },
-  { val: 11,              label: "Listo",       dot: "#43a047" },
-  { val: 10,              label: "Asignado",    dot: "#43a047" },
-  { val: 9,               label: "En camino",   dot: "#6a1b9a" },
-  { val: 8,               label: "Entregado",   dot: "#43a047" },
-  { val: 5,               label: "Cancelado",   dot: "#c62828" },
-  { val: "sin-asignar", label: "Sin asignar", dot: "#e53935" },
-];
+const FILTER_OPTIONS = FILTRO_ESTADOS_DOM;
 
 /* ─── Componentes pequeños ───────────────────────────────── */
 function EstadoBadge({ estado, estadoId }) {
@@ -174,9 +151,14 @@ const formatDuration = (minutes) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-const mapToGoogleMaps = (address) => {
+// Igual que en la app móvil: la búsqueda incluye municipio, departamento y país
+// para que el geocoding no confunda direcciones repetidas entre ciudades.
+const mapToGoogleMaps = (address, municipio = "", departamento = "") => {
   if (!address) return "https://www.google.com/maps";
-  const query = encodeURIComponent(address);
+  const partes = [address, municipio, departamento, "Colombia"]
+    .map(p => (p || "").trim())
+    .filter(Boolean);
+  const query = encodeURIComponent(partes.join(", "));
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 };
 
@@ -267,8 +249,8 @@ function ModalConfirmarDesactivar({ usuario, pedidosActivos, onConfirm, onClose 
 /* ═══════════════════════════════════════════════════════════
    MODAL CAMBIAR ESTADO
    ═══════════════════════════════════════════════════════════ */
-function ModalCambiarEstado({ pedido, onClose, onSave }) {
-  const opciones = ESTADO_TRANSITIONS[pedido.estadoId] || [];
+function ModalCambiarEstado({ pedido, esRepartidor = false, onClose, onSave }) {
+  const opciones = transicionesDom(pedido.estadoId, esRepartidor);
   const [seleccion, setSeleccion] = useState(opciones[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -486,7 +468,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                 {pedido.direccion_entrega && (
                   <a
                     className="link-button"
-                    href={mapToGoogleMaps(pedido.direccion_entrega)}
+                    href={mapToGoogleMaps(pedido.direccion_entrega, pedido.municipio_entrega, pedido.departamento_entrega)}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ marginTop: 12, display: "inline-block", fontSize: 13 }}
@@ -886,12 +868,10 @@ export default function GestionDomicilios() {
       emp ? `${emp.nombre} ${emp.apellidos}` : "",
     ].filter(Boolean).some(v => v.toLowerCase().includes(q));
 
-    const activeEstados = [3, 4, 13, 11, 10, 9];
   const matchE =
     filterEstado === "todos"       ? true :
-    filterEstado === "activos"     ? activeEstados.includes(p.estadoId) :
-    filterEstado === "Entregado"   ? p.estado === "Entregado" :
-    filterEstado === "sin-asignar" ? !p.idEmpleado && ![8, 5].includes(p.estadoId) :
+    filterEstado === "activos"     ? esDomicilioActivo(p.estadoId) :
+    filterEstado === "sin-asignar" ? !p.idEmpleado && esDomicilioActivo(p.estadoId) :
     p.estadoId === filterEstado;
 
     let matchFecha = true;
@@ -1237,9 +1217,9 @@ export default function GestionDomicilios() {
                               <button
                                 className="act-btn act-btn--map"
                                 data-tooltip="Ver en Google Maps"
-                                onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega), "_blank", "noopener")}
+                                onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega, ped.municipio_entrega, ped.departamento_entrega), "_blank", "noopener")}
                               >🌍</button>
-                              {ESTADO_TRANSITIONS[ped.estadoId] && (
+                              {transicionesDom(ped.estadoId).length > 0 && (
                                 <button
                                   className="act-btn"
                                   data-tooltip="Cambiar estado del pedido"

@@ -55,6 +55,12 @@ class DomicilioResponse(BaseModel):
     estado_pago:          Optional[str]      = None
     productos:            Optional[List[Any]] = None
     telefono_cliente:     Optional[str]      = None
+    # Estado de la venta asociada, comprobante de pago y código de entrega.
+    # El servicio ya los construía; sin declararlos aquí Pydantic los descartaba
+    # y el panel no podía mostrarlos ni validar el OTP real.
+    venta_estado:         Optional[int]      = None
+    comprobante_pago:     Optional[str]      = None
+    otp:                  Optional[str]      = None
 
     class Config:
         from_attributes = True

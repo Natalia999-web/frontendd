@@ -225,30 +225,6 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const permisos   = PERMISOS_POR_ESTADO[pedido.estado] || {};
   const esEditable = Object.values(permisos).some(Boolean);
 
-  if (!esEditable) {
-    return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
-          <div style={{ padding: "28px 24px", textAlign: "center" }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 14,
-              background: "#ffebee", border: "1px solid #ef9a9a",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 24, margin: "0 auto 14px",
-            }}>🚫</div>
-            <h3 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, fontFamily: "var(--font-head)" }}>
-              No editable
-            </h3>
-            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#616161" }}>
-              Los pedidos en estado <strong>"{pedido.estado}"</strong> no se pueden editar.
-            </p>
-            <button className="btn-ghost" onClick={onClose}>Entendido</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const [form, setForm] = useState({
     idCliente:         pedido.idCliente,
     productosItems:    pedido.productosItems || [],
@@ -285,6 +261,33 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
 
   const clienteActual = clientes.find(c => c.id === form.idCliente);
   const [datosCliente, setDatosCliente] = useState(null);
+
+  // Los pedidos en estados no editables muestran un aviso. El return va aquí,
+  // después de TODOS los hooks: si se hace antes, React cuenta distinto número
+  // de hooks entre renders y lanza "Rendered fewer hooks than expected".
+  if (!esEditable) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
+          <div style={{ padding: "28px 24px", textAlign: "center" }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14,
+              background: "#ffebee", border: "1px solid #ef9a9a",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 24, margin: "0 auto 14px",
+            }}>🚫</div>
+            <h3 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, fontFamily: "var(--font-head)" }}>
+              No editable
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#616161" }}>
+              Los pedidos en estado <strong>"{pedido.estado}"</strong> no se pueden editar.
+            </p>
+            <button className="btn-ghost" onClick={onClose}>Entendido</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const abrirEditorCliente = () => {
     if (!clienteActual) return;

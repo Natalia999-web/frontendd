@@ -11,6 +11,9 @@ from src.shared.services.models import (
 )
 from src.shared.services.notificaciones_utils import notificar, notificar_stock_producto
 from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
+from .estados import (
+    EstadoDomicilio, ESTADO_DOM_A_VENTA, normalizar_estado, validar_cambio,
+)
 from .schemas import DomicilioCreate, DomicilioUpdate
 
 logger = logging.getLogger(__name__)
@@ -76,6 +79,10 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
                 "imagen":          _imagen_producto(db, item.ID_Producto),
             })
 
+    # El estado se normaliza al leer: las filas escritas por versiones viejas de
+    # la app móvil traen otra numeración (ver estados.py).
+    estado_canonico = normalizar_estado(dom.Estado, tiene_repartidor=bool(dom.ID_Empleado))
+
     return {
         "ID_Domicilio":         dom.ID_Domicilio,
         "ID_Venta":             dom.ID_Venta,
@@ -88,8 +95,8 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         # Indicaciones de entrega tomadas del perfil del cliente (Usuarios.Indicaciones),
         # que es donde el cliente las registra. Separado de Observaciones (nota por-entrega).
         "indicaciones_cliente": cliente.Indicaciones if cliente else None,
-        "Estado":               dom.Estado,
-        "estado_label":         _label_estado(db, dom.Estado) if dom.Estado else None,
+        "Estado":               estado_canonico,
+        "estado_label":         _label_estado(db, estado_canonico) if estado_canonico else None,
         "venta_estado":         venta.Estado if venta else None,
         "Direccion_entrega":    dom.Direccion_entrega,
         "Municipio_entrega":    dom.Municipio_entrega,
@@ -241,7 +248,11 @@ def obtener_domicilios(
         venta      = ventas_map.get(dom.ID_Venta)
         cliente    = usuarios_map.get(venta.ID_Usuario) if venta else None
         repartidor = usuarios_map.get(dom.ID_Empleado)  if dom.ID_Empleado else None
-        estado_obj = estados_map.get(dom.Estado)
+        # Igual que en _formato_domicilio: se normaliza el estado leído.
+        estado_canonico = normalizar_estado(
+            dom.Estado, tiene_repartidor=bool(dom.ID_Empleado)
+        )
+        estado_obj = estados_map.get(estado_canonico)
 
         total_v    = float(venta.Total) if venta and venta.Total else 0.0
         metodo     = venta.Metodo_Pago or "" if venta else ""
@@ -270,7 +281,7 @@ def obtener_domicilios(
             "Fecha_entrega":        dom.Fecha_entrega,
             "Observaciones":        dom.Observaciones,
             "indicaciones_cliente": cliente.Indicaciones if cliente else None,
-            "Estado":               dom.Estado,
+            "Estado":               estado_canonico,
             "estado_label":         estado_obj.Estado if estado_obj else None,
             "venta_estado":         venta.Estado if venta else None,
             "Direccion_entrega":    dom.Direccion_entrega,
@@ -352,10 +363,10 @@ def crear_domicilio(db: Session, datos: DomicilioCreate) -> dict:
         if not db.query(Usuario).filter(Usuario.ID_Usuario == datos.ID_Empleado).first():
             raise HTTPException(status_code=404, detail="Repartidor no encontrado")
 
-    # Estado inicial según si viene repartidor o no (IDs de la tabla Estados global)
-    ESTADO_PENDIENTE = 3   # Pendiente
-    ESTADO_ASIGNADO  = 10  # Asignado
-    estado_inicial   = ESTADO_ASIGNADO if datos.ID_Empleado else ESTADO_PENDIENTE
+    # Estado inicial según si viene repartidor o no (numeración canónica)
+    estado_inicial = (
+        EstadoDomicilio.ASIGNADO if datos.ID_Empleado else EstadoDomicilio.PENDIENTE
+    )
 
     nuevo = Domicilio(
         ID_Venta             = datos.ID_Venta,
@@ -403,17 +414,15 @@ def asignar_repartidor(db: Session, id_domicilio: int, id_empleado: int) -> dict
     if not db.query(Usuario).filter(Usuario.ID_Usuario == id_empleado).first():
         raise HTTPException(status_code=404, detail="Repartidor no encontrado")
 
-    ESTADO_PENDIENTE = 3
-
-    # Busca el estado 'Asignado' por nombre para no depender de un ID hardcodeado
-    estado_asignado = db.query(Estado).filter(Estado.Estado.ilike("asignado")).first()
-
     cambia_repartidor = dom.ID_Empleado != id_empleado
+    # Un domicilio pendiente pasa a Asignado al recibir repartidor. Si ya venía
+    # en camino o entregado, la reasignación no lo hace retroceder.
+    estado_previo = normalizar_estado(dom.Estado, tiene_repartidor=bool(dom.ID_Empleado))
 
     try:
         dom.ID_Empleado = id_empleado
-        if dom.Estado == ESTADO_PENDIENTE and estado_asignado:
-            dom.Estado = estado_asignado.ID_Estados
+        if estado_previo == EstadoDomicilio.PENDIENTE:
+            dom.Estado = int(EstadoDomicilio.ASIGNADO)
         db.commit()
     except Exception as e:
         db.rollback()
@@ -499,28 +508,30 @@ def enviar_mensaje(
 
 
 def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observaciones: str = None) -> dict:
-    # La app móvil envía su propio numerado: 3=EnCamino, 4=Entregado, 5=Cancelado
-    # La Venta.Estado usa IDs de la tabla global Estados:
-    #   4=Confirmado, 9=EnCamino, 8=Entregado, 5=Cancelado
-    FLUTTER_TO_VENTA = {
-        3: 9,   # Flutter "en camino"  → DB Estado ID 9 "En Camino"
-        4: 8,   # Flutter "entregado"  → DB Estado ID 8 "Entregado"
-        5: 5,   # Flutter "cancelado"  → DB Estado ID 5 "Cancelado"
-    }
-    ESTADO_ENTREGADO_FLUTTER = 4
-    ESTADOS_PROPAGAR = {3, 4, 5}
+    """Cambia el estado del domicilio y lo refleja en la venta.
 
+    El estado que llega se normaliza a la numeración canónica de la tabla
+    `Estados` (ver estados.py), de modo que web y app móvil —incluidas versiones
+    viejas que aún envían su propio numerado— acaben escribiendo lo mismo.
+    """
     dom = db.query(Domicilio).filter(Domicilio.ID_Domicilio == id_domicilio).first()
     if not dom:
         raise HTTPException(status_code=404, detail="Domicilio no encontrado")
+
+    tiene_repartidor = bool(dom.ID_Empleado)
+    estado_actual = normalizar_estado(dom.Estado, tiene_repartidor=tiene_repartidor)
+    # Al cambiar de estado, un 3 entrante significa "En camino" solo si venía de
+    # una app vieja; con la numeración canónica 3 es Pendiente. Se resuelve con
+    # el mismo criterio de lectura: si ya hay repartidor, es En camino.
+    nuevo_estado = normalizar_estado(nuevo_estado, tiene_repartidor=tiene_repartidor)
+    validar_cambio(estado_actual, nuevo_estado)
 
     _ESTADOS_PAGO_ENTREGA = {
         "efectivo_recibido", "pagado_completo", "anticipo_pagado",
         "no_recibido", "pendiente_validacion",
     }
 
-    ESTADO_ENTREGADO_DB = 8
-    if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB) and dom.ID_Venta:
+    if nuevo_estado == EstadoDomicilio.ENTREGADO and dom.ID_Venta:
         venta_check = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
         if venta_check:
             estado_pago = (getattr(venta_check, "Estado_Pago", None) or "pendiente").strip()
@@ -530,7 +541,7 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
                     detail="Debes registrar el cobro antes de marcar el pedido como entregado",
                 )
 
-    if nuevo_estado in (ESTADO_ENTREGADO_FLUTTER, ESTADO_ENTREGADO_DB):
+    if nuevo_estado == EstadoDomicilio.ENTREGADO:
         entregado_en = _now()
         dom.Fecha_entrega = entregado_en
         # Espeja el timestamp de entrega en la venta (fuente única para el plazo
@@ -540,12 +551,12 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
             if _venta_fe and not _venta_fe.Fecha_entrega:
                 _venta_fe.Fecha_entrega = entregado_en
 
-    # Propagar a la Venta usando el ID correcto de la tabla global Estados
-    if nuevo_estado in ESTADOS_PROPAGAR and dom.ID_Venta:
+    # Propagar a la Venta. "Asignado" no la mueve: el pedido sigue Listo.
+    if nuevo_estado in ESTADO_DOM_A_VENTA and dom.ID_Venta:
         venta = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
         if venta:
-            nuevo_estado_venta = FLUTTER_TO_VENTA.get(nuevo_estado, nuevo_estado)
-            # Al entregar (Flutter 4 → DB 8): descontar stock si aún no se había entregado
+            nuevo_estado_venta = ESTADO_DOM_A_VENTA[nuevo_estado]
+            # Al entregar: descontar stock si aún no se había entregado
             if nuevo_estado_venta == 8 and venta.Estado != 8:
                 items = db.query(VentaXProducto).filter(
                     VentaXProducto.ID_Venta == dom.ID_Venta
@@ -572,7 +583,7 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
         if dom.ID_Venta:
             venta_dom = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
             if venta_dom:
-                db_estado = FLUTTER_TO_VENTA.get(nuevo_estado, nuevo_estado)
+                db_estado = ESTADO_DOM_A_VENTA.get(nuevo_estado, nuevo_estado)
                 notificar_cambio_pedido_push(
                     id_usuario_cliente=venta_dom.ID_Usuario,
                     id_venta=dom.ID_Venta,

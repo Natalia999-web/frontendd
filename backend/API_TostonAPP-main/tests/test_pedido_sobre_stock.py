@@ -171,8 +171,12 @@ class AnticipoTests(unittest.TestCase):
         self.assertFalse(_es_transferencia(None))
 
 
-def venta(id_venta=1, sobre_stock=0):
-    return type("Venta", (), {"ID_Venta": id_venta, "Sobre_Stock": sobre_stock})()
+def venta(id_venta=1, sobre_stock=0, necesita_produccion=0):
+    return type("Venta", (), {
+        "ID_Venta": id_venta,
+        "Sobre_Stock": sobre_stock,
+        "Necesita_Produccion": necesita_produccion,
+    })()
 
 
 def item_venta(id_venta, id_producto, cantidad):
@@ -200,19 +204,22 @@ class RequiereFechaPropuestaTests(unittest.TestCase):
         )
         self.assertTrue(requiere_fecha_propuesta(db, venta(sobre_stock=1)))
 
-    def test_producto_por_encargo_con_deficit_requiere_fecha(self):
+    def test_pedido_de_produccion_requiere_fecha(self):
+        # El déficit de producción se congela al crear la venta en
+        # Necesita_Produccion: así el pedido no deja de requerir fecha porque
+        # el stock haya cambiado después.
         db = FakeDB(
             [producto(1, stock=0, precio=10000, requiere_produccion=1)],
             [item_venta(1, 1, 4)],
         )
-        self.assertTrue(requiere_fecha_propuesta(db, venta()))
+        self.assertTrue(requiere_fecha_propuesta(db, venta(necesita_produccion=1)))
 
-    def test_producto_por_encargo_con_stock_no_requiere_fecha(self):
+    def test_pedido_sin_deficit_de_produccion_no_requiere_fecha(self):
         db = FakeDB(
             [producto(1, stock=10, precio=10000, requiere_produccion=1)],
             [item_venta(1, 1, 4)],
         )
-        self.assertFalse(requiere_fecha_propuesta(db, venta()))
+        self.assertFalse(requiere_fecha_propuesta(db, venta(necesita_produccion=0)))
 
 
 if __name__ == "__main__":

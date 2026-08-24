@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { getUser } from "../../../services/authService";
-import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, computarOTP, verificarOTP, registrarPagoEfectivo } from "../../../services/domiciliosService";
+import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, verificarOTP, registrarPagoEfectivo } from "../../../services/domiciliosService";
 import { subirImagenCloudinary } from "../../../utils/cloudinary";
 import "./Domicilios.css";
 
@@ -188,7 +188,9 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
   const [uploading,        setUploading]        = useState(false);
   const [error,            setError]            = useState(null);
 
-  const otp = computarOTP(pedido.id);
+  // Código real generado por el backend (aleatorio). Antes se calculaba con
+  // una fórmula local que ya no coincide con el servidor.
+  const otp = pedido.otp;
 
   const handleFileChange = (setter, previewSetter) => (e) => {
     const file = e.target.files[0];
@@ -280,17 +282,28 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
             <div style={{ fontSize: 12, color: "#9e9e9e", marginBottom: 12 }}>
               Muestra este código al cliente para confirmar la entrega
             </div>
-            <div style={{
-              fontSize: 52, fontWeight: 900, letterSpacing: 8,
-              color: "#1565c0", background: "#e3f2fd",
-              borderRadius: 16, padding: "20px 24px", display: "inline-block",
-              fontFamily: "monospace",
-            }}>
-              {otp}
-            </div>
-            <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 12 }}>
-              El cliente debe confirmar este código verbalmente.
-            </div>
+            {otp ? (
+              <>
+                <div style={{
+                  fontSize: 52, fontWeight: 900, letterSpacing: 8,
+                  color: "#1565c0", background: "#e3f2fd",
+                  borderRadius: 16, padding: "20px 24px", display: "inline-block",
+                  fontFamily: "monospace",
+                }}>
+                  {otp}
+                </div>
+                <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 12 }}>
+                  El cliente debe confirmar este código verbalmente.
+                </div>
+              </>
+            ) : (
+              <div style={{
+                fontSize: 13, color: "#c62828", background: "#ffebee",
+                border: "1px solid #ef9a9a", borderRadius: 12, padding: "14px 16px",
+              }}>
+                Este domicilio todavía no tiene código de entrega asignado.
+              </div>
+            )}
           </div>
         )}
 

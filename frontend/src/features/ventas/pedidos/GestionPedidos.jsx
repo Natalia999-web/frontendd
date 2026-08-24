@@ -1314,6 +1314,7 @@ export default function GestionPedidos() {
   const [historial,        setHistorial]        = useState([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [historialLoaded,  setHistorialLoaded]  = useState(false);
+  const [errorHistorial,   setErrorHistorial]   = useState(null);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
   const [toast,        setToast]        = useState(null);
@@ -1327,15 +1328,28 @@ export default function GestionPedidos() {
   const cargarHistorial = async () => {
     if (historialLoaded) return;
     setLoadingHistorial(true);
+    setErrorHistorial(null);
     try {
       const data = await getHistorialPedidos({ porPagina: 100 });
       setHistorial(data.pedidos);
       setHistorialLoaded(true);
-    } catch {
-      // silent
+    } catch (err) {
+      // El historial se arma con /ventas/, que requiere el permiso ver_ventas.
+      // Si falta, antes la pestaña quedaba vacía sin decir por qué.
+      const msg = /403|permiso/i.test(err?.message || "")
+        ? "No tienes permiso para ver el historial de ventas (ver_ventas)."
+        : (err?.message || "No se pudo cargar el historial.");
+      setErrorHistorial(msg);
+      showToast(msg, "error");
     } finally {
       setLoadingHistorial(false);
     }
+  };
+
+  const reintentarHistorial = () => {
+    setHistorialLoaded(false);
+    setErrorHistorial(null);
+    cargarHistorial();
   };
 
   const handleCambiarVista = (v) => {
@@ -1870,8 +1884,20 @@ export default function GestionPedidos() {
               <tbody>
                 {(vista === "activos" ? loading : loadingHistorial) ? (
                   <SkeletonRows cols={8} rows={5} />
+                ) : vista === "historial" && errorHistorial ? (
+                  <tr><td colSpan={8}>
+                    <div className="empty-state">
+                      <div className="empty-state__icon">⚠️</div>
+                      <p className="empty-state__text">{errorHistorial}</p>
+                      <button className="btn-ghost" style={{ marginTop: 10 }} onClick={reintentarHistorial}>
+                        Reintentar
+                      </button>
+                    </div>
+                  </td></tr>
                 ) : paged.length === 0 ? (
-                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state__icon">📦</div><p className="empty-state__text">Sin pedidos.</p></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state__icon">📦</div><p className="empty-state__text">
+                    {vista === "historial" ? "Aún no hay pedidos entregados ni cancelados." : "Sin pedidos activos."}
+                  </p></div></td></tr>
                 ) : paged.map((ped, idx) => {
                   const emp = empleados.find(e => e.id === ped.idEmpleado);
                   return (
