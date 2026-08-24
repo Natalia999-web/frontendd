@@ -274,7 +274,7 @@ export default function CategoriaInsumos() {
   const handleDelete = async () => {
     try {
       await eliminarCategoria(modal.cat.id);
-      showToast("Categoría eliminada", "error");
+      showToast("Categoría eliminada");
       setModal(null);
       cargarDatos();
     } catch (e) {

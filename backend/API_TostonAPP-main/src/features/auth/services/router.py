@@ -19,7 +19,7 @@ from .service import (
     verificar_codigo_recuperacion, resetear_contrasena,
     cambiar_contrasena, actualizar_foto_perfil, eliminar_foto_perfil,
     obtener_mis_permisos, verificar_email_token, reenviar_verificacion,
-    verificar_token_empleado, eliminar_mi_cuenta,
+    verificar_token_empleado, buscar_por_correo,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -123,6 +123,14 @@ def reenviar_verificacion_endpoint(datos: ReenviarVerificacionInput, db: Session
     )
 
 
+@router.post("/verificar-correo")
+def verificar_correo_disponible(datos: RecuperarContrasenaInput, db: Session = Depends(get_db)):
+    registro, _ = buscar_por_correo(db, datos.correo)
+    if registro:
+        raise HTTPException(status_code=409, detail="Este correo ya está registrado.")
+    return {"disponible": True}
+
+
 @router.post("/recuperar-contrasena", response_model=RecuperarContrasenaResponse)
 def recuperar_contrasena(datos: RecuperarContrasenaInput, db: Session = Depends(get_db)):
     solicitar_recuperacion(db, datos.correo)
@@ -205,15 +213,6 @@ def cambiar_password(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"mensaje": "Contraseña actualizada correctamente"}
-
-
-@router.delete("/mi-cuenta")
-def eliminar_cuenta_propia(
-    db:     Session = Depends(get_db),
-    actual: dict    = Depends(obtener_usuario_actual),
-):
-    """Elimina la cuenta del usuario autenticado (cualquier rol excepto admin)."""
-    return eliminar_mi_cuenta(db, actual)
 
 
 @router.post("/foto-perfil")

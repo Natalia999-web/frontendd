@@ -15,15 +15,6 @@ const MOTIVOS = [
   "Otro",
 ];
 
-function SelectArrow() {
-  return (
-    <div className="select-arrow">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
-  );
-}
 
 /* ─── BARRA DE PASOS ─────────────────────────────────────── */
 const STEPS = ["Pedido", "Productos", "Detalles"];
@@ -477,21 +468,16 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
                 <label className="field-label">
                   Motivo <span className="required">*</span>
                 </label>
-                <div className="select-wrap">
-                  <select
-                    className={`field-select${errors.motivo ? " error" : ""}`}
-                    value={motivo}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setMotivo(val);
-                      setErrors((prev) => ({ ...prev, motivo: "" }));
-                    }}
-                  >
-                    <option value="">Seleccione…</option>
-                    {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <SelectArrow />
-                </div>
+                <SearchableSelect
+                  options={MOTIVOS.map(m => ({ value: m, label: m }))}
+                  value={motivo}
+                  onChange={e => { setMotivo(e.target.value); setErrors(prev => ({ ...prev, motivo: "" })); }}
+                  getValue={o => o.value}
+                  getLabel={o => o.label}
+                  placeholder="Seleccione…"
+                  searchPlaceholder="🔍 Buscar motivo…"
+                  className={`field-select${errors.motivo ? " error" : ""}`}
+                />
                 {errors.motivo && <span className="field-error">{errors.motivo}</span>}
               </div>
 

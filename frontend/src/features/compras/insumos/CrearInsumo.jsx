@@ -104,7 +104,7 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+      <div className="modal-box" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
 
         <div className="modal-header">
           <div>
@@ -125,14 +125,14 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
               <div className="form-group">
                 <label className="form-label">Nombre <span className="required">*</span></label>
                 <input
-                  className={`field-input${errors.nombre ? " error" : ""}`}
+                  className={`field-input${errors.nombre ? " field-input--error" : ""}`}
                   value={form.nombre} onChange={e => set("nombre", soloLetras(e.target.value))}
                   placeholder="Ej. Plátano verde"
                 />
                 {errors.nombre && <p className="field-error">{errors.nombre}</p>}
               </div>
 
-              <div className="form-grid-2">
+              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Categoría <span className="required">*</span></label>
                   <SearchableSelect
@@ -143,14 +143,14 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
                     getLabel={c => `${c.icon || ""} ${c.nombre}`}
                     placeholder="— Seleccionar —"
                     searchPlaceholder="🔍 Buscar categoría…"
-                    className={`field-input${errors.idCategoria ? " error" : ""}`}
+                    className={`field-input${errors.idCategoria ? " field-input--error" : ""}`}
                   />
                   {errors.idCategoria && <p className="field-error">{errors.idCategoria}</p>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Unidad de medida <span className="required">*</span></label>
                   <select
-                    className={`field-input${errors.idUnidad ? " error" : ""}`}
+                    className={`field-input${errors.idUnidad ? " field-input--error" : ""}`}
                     value={form.idUnidad} onChange={e => set("idUnidad", e.target.value)}
                   >
                     <option value="">— Seleccionar —</option>
@@ -167,7 +167,7 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
               <label className="form-label">Stock mínimo <span className="required">*</span></label>
               <input
                 type="number" min="0"
-                className={`field-input${errors.stockMinimo ? " error" : ""}`}
+                className={`field-input${errors.stockMinimo ? " field-input--error" : ""}`}
                 value={form.stockMinimo} onChange={e => set("stockMinimo", e.target.value)}
                 placeholder="0"
               />

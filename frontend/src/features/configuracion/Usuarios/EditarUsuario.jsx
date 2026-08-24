@@ -342,7 +342,7 @@ export function ModalEliminarUsuario({ user, razon, advertencias = [], onClose, 
 
   const handleEliminar = () => {
     setDone(true);
-    setTimeout(() => { onConfirm(user.id); }, 800);
+    onConfirm(user.id);
   };
 
   // ── Bloqueo duro (ej: admin principal) ──

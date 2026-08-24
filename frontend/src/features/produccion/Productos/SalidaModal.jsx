@@ -113,6 +113,7 @@ export default function SalidaModal({ entidad, tipo, stockActual, unidadLabel = 
                 type="number" min="1" max={stockActual}
                 className={`field-input${errors.cantidad ? " field-input--error" : ""}`}
                 value={cantidad}
+                onKeyDown={e => { if (["-", "e", "E", "+", "."].includes(e.key)) e.preventDefault(); }}
                 onChange={e => {
                   const val = e.target.value;
                   setCantidad(val);

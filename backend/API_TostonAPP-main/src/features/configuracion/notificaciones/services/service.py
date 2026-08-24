@@ -14,17 +14,35 @@ def _sincronizar_stock(db: Session) -> None:
     insumos   = db.query(Insumo).filter(Insumo.Estado.in_([14, 15])).all()
     productos = db.query(Producto).filter(Producto.Estado.in_([14, 15])).all()
 
-    if not insumos and not productos:
-        return
-
     tipos = [
         "stock_agotado_insumo", "stock_minimo_insumo",
         "stock_agotado_producto", "stock_minimo_producto",
     ]
+
+    # IDs que siguen con problema de stock
+    insumo_ids_mal   = {i.ID_Insumo   for i in insumos}
+    producto_ids_mal = {p.ID_Producto for p in productos}
+
+    # Limpiar notificaciones (leídas o no) cuyo problema ya se resolvió
+    # Si el stock vuelve a caer, se crea una nueva notificación
+    todas = db.query(Notificacion).filter(Notificacion.Tipo.in_(tipos)).all()
+    for n in todas:
+        if n.Tipo in ("stock_agotado_insumo", "stock_minimo_insumo") and n.Referencia_ID not in insumo_ids_mal:
+            db.delete(n)
+        elif n.Tipo in ("stock_agotado_producto", "stock_minimo_producto") and n.Referencia_ID not in producto_ids_mal:
+            db.delete(n)
+    if todas:
+        db.flush()
+
+    if not insumos and not productos:
+        return
+
+    # Existentes = cualquier notif (leída o no) para ítems que aún tienen el problema
+    # Esto evita crear duplicados aunque el admin ya la haya marcado como leída
     existentes = {
         (n.Tipo, n.Referencia_ID)
         for n in db.query(Notificacion.Tipo, Notificacion.Referencia_ID)
-                   .filter(Notificacion.Tipo.in_(tipos), Notificacion.Leida == False)
+                   .filter(Notificacion.Tipo.in_(tipos))
                    .all()
     }
 
@@ -65,7 +83,7 @@ def _sincronizar_stock(db: Session) -> None:
 
     if nuevas:
         db.add_all(nuevas)
-        db.flush()
+        db.commit()
 
 
 def obtener_notificaciones(db: Session) -> dict:
@@ -110,6 +128,82 @@ def limpiar_leidas(db: Session) -> dict:
     eliminadas = db.query(Notificacion).filter(Notificacion.Leida == True).delete()
     db.commit()
     return {"mensaje": f"{eliminadas} notificaciones eliminadas"}
+
+
+def obtener_notificaciones_cocina(db: Session) -> dict:
+    """Notificaciones derivadas para el cocinero: pedidos pendientes de preparación."""
+    from src.shared.services.models import Venta
+
+    ventas = (
+        db.query(Venta)
+        .filter(Venta.Estado.in_([4, 13]))
+        .order_by(Venta.Fecha_Venta.desc())
+        .limit(20)
+        .all()
+    )
+    notifs = []
+    for v in ventas:
+        if v.Estado == 4:
+            tipo    = "pedido_nuevo"
+            titulo  = f"Pedido por preparar — #{v.ID_Venta}"
+            mensaje = "Pedido confirmado en espera de producción."
+        else:
+            tipo    = "pedido_en_produccion"
+            titulo  = f"Pedido en producción — #{v.ID_Venta}"
+            mensaje = "El pedido está en curso en cocina."
+        notifs.append({
+            "id_ref":   f"cocina_{v.ID_Venta}_{v.Estado}",
+            "tipo":     tipo,
+            "titulo":   titulo,
+            "mensaje":  mensaje,
+            "ruta":     "/admin/cocina",
+            "fecha":    v.Fecha_Venta,
+            "id_venta": v.ID_Venta,
+        })
+    return {"total": len(notifs), "notificaciones": notifs}
+
+
+def obtener_notificaciones_domiciliario(db: Session, id_usuario: int) -> dict:
+    """Notificaciones derivadas para el domiciliario: sus entregas asignadas o canceladas."""
+    from src.shared.services.models import Domicilio
+    from datetime import datetime, timedelta
+
+    hace_7_dias = datetime.now() - timedelta(days=7)
+
+    domicilios = (
+        db.query(Domicilio)
+        .filter(
+            Domicilio.ID_Empleado == id_usuario,
+            Domicilio.Estado.in_([9, 10, 5]),
+            Domicilio.Fecha_asignacion >= hace_7_dias,
+        )
+        .order_by(Domicilio.Fecha_asignacion.desc())
+        .limit(20)
+        .all()
+    )
+    notifs = []
+    for dom in domicilios:
+        fecha = dom.Fecha_asignacion or dom.Fecha_entrega
+        if dom.Estado == 5:
+            notifs.append({
+                "id_ref":  f"dom_{dom.ID_Domicilio}_cancelado",
+                "tipo":    "pedido_cancelado",
+                "titulo":  f"Entrega cancelada — #{dom.ID_Venta}",
+                "mensaje": "Esta entrega fue cancelada.",
+                "ruta":    "/admin/mis-entregas",
+                "fecha":   fecha,
+            })
+        else:
+            notifs.append({
+                "id_ref":  f"dom_{dom.ID_Domicilio}_asignado",
+                "tipo":    "domicilio_asignado",
+                "titulo":  f"Nueva entrega asignada — #{dom.ID_Venta}",
+                "mensaje": "Tienes una entrega pendiente. Revisa los detalles en tus entregas.",
+                "ruta":    "/admin/mis-entregas",
+                "fecha":   fecha,
+            })
+    notifs.sort(key=lambda x: x["fecha"] or datetime.min, reverse=True)
+    return {"total": len(notifs), "notificaciones": notifs}
 
 
 # ── Estado de venta → (tipo_notif, titulo, mensaje) ──────────

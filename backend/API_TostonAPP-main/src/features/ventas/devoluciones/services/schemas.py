@@ -17,6 +17,7 @@ class DevolucionCreate(BaseModel):
     ID_Usuario:         Optional[int] = None         # inyectado desde el token en el router
     ID_DetalleVenta:    Optional[int] = None
     Motivo:             str
+    Comentario:         Optional[str] = None
     Comprobante_Imagen: Optional[str] = None
     productos:          list[DevolucionDetalleInput]
 

@@ -25,12 +25,14 @@ class NotificacionesResponse(BaseModel):
 
 # ── Notificaciones derivadas para clientes ──────────────────
 class NotificacionClienteItem(BaseModel):
-    id_ref:  str
-    tipo:    str
-    titulo:  str
-    mensaje: Optional[str]  = None
-    ruta:    Optional[str]  = None
-    fecha:   Optional[datetime] = None
+    id_ref:        str
+    tipo:          str
+    titulo:        str
+    mensaje:       Optional[str]      = None
+    ruta:          Optional[str]      = None
+    fecha:         Optional[datetime] = None
+    id_venta:      Optional[int]      = None
+    fecha_entrega: Optional[str]      = None
 
 
 class NotificacionesClienteResponse(BaseModel):

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getUser } from "../../../services/authService";
 import { getMensajes, enviarMensaje, getDomicilio } from "../../../services/domiciliosService";
+import { marcarVisto } from "../../chat/context/ChatContext";
 import "./Domicilios.css";
 
 const POLL_MS = 5_000;
@@ -52,6 +53,9 @@ export default function ChatConversacion() {
           getDomicilio(Number(idDomicilio)).catch(() => null),
         ]);
         if (dom) setPedido(dom);
+        // Admin marca el chat como visto al abrirlo
+        const u = getUser();
+        if (u?.tipo === "empleado") marcarVisto(Number(idDomicilio));
       } catch {
         setError("No se pudo cargar el chat");
       } finally {
@@ -67,10 +71,14 @@ export default function ChatConversacion() {
     return () => clearInterval(id);
   }, [cargarMensajes]);
 
-  // Scroll al último mensaje
+  // Scroll al último mensaje + marcar visto si admin
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mensajes]);
+    if (mensajes.length > 0 && idDomicilio) {
+      const u = getUser();
+      if (u?.tipo === "empleado") marcarVisto(Number(idDomicilio));
+    }
+  }, [mensajes, idDomicilio]);
 
   const handleSend = async () => {
     const contenido = texto.trim();

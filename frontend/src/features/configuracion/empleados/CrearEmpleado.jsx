@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { TIPOS_DOC, ROLES_EMPLEADO, uid, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
+import { TIPOS_DOC, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { getUsuarios } from "../../../services/usuariosService.js";
 import "./Empleados.css";
 
 /* ─── RolBadge ───────────────────────────────────────────── */
-export function RolBadge({ idRol }) {
-  const rol = ROLES_EMPLEADO.find(r => r.id === Number(idRol));
-  if (!rol) return null;
+export function RolBadge({ idRol, roles = [] }) {
+  const rol = roles.find(r => r.id === Number(idRol));
+  if (!rol) return idRol ? <span style={{ fontSize:12, color:"#9e9e9e" }}>Rol #{idRol}</span> : null;
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:700, background:rol.bg, color:rol.color, border:`1px solid ${rol.border}`, whiteSpace:"nowrap" }}>
-      <span style={{ fontSize:13 }}>{rol.icon}</span>{rol.nombre}
+    <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:700, background:"#e8f5e9", color:"#2e7d32", border:"1px solid #a5d6a7", whiteSpace:"nowrap" }}>
+      <span style={{ fontSize:13 }}>{rol.icono}</span>{rol.nombre}
     </span>
   );
 }
@@ -120,7 +120,7 @@ function StepsBar({ current }) {
 }
 
 /* ─── CrearEmpleado ──────────────────────────────────────── */
-export default function CrearEmpleado({ onClose, onSave }) {
+export default function CrearEmpleado({ onClose, onSave, roles = [] }) {
   const [existing, setExisting] = useState([]);
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(list => setExisting(list)).catch(() => {});
@@ -151,6 +151,7 @@ export default function CrearEmpleado({ onClose, onSave }) {
     if (k === "tipoDoc" && !val) err = "Requerido";
     if (k === "numDoc") {
       if (!val.trim()) err = "El número de documento es obligatorio";
+      else if (val.length < 8 || val.length > 11) err = "Debe tener entre 8 y 11 dígitos";
       else if (users.some(u => u.cedula === val)) err = "Este documento ya está registrado";
     }
     if (k === "idRol" && !val) err = "Selecciona un rol";
@@ -200,6 +201,7 @@ export default function CrearEmpleado({ onClose, onSave }) {
     if (s === 1) {
       if (!form.tipoDoc)       e.tipoDoc = "Requerido";
       if (!form.numDoc.trim()) e.numDoc  = "El número de documento es obligatorio";
+      else if (form.numDoc.length < 8 || form.numDoc.length > 11) e.numDoc = "Debe tener entre 8 y 11 dígitos";
       else if (users.some(u => u.cedula === form.numDoc)) e.numDoc = "Este documento ya está registrado";
       
       if (!form.idRol)         e.idRol   = "Selecciona un rol";
@@ -242,10 +244,14 @@ export default function CrearEmpleado({ onClose, onSave }) {
     const e = validateStep(4);
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    const { confirmar: _, ...data } = form;
-    onSave({ ...data, id: uid(), fechaIngreso: form.fechaIngreso });
-    setSaving(false);
+    try {
+      const { confirmar: _, ...data } = form;
+      await onSave(data);
+    } catch {
+      // parent shows toast on error
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -294,7 +300,7 @@ export default function CrearEmpleado({ onClose, onSave }) {
                   </select>
                   <input className={"field-input doc-input" + (errors.numDoc ? " field-input--error" : "")}
                     type="text" value={form.numDoc} onChange={e => set("numDoc", e.target.value)}
-                    placeholder="Número de documento"
+                    placeholder="Número de documento" maxLength={11}
                     onFocus={e => e.target.style.borderColor = "#4caf50"}
                     onBlur={e => e.target.style.borderColor = errors.numDoc ? "#e53935" : "#e0e0e0"} />
                 </div>
@@ -307,7 +313,7 @@ export default function CrearEmpleado({ onClose, onSave }) {
                 <select className={"field-input" + (errors.idRol ? " field-input--error" : "")}
                   value={form.idRol || ""} onChange={e => set("idRol", Number(e.target.value))} style={{ cursor:"pointer" }}>
                   <option value="">— Seleccionar rol —</option>
-                  {ROLES_EMPLEADO.map(r => <option key={r.id} value={r.id}>{r.icon} {r.nombre}</option>)}
+                  {roles.map(r => <option key={r.id} value={r.id}>{r.icono} {r.nombre}</option>)}
                 </select>
                 {errors.idRol && <p className="field-error">{errors.idRol}</p>}
               </div>
@@ -392,7 +398,7 @@ export default function CrearEmpleado({ onClose, onSave }) {
                     <input className={"field-input" + (errors.contrasena ? " field-input--error" : "")}
                       type={showPass ? "text" : "password"} style={{ paddingRight:36 }}
                       value={form.contrasena || ""} onChange={e => set("contrasena", e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e => e.target.style.borderColor = errors.contrasena ? "#e53935" : "#e0e0e0"} />
                     <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>

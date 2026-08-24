@@ -29,6 +29,7 @@ import PerfilDomiciliario from "../features/ventas/domicilios/PerfilDomiciliario
 import GananciasDomiciliario from "../features/ventas/domicilios/GananciasDomiciliario";
 import NotificacionesDomiciliario from "../features/ventas/domicilios/NotificacionesDomiciliario";
 import ChatConversacion from "../features/ventas/domicilios/ChatConversacion";
+import CentroChatAdmin from "../features/chat/CentroChatAdmin";
 
 /* ─── CLIENTE REAL ─── */
 import OrdersPage from "../features/sales/orders/OrdersPage";
@@ -130,6 +131,7 @@ const AppRouter = () => {
             <Route path="mis-notificaciones"   element={<PR clave="Domicilios_cambiar_estado" el={<NotificacionesDomiciliario />} />} />
             <Route path="mi-perfil-repartidor" element={<PR clave="Domicilios_cambiar_estado" el={<PerfilDomiciliario />} />} />
             <Route path="chat/:idDomicilio"    element={<PR clave="Domicilios_cambiar_estado" el={<ChatConversacion />} />} />
+            <Route path="chats"               element={<PR clave="Domicilios_ver"            el={<CentroChatAdmin />} />} />
 
             {/* Compras */}
             <Route path="categorias_insumos" element={<PR clave="CategoriaInsumos_ver" el={<CategoriaInsumos />} />} />

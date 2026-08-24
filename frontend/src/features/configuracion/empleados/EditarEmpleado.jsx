@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { TIPOS_DOC, ROLES_EMPLEADO, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
+import { TIPOS_DOC, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { RolBadge, LocationSelects } from "./CrearEmpleado.jsx";
 import { validatePassword } from "../Usuarios/usuariosUtils.js";
@@ -40,9 +40,9 @@ const NAV_ITEMS = [
   { id:"rol",       label:"Rol",       icon:"🎖️" },
 ];
 
-export function ModalVerEmpleado({ empleado, onClose }) {
+export function ModalVerEmpleado({ empleado, onClose, roles = [] }) {
   const [activeSection, setActiveSection] = useState("personal");
-  const rol = ROLES_EMPLEADO.find(r => r.id === Number(empleado.idRol));
+  const rol = roles.find(r => r.id === Number(empleado.idRol));
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -175,7 +175,7 @@ export function ModalVerEmpleado({ empleado, onClose }) {
                 <p className="section-label" style={{ marginTop:0 }}>Rol asignado</p>
                 <div className="form-group">
                   <label className="form-label">Rol del empleado</label>
-                  <div style={{ paddingTop:4 }}><RolBadge idRol={empleado.idRol} /></div>
+                  <div style={{ paddingTop:4 }}><RolBadge idRol={empleado.idRol} roles={roles} /></div>
                 </div>
                 {rol && (
                   <div className="form-group">
@@ -220,7 +220,7 @@ export function ModalEliminarEmpleado({ empleado, onClose, onConfirm }) {
 }
 
 /* ─── EditarEmpleado — Wizard 4 pasos ────────────────────── */
-export default function EditarEmpleado({ empleado, onClose, onSave }) {
+export default function EditarEmpleado({ empleado, onClose, onSave, roles = [] }) {
   const [form, setForm]         = useState({ ...empleado, contrasena:"", confirmar:"" });
   const [errors, setErrors]     = useState({});
   const [saving, setSaving]     = useState(false);
@@ -239,7 +239,10 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
     setForm(newForm);
     let err = "";
     if (k === "tipoDoc" && !val) err = "Requerido";
-    if (k === "numDoc" && !val.trim()) err = "Requerido";
+    if (k === "numDoc") {
+      if (!val.trim()) err = "Requerido";
+      else if (val.length < 8 || val.length > 11) err = "Debe tener entre 8 y 11 dígitos";
+    }
     if (k === "idRol" && !val) err = "Selecciona un rol";
     if (k === "nombre" && !val.trim()) err = "Requerido";
     if (k === "apellidos" && !val.trim()) err = "Requerido";
@@ -283,6 +286,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
     if (s === 1) {
       if (!form.tipoDoc)       e.tipoDoc = "Requerido";
       if (!form.numDoc.trim()) e.numDoc  = "Requerido";
+      else if (form.numDoc.length < 8 || form.numDoc.length > 11) e.numDoc = "Debe tener entre 8 y 11 dígitos";
       if (!form.idRol)         e.idRol   = "Selecciona un rol";
     }
     if (s === 2) {
@@ -318,10 +322,14 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
     const e = validateStep(4);
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    const { confirmar, ...data } = form;
-    onSave(data);
-    setSaving(false);
+    try {
+      const { confirmar, ...data } = form;
+      await onSave(data);
+    } catch {
+      // parent shows toast on error
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -369,7 +377,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
                   </select>
                   <input className={"field-input doc-input" + (errors.numDoc ? " field-input--error" : "")}
                     type="text" value={form.numDoc} onChange={e => set("numDoc", e.target.value)}
-                    placeholder="Número de documento"
+                    placeholder="Número de documento" maxLength={11}
                     onFocus={e => e.target.style.borderColor = "#4caf50"}
                     onBlur={e => e.target.style.borderColor = errors.numDoc ? "#e53935" : "#e0e0e0"} />
                 </div>
@@ -382,7 +390,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave }) {
                 <select className={"field-input" + (errors.idRol ? " field-input--error" : "")}
                   value={form.idRol || ""} onChange={e => set("idRol", Number(e.target.value))} style={{ cursor:"pointer" }}>
                   <option value="">— Seleccionar rol —</option>
-                  {ROLES_EMPLEADO.map(r => <option key={r.id} value={r.id}>{r.icon} {r.nombre}</option>)}
+                  {roles.map(r => <option key={r.id} value={r.id}>{r.icono} {r.nombre}</option>)}
                 </select>
                 {errors.idRol && <p className="field-error">{errors.idRol}</p>}
               </div>

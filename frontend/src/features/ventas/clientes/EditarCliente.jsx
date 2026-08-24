@@ -304,7 +304,10 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
     setForm(newForm);
     let err = "";
     if (k === 'tipoDoc' && !val) err = "Requerido";
-    if (k === 'numDoc' && !val.trim()) err = "Requerido";
+    if (k === 'numDoc') {
+      if (!val.trim()) err = "Requerido";
+      else if (val.length < 8 || val.length > 11) err = "Debe tener entre 8 y 11 dígitos";
+    }
     if (k === 'nombre' && !val.trim()) err = "Requerido";
     if (k === 'apellidos' && !val.trim()) err = "Requerido";
     if (k === 'correo') {
@@ -347,6 +350,7 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
     if (s === 1) {
       if (!form.tipoDoc)       e.tipoDoc = "Requerido";
       if (!form.numDoc?.trim()) e.numDoc  = "Requerido";
+      else if (form.numDoc.length < 8 || form.numDoc.length > 11) e.numDoc = "Debe tener entre 8 y 11 dígitos";
     }
     if (s === 2) {
       if (!form.nombre?.trim())    e.nombre    = "Requerido";
@@ -379,10 +383,14 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
     const e = validateStep(3);
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    const { confirmar, ...data } = form;
-    onSave(data);
-    setSaving(false);
+    try {
+      const { confirmar, ...data } = form;
+      await onSave(data);
+    } catch {
+      // parent shows toast on error
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -428,7 +436,7 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
                   </select>
                   <input className={"field-input doc-input" + (errors.numDoc ? " field-input--error" : "")}
                     type="text" value={form.numDoc || ""} onChange={e => set("numDoc", e.target.value)}
-                    placeholder="Número de documento"
+                    placeholder="Número de documento" maxLength={11}
                     onFocus={e => e.target.style.borderColor = "#4caf50"}
                     onBlur={e  => e.target.style.borderColor = errors.numDoc ? "#e53935" : "#e0e0e0"} />
                 </div>

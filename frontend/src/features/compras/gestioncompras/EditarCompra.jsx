@@ -703,21 +703,16 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                 <>
                   <div className="field-wrap">
                     <label className="field-label">Proveedor <span className="required">*</span></label>
-                    <div className="select-wrap">
-                      <select
-                        className={`field-select ${errors.idProveedor ? "error" : ""}`}
-                        value={form.idProveedor}
-                        onChange={e => set("idProveedor", e.target.value)}
-                      >
-                        <option value="">— Seleccionar proveedor —</option>
-                        {proveedores.map(p => (
-                          <option key={p.ID_Proveedor || p.id} value={p.ID_Proveedor || p.id}>
-                            {p.Responsable || p.responsable} · {p.Municipio || p.ciudad}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="select-arrow">▾</span>
-                    </div>
+                    <SearchableSelect
+                      options={proveedores}
+                      value={form.idProveedor}
+                      onChange={e => set("idProveedor", e.target.value)}
+                      getValue={p => p.ID_Proveedor || p.id}
+                      getLabel={p => `${p.Responsable || p.responsable} · ${p.Municipio || p.ciudad}`}
+                      placeholder="— Seleccionar proveedor —"
+                      searchPlaceholder="🔍 Buscar proveedor…"
+                      className={`field-select ${errors.idProveedor ? "error" : ""}`}
+                    />
                     {errors.idProveedor && <span className="field-error">{errors.idProveedor}</span>}
                   </div>
 
@@ -751,19 +746,16 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
 
                   <div className="field-wrap">
                     <label className="field-label">Método de pago <span className="required">*</span></label>
-                    <div className="select-wrap">
-                      <select
-                        className={`field-select ${errors.metodoPago ? "error" : ""}`}
-                        value={form.metodoPago}
-                        onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
-                      >
-                        <option value="">— Seleccionar método —</option>
-                        {METODOS_PAGO.map(m => (
-                          <option key={m.value} value={m.value}>{m.icon} {m.label}</option>
-                        ))}
-                      </select>
-                      <span className="select-arrow">▾</span>
-                    </div>
+                    <SearchableSelect
+                      options={METODOS_PAGO}
+                      value={form.metodoPago}
+                      onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
+                      getValue={m => m.value}
+                      getLabel={m => `${m.icon} ${m.label}`}
+                      placeholder="— Seleccionar método —"
+                      searchPlaceholder="🔍 Método…"
+                      className={`field-select ${errors.metodoPago ? "error" : ""}`}
+                    />
                     {errors.metodoPago && <span className="field-error">{errors.metodoPago}</span>}
                   </div>
 
@@ -836,36 +828,27 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
 
                         <div className="detalle-fields" style={{ flex: 1 }}>
                           <div className="field-wrap" style={{ gridColumn: "1 / -1" }}>
-                            <div className="select-wrap">
-                              <select
-                                className={`field-select ${errors[`ins_${i}`] ? "error" : ""}`}
-                                value={d.idInsumo}
-                                onChange={e => {
-                                  const selectedId = e.target.value;
-                                  const ins = insumosActivos.find(ins => String(ins.id) === selectedId);
-                                  setDetalles(ds => ds.map(det =>
-                                    det._key === d._key
-                                      ? { ...det, idInsumo: selectedId, idUnidad: ins?.idUnidad ? String(ins.idUnidad) : "" }
-                                      : det
-                                  ));
-                                }}
-                              >
-                                <option value="">— Seleccionar insumo —</option>
-                                {insumosActivos.map(ins => (
-                                  <option
-                                    key={ins.id}
-                                    value={ins.id}
-                                    disabled={
-                                      idsSeleccionados.includes(String(ins.id)) &&
-                                      String(ins.id) !== String(d.idInsumo)
-                                    }
-                                  >
-                                    {ins.nombre}
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="select-arrow">▾</span>
-                            </div>
+                            <SearchableSelect
+                              options={insumosActivos.filter(ins =>
+                                !idsSeleccionados.includes(String(ins.id)) ||
+                                String(ins.id) === String(d.idInsumo)
+                              )}
+                              value={d.idInsumo}
+                              onChange={e => {
+                                const selectedId = e.target.value;
+                                const ins = insumosActivos.find(ins => String(ins.id) === selectedId);
+                                setDetalles(ds => ds.map(det =>
+                                  det._key === d._key
+                                    ? { ...det, idInsumo: selectedId, idUnidad: ins?.idUnidad ? String(ins.idUnidad) : "" }
+                                    : det
+                                ));
+                              }}
+                              getValue={ins => ins.id}
+                              getLabel={ins => ins.nombre}
+                              placeholder="— Seleccionar insumo —"
+                              searchPlaceholder="🔍 Buscar insumo…"
+                              className={`field-select ${errors[`ins_${i}`] ? "error" : ""}`}
+                            />
                             {errors[`ins_${i}`] && <span className="field-error">{errors[`ins_${i}`]}</span>}
                           </div>
 

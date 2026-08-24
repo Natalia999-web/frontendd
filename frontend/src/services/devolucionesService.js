@@ -3,8 +3,13 @@ import { apiFetch } from "../utils/api";
 // Estado numérico → label string (coincide con _ESTADO_LABELS del backend)
 const ESTADO_LABELS = {
   3: "Pendiente",
-  6: "Aprobada",
+  6: "Reembolsada",
   7: "Rechazada",
+};
+
+const fmtFecha = (d) => {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const adaptDevolucion = (d) => {
@@ -19,10 +24,10 @@ const adaptDevolucion = (d) => {
     estadoId,
     estado,
     motivo:          d.Motivo           || "",
-    comentario:      d.Comentario       || "",
-    fechaSolicitud:  d.FechaDevolucion  || "",
-    fechaAprobacion: d.FechaAprobacion  || null,
-    fechaReembolso:  d.FechaReembolso   || null,
+    comentario:      (estadoId !== 7 ? d.Comentario : "") || "",
+    fechaSolicitud:  fmtFecha(d.FechaDevolucion)  || "",
+    fechaAprobacion: fmtFecha(d.FechaAprobacion) || null,
+    fechaReembolso:  fmtFecha(d.FechaReembolso)  || null,
     totalDevuelto:   parseFloat(d.TotalDevuelto || 0),
     // Al rechazar, el admin pone el motivo en Comentario
     motivoRechazo:   (estadoId === 7 && d.Comentario) ? d.Comentario : "",
@@ -81,10 +86,17 @@ export const crearDevolucion = async (payload) => {
       PrecioUnitario: p.precioUnitario,
     })),
   };
+  if (payload.comentario)        body.Comentario = payload.comentario;
   if (payload.idCliente != null) body.ID_Usuario = payload.idCliente;
   if (payload.evidencia?.base64) body.Comprobante_Imagen = payload.evidencia.base64;
   const data = await apiFetch("/devoluciones/", { method: "POST", body: JSON.stringify(body) });
   return adaptDevolucion(data);
+};
+
+// Admin: saldo de crédito de un cliente
+export const getCreditoCliente = async (idCliente) => {
+  const data = await apiFetch(`/ventas/credito-cliente/${idCliente}`);
+  return data.saldo ?? 0;
 };
 
 // Admin: aprobar o rechazar

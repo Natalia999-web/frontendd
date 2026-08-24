@@ -1076,6 +1076,16 @@ def obtener_mi_credito(db: Session, usuario_actual: dict) -> dict:
     return {"saldo": saldo, "id_usuario": id_usuario}
 
 
+def obtener_credito_cliente(db: Session, id_usuario: int) -> dict:
+    """Retorna el saldo de crédito de cualquier cliente (uso admin)."""
+    credito = db.query(CreditoCliente).filter(
+        CreditoCliente.ID_Usuario == id_usuario
+    ).first()
+    if not credito:
+        return {"saldo": 0.0, "id_usuario": id_usuario}
+    return {"saldo": float(credito.Saldo or 0), "id_usuario": id_usuario}
+
+
 # ── Feature "Fecha propuesta" ──────────────────────────────────────────────
 
 def requiere_fecha_propuesta(db: Session, venta: Venta) -> bool:

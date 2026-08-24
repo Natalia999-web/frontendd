@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { getSalidas, registrarSalida, anularSalida, procesarVencidos } from "../../services/salidasService.js";
 import { getProductos } from "../../services/productosService.js";
 import { getInsumos } from "../../services/insumosService.js";
-import { fmtFecha } from "../../utils/dateUtils.js";
 import { usePrivilegios } from "../../context/PrivilegiosContext.jsx";
 import "./Salidas.css";
 
@@ -13,11 +12,6 @@ import "./Salidas.css";
 const ITEMS_PER_PAGE = 5;
 
 function hoyISO() { return new Date().toISOString().split("T")[0]; }
-function estaVencido(fv)    { return fv ? fv < hoyISO() : false; }
-function diasParaVencer(fv) {
-  if (!fv) return null;
-  return Math.ceil((new Date(fv + "T00:00:00") - new Date(hoyISO() + "T00:00:00")) / 86400000);
-}
 
 const TIPOS = [
   { val: "vencimiento", label: "Vencido",    icon: "🕒", color: "#e65100", bg: "#fff3e0", border: "#ffcc80" },
@@ -41,11 +35,11 @@ function adaptarSalida(s) {
     entidadTipo:     s.ID_Insumo ? "insumo" : "producto",
     entidadNombre:   s.nombre_insumo || s.nombre_producto || "—",
     entidadCat:      s.nombre_categoria || "—",
-    unidad:          "uds.",
+    unidad:          s.simbolo_unidad || "uds.",
     cantidad:        s.Cantidad,
     motivo:          s.Motivo,
     fecha:           fmtDate(s.Fecha),
-    anulada:         s.estado_label === "Anulada",
+    anulada:         s.Estado === 12,
     estadoLabel:     s.estado_label || "Activa",
     empleado:        s.nombre_empleado || (s.Tipo === "vencimiento" ? "Sistema (auto)" : "—"),
     anuladoPor:      s.nombre_anulado_por || null,
@@ -163,13 +157,13 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
   const [tipoSalida,   setTipoSalida]   = useState("daño");
   const [cantidad,     setCantidad]     = useState("");
   const [motivo,       setMotivo]       = useState("");
-  const [errors,       setErrors]       = useState({});
-  const [saving,       setSaving]       = useState(false);
-  const [toast,        setToast]        = useState(null);
+  const [errors,    setErrors] = useState({});
+  const [saving,    setSaving] = useState(false);
+  const [errToast,  setErrToast] = useState(null);
 
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+  const showErrToast = (msg) => {
+    setErrToast(msg);
+    setTimeout(() => setErrToast(null), 3500);
   };
 
   const lista = entidadTipo === "producto" ? productos : insumos;
@@ -213,10 +207,10 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
         cantidad:   Number(cantidad),
         motivo:     motivo.trim() || undefined,
       });
-      showToast(`Salida registrada — ${seleccionado.nombre} (-${cantidad} ${unidadLabel})`);
-      setTimeout(() => onRegistrada?.(), 1500);
+      onRegistrada?.(`Salida registrada — ${seleccionado.nombre} (-${cantidad} ${unidadLabel})`);
+      return; // el modal se desmonta; no tocar estado después de aquí
     } catch (err) {
-      showToast(err.message || "Error al registrar", "error");
+      showErrToast(err.message || "Error al registrar");
     }
     setSaving(false);
   };
@@ -330,7 +324,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                   <input type="number" min="1" max={stockActual}
                     className={`sl-input${errors.cantidad ? " sl-input--error" : ""}`}
                     value={cantidad}
-                    onKeyDown={e => { if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") e.preventDefault(); }}
+                    onKeyDown={e => { if (["-", "e", "E", "+", "."].includes(e.key)) e.preventDefault(); }}
                     onChange={e => {
                       const v = e.target.value;
                       setCantidad(v);
@@ -379,9 +373,9 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
         </div>
       </div>
 
-      {toast && (
-        <div className="sl-toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-          <span>{toast.type === "error" ? "❌" : "✅"}</span> {toast.msg}
+      {errToast && (
+        <div className="sl-toast" style={{ background: "#c62828" }}>
+          <span>❌</span> {errToast}
         </div>
       )}
     </div>
@@ -391,10 +385,10 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
 /* ══════════════════════════════════════════════════════════
    SKELETON
 ══════════════════════════════════════════════════════════ */
-function SkeletonRows() {
+function SkeletonRows({ cols = 7 }) {
   return Array.from({ length: 5 }, (_, i) => (
     <tr key={i}>
-      {Array.from({ length: 7 }, (_, j) => (
+      {Array.from({ length: cols }, (_, j) => (
         <td key={j}><div className="skeleton-cell" /></td>
       ))}
     </tr>
@@ -439,7 +433,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
   const totalPages = Math.ceil(filtradas.length / ITEMS_PER_PAGE);
   const safePage   = Math.min(page, Math.max(1, totalPages));
   const paginadas  = filtradas.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
-  const totalUnidades = salidas.reduce((acc, s) => acc + (s.cantidad || 0), 0);
+  const totalUnidades = salidas.filter(s => !s.anulada).reduce((acc, s) => acc + (s.cantidad || 0), 0);
 
   const toggleFiltroTipo = (val) => setFiltroTipo(prev => prev === val ? "todos" : val);
 
@@ -648,7 +642,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
   const vencimientos = salidas.filter(s => s.tipo === "vencimiento");
   const porProducto  = vencimientos.filter(s => s.entidadTipo === "producto");
   const porInsumo    = vencimientos.filter(s => s.entidadTipo === "insumo");
-  const totalUnidades = vencimientos.reduce((acc, s) => acc + (s.cantidad || 0), 0);
+  const totalUnidades = vencimientos.filter(s => !s.anulada).reduce((acc, s) => acc + (s.cantidad || 0), 0);
 
   const filtrados = filtro === "producto" ? porProducto
     : filtro === "insumo" ? porInsumo
@@ -738,7 +732,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
           </thead>
           <tbody>
             {loading ? (
-              <SkeletonRows />
+              <SkeletonRows cols={6} />
             ) : paginados.length === 0 ? (
               <tr><td colSpan={6}>
                 <div className="empty-state">
@@ -873,7 +867,7 @@ function ReporteSalidas({ salidas, loading }) {
     a.href     = url;
     a.download = `reporte-salidas${fechaInicio ? "-" + fechaInicio : ""}${fechaFin ? "-al-" + fechaFin : ""}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   if (!canReport) {
@@ -1073,6 +1067,12 @@ export default function GestionSalidas() {
   const [productos, setProductos] = useState([]);
   const [insumos,   setInsumos]   = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [pageToast, setPageToast] = useState(null);
+
+  const showPageToast = (msg, type = "success") => {
+    setPageToast({ msg, type });
+    setTimeout(() => setPageToast(null), 3000);
+  };
 
   // Mapas id → nombre de categoría, construidos una vez al cargar
   const prodCatMap = useRef({});
@@ -1092,10 +1092,32 @@ export default function GestionSalidas() {
   const cargarSalidas = async () => {
     setLoading(true);
     try {
-      const data = await getSalidas();
-      setSalidas(enriquecerSalidas([...(data.salidas || [])].sort((a, b) => b.id - a.id)));
+      const [data, pData, iData] = await Promise.all([
+        getSalidas(),
+        getProductos().catch(() => null),
+        getInsumos().catch(() => null),
+      ]);
+      if (pData) {
+        const prodList = (pData.productos || []).filter(p => p.Estado !== 0).map(p => ({
+          id: p.ID_Producto, nombre: p.nombre || p.Nombre || "",
+          _tipo: "producto", _stock: p.Stock_Actual ?? p.Stock ?? 0,
+          _label: p.nombre_categoria || "", _unidad: "uds.",
+        }));
+        prodCatMap.current = Object.fromEntries(prodList.map(p => [p.id, p._label]));
+        setProductos(prodList);
+      }
+      if (iData) {
+        const insList = (iData.insumos || []).filter(i => i.Estado !== 0).map(i => ({
+          id: i.ID_Insumo, nombre: i.Nombre, _tipo: "insumo",
+          _stock: i.Stock_Actual ?? 0, _label: i.nombre_categoria || "",
+          _unidad: i.simbolo_unidad || "uds.", stockMinimo: i.Stock_Minimo,
+        }));
+        insCatMap.current = Object.fromEntries(insList.map(i => [i.id, i._label]));
+        setInsumos(insList);
+      }
+      setSalidas(enriquecerSalidas([...(data.salidas || [])].sort((a, b) => b.ID_Salida - a.ID_Salida)));
     } catch {
-      // error shown in child toast
+      showPageToast("Error al cargar salidas. Verifica la conexión.", "error");
     } finally {
       setLoading(false);
     }
@@ -1134,9 +1156,9 @@ export default function GestionSalidas() {
 
         setProductos(prodList);
         setInsumos(insList);
-        setSalidas(enriquecerSalidas([...(sData.salidas || [])].sort((a, b) => b.id - a.id)));
+        setSalidas(enriquecerSalidas([...(sData.salidas || [])].sort((a, b) => b.ID_Salida - a.ID_Salida)));
       } catch {
-        // fallback silencioso
+        showPageToast("Error al cargar datos. Verifica la conexión.", "error");
       } finally {
         setLoading(false);
       }
@@ -1188,8 +1210,14 @@ export default function GestionSalidas() {
           productos={productos}
           insumos={insumos}
           onClose={() => setShowModal(false)}
-          onRegistrada={() => { setShowModal(false); cargarSalidas(); }}
+          onRegistrada={(msg) => { setShowModal(false); cargarSalidas(); if (msg) showPageToast(msg); }}
         />
+      )}
+
+      {pageToast && (
+        <div className="sl-toast" style={{ background: pageToast.type === "error" ? "#c62828" : "#2e7d32" }}>
+          <span>{pageToast.type === "error" ? "❌" : "✅"}</span> {pageToast.msg}
+        </div>
       )}
     </div>
   );

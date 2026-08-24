@@ -7,7 +7,7 @@ from src.features.auth.services.dependencies import requiere_permiso, obtener_us
 from .schemas import VentaCreate, VentaEstado, VentaResponse, VentaListResponse, FechaEntregaInput, PagoFinalCreate
 from .service import (
     obtener_ventas, obtener_venta, obtener_mi_venta, crear_venta, cambiar_estado,
-    obtener_mis_ventas, obtener_mi_credito,
+    obtener_mis_ventas, obtener_mi_credito, obtener_credito_cliente,
     proponer_fecha, aceptar_fecha, rechazar_fecha,
     registrar_pago_final,
 )
@@ -22,6 +22,16 @@ def ver_mi_credito(
 ):
     """Retorna el saldo de crédito disponible del cliente autenticado."""
     return obtener_mi_credito(db, actual)
+
+
+@router.get("/credito-cliente/{id_usuario}")
+def ver_credito_cliente(
+    id_usuario: int,
+    db:         Session = Depends(get_db),
+    _:          dict    = Depends(requiere_permiso("ver_ventas")),
+):
+    """Retorna el saldo de crédito de un cliente específico (uso admin)."""
+    return obtener_credito_cliente(db, id_usuario)
 
 
 @router.get("/mis-ventas", response_model=VentaListResponse)

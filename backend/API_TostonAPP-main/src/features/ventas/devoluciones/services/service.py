@@ -26,7 +26,7 @@ ESTADO_RECHAZADA = 7
 
 _ESTADO_LABELS = {
     ESTADO_PENDIENTE: "Pendiente",
-    ESTADO_APROBADA:  "Aprobada",
+    ESTADO_APROBADA:  "Reembolsada",
     ESTADO_RECHAZADA: "Rechazada",
 }
 
@@ -324,6 +324,7 @@ def crear_devolucion(db: Session, datos: DevolucionCreate) -> dict:
         ID_Usuario         = datos.ID_Usuario,
         ID_DetalleVenta    = datos.ID_DetalleVenta,
         Motivo             = datos.Motivo,
+        Comentario         = datos.Comentario,
         Comprobante_Imagen = datos.Comprobante_Imagen,
         Estado             = ESTADO_PENDIENTE,
         TotalDevuelto      = total,

@@ -31,7 +31,12 @@ def _formato_insumo(
     else:
         proximo_lote = (
             db.query(LoteCompra)
-            .filter(LoteCompra.ID_Insumo == insumo.ID_Insumo)
+            .filter(
+                LoteCompra.ID_Insumo == insumo.ID_Insumo,
+                LoteCompra.Estado == 1,
+                LoteCompra.Cantidad_Actual > 0,
+            )
+            .order_by(LoteCompra.Fecha_Vencimiento.asc())
             .first()
         )
 
@@ -75,6 +80,10 @@ def _formato_insumo(
             OrdenProduccion.Estado.in_([1, 13]),
         ).first() is not None
 
+    en_compra = db.query(DetalleCompra).filter(
+        DetalleCompra.ID_Insumo == insumo.ID_Insumo
+    ).first() is not None
+
     return {
         "ID_Insumo":                insumo.ID_Insumo,
         "Nombre":                   insumo.Nombre,
@@ -91,6 +100,7 @@ def _formato_insumo(
         "precio_unitario":          precio_unitario,
         "tiene_ficha_tecnica":      en_ficha,
         "tiene_orden_produccion":   en_orden,
+        "tiene_compra":             en_compra,
     }
 
 
@@ -162,11 +172,15 @@ def obtener_insumos(
                    .filter(UnidadMedida.ID_Unidad_Medida.in_(unidad_ids)).all()
     } if unidad_ids else {}
 
-    # Batch 2: primer lote por insumo (orden ascendente de vencimiento = FEFO)
+    # Batch 2: primer lote activo por insumo (orden ascendente de vencimiento = FEFO)
     lotes_raw: dict[int, LoteCompra] = {}
     for lote in (
         db.query(LoteCompra)
-        .filter(LoteCompra.ID_Insumo.in_(insumo_ids))
+        .filter(
+            LoteCompra.ID_Insumo.in_(insumo_ids),
+            LoteCompra.Estado == 1,
+            LoteCompra.Cantidad_Actual > 0,
+        )
         .order_by(LoteCompra.Fecha_Vencimiento.asc())
         .all()
     ):
@@ -218,6 +232,15 @@ def obtener_insumos(
         if orden.ID_Ficha and orden.ID_Ficha in ficha_to_insumos:
             insumos_en_orden.update(ficha_to_insumos[orden.ID_Ficha])
 
+    # Batch 6: insumos con al menos una compra registrada
+    insumos_con_compra: set = {
+        row.ID_Insumo
+        for row in db.query(DetalleCompra.ID_Insumo)
+                     .filter(DetalleCompra.ID_Insumo.in_(insumo_ids))
+                     .distinct()
+                     .all()
+    }
+
     hoy = datetime.utcnow()
 
     def _build(insumo: Insumo) -> dict:
@@ -248,6 +271,7 @@ def obtener_insumos(
             "precio_unitario":        float(ultimo_detalle.Precio_Und) if ultimo_detalle and ultimo_detalle.Precio_Und else 0.0,
             "tiene_ficha_tecnica":    insumo.ID_Insumo in fichas_insumos_set,
             "tiene_orden_produccion": insumo.ID_Insumo in insumos_en_orden,
+            "tiene_compra":           insumo.ID_Insumo in insumos_con_compra,
         }
 
     return {
@@ -418,6 +442,12 @@ def eliminar_insumo(db: Session, id_insumo: int) -> dict:
         raise HTTPException(
             status_code=400,
             detail="No se puede eliminar un insumo que está en una orden de producción activa"
+        )
+
+    if db.query(DetalleCompra).filter(DetalleCompra.ID_Insumo == id_insumo).first():
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede eliminar un insumo que está asociado a registros de compra"
         )
 
     # Elimina todos los lotes asociados al insumo

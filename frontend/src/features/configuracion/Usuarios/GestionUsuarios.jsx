@@ -125,7 +125,7 @@ export default function GestionUsuarios() {
   const safePage   = Math.min(page, totalPages);
   const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
-  useEffect(() => { setPage(1); }, [search, filter, filterRol]);
+  useEffect(() => { setPage(1); }, [search, filter, filterRol, filterDesde, filterHasta]);
 
   const handleSave = async () => {
     await cargarDatos();
@@ -144,7 +144,7 @@ export default function GestionUsuarios() {
     const user = usuarios.find(u => u.id === id);
     try {
       await eliminarUsuario(user.tipo, id);
-      showToast("Usuario eliminado", "error");
+      showToast("Usuario eliminado");
       await cargarDatos();
       setModal(null);
     } catch (e) {
@@ -155,17 +155,17 @@ export default function GestionUsuarios() {
 
   const handleToggleClick = async (user) => {
     if (user.tipo === "empleado" && user.idRol === 1) return;
-    setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, estado: !u.estado } : u));
+    const match = u => u.id === user.id && u.tipo === user.tipo;
+    setUsuarios(prev => prev.map(u => match(u) ? { ...u, estado: !u.estado } : u));
     try {
       await toggleEstadoUsuario(user.tipo, user.id, user.estado);
     } catch (e) {
-      // Revert
-      setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, estado: user.estado } : u));
+      setUsuarios(prev => prev.map(u => match(u) ? { ...u, estado: user.estado } : u));
       showToast(e.message || "Error al cambiar estado", "error");
     }
   };
 
-  const hasFilter = filter !== "todos" || filterRol !== "todos";
+  const hasFilter = filter !== "todos" || filterRol !== "todos" || !!filterDesde || !!filterHasta;
   const todosLosRoles = [...new Set(usuarios.map(u => u.rol).filter(Boolean))].sort();
 
   return (
@@ -236,7 +236,7 @@ export default function GestionUsuarios() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol("todos"); }}>
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol("todos"); setFilterDesde(""); setFilterHasta(""); }}>
               ✕ Limpiar
             </button>
           )}

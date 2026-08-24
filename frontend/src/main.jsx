@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import AppRouter from "./routes/AppRouter";
 import { AppProvider } from "./AppContext.jsx";
 import { NotificacionesProvider } from "./features/notificaciones/context/NotificacionesContext";
+import { ChatProvider } from "./features/chat/context/ChatContext";
 import { PrivilegiosProvider } from "./context/PrivilegiosContext.jsx";
 import { getUser } from "./services/authService.js";
 import { getCompras } from "./services/comprasService.js";
@@ -216,7 +217,9 @@ function NotificacionesWrapper({ children }) {
       compras={notifData.compras}
       pedidos={[]}
     >
-      {children}
+      <ChatProvider>
+        {children}
+      </ChatProvider>
     </NotificacionesProvider>
   );
 }

@@ -413,16 +413,16 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
   font-weight: 600;
   padding: 6px 10px;
   border-radius: 8px;
-  white-space: nowrap;
+  white-space: normal;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.18s;
   z-index: 50;
   max-width: 220px;
-  white-space: normal;
   text-align: center;
   line-height: 1.4;
 }
+
 
 .toggle-tooltip::after {
   content: "";

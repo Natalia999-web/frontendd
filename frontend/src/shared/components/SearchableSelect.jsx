@@ -16,7 +16,7 @@ export default function SearchableSelect({
 }) {
   const [open, setOpen]   = useState(false);
   const [q, setQ]         = useState("");
-  const [pos, setPos]     = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos]     = useState({ top: 0, left: 0, width: 0, openUp: false });
   const triggerRef        = useRef();
   const inputRef          = useRef();
 
@@ -26,10 +26,20 @@ export default function SearchableSelect({
     ? options.filter(o => getLabel(o).toLowerCase().includes(q.toLowerCase()))
     : options;
 
+  // Alto real del dropdown: lista (210px CSS) + buscador (~46px) + borde (~4px)
+  const DROPDOWN_MAX_H = 260;
+
   const updatePos = () => {
     if (!triggerRef.current) return;
     const r = triggerRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width });
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openUp = spaceBelow < DROPDOWN_MAX_H && r.top > DROPDOWN_MAX_H;
+    setPos({
+      top:  openUp ? r.top - DROPDOWN_MAX_H - 4 : r.bottom + 4,
+      left: r.left,
+      width: r.width,
+      openUp,
+    });
   };
 
   const handleOpen = () => {

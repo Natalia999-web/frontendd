@@ -5,6 +5,7 @@
 @keyframes fadeIn       { from { opacity: 0 }                             to { opacity: 1 } }
 @keyframes slideUp      { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 @keyframes slideInRight { from { transform: translateX(60px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+@keyframes filterDrop   { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: translateY(0) } }
 
 /* ══════════════════════════════════════════════════════════
    LAYOUT PRINCIPAL
@@ -296,27 +297,6 @@
 .sl-filter-opt:hover  { background: #f0f4f0; }
 .sl-filter-opt.active { background: #e8f5e9; color: #2e7d32; font-weight: 700; }
 
-/* ── Tabla ────────────────────────────────────────────── */
-.sl-table-wrap {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-  border-radius: 12px;
-  border: 1.5px solid #c8e6c9;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(46,125,50,0.07);
-}
-
-.sl-table { width: 100%; border-collapse: collapse; }
-.sl-table thead tr { background: #2e7d32; position: sticky; top: 0; z-index: 1; }
-.sl-table th {
-  padding: 13px 16px; font-size: 13px; font-weight: 700;
-  color: #fff; text-align: left; white-space: nowrap;
-}
-.sl-table__row { border-bottom: 1px solid #f1f8f1; transition: background 0.12s; }
-.sl-table__row:last-child { border-bottom: none; }
-.sl-table__row:hover { background: #f9fdf9; }
-.sl-table td { padding: 12px 16px; vertical-align: middle; }
 
 .sl-tipo-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -345,13 +325,6 @@
   transition: all 0.15s;
   line-height: 1;
   padding: 0;
-}
-
-.sl-action-btn--edit   { border-color: #90caf9; background: #e3f2fd; }
-.sl-action-btn--edit:hover {
-  background: #1565c0; border-color: #1565c0;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(21,101,192,0.25);
 }
 
 .sl-action-btn--delete { border-color: #ef9a9a; background: #ffebee; }
@@ -421,37 +394,6 @@
 .sl-pill:hover  { border-color: #a5d6a7; color: #2e7d32; }
 .sl-pill.active { border-color: #2e7d32; background: #e8f5e9; color: #2e7d32; font-weight: 700; }
 
-/* ── Vencidos ───────────────────────────────────────────── */
-.sl-vencidos-scroll {
-  flex: 1; overflow-y: hidden; min-height: 0;
-  padding: 4px 4px 8px 4px;
-}
-.sl-vencidos-scroll::-webkit-scrollbar       { width: 4px; }
-.sl-vencidos-scroll::-webkit-scrollbar-thumb { background: #c8e6c9; border-radius: 4px; }
-
-.sl-vencidos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px; padding-bottom: 4px;
-}
-
-.sl-vencido-card { border-radius: 12px; border: 1.5px solid; overflow: visible; transition: transform 0.15s; }
-.sl-vencido-card:hover { transform: translateY(-2px); }
-.sl-vencido-card__header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  padding: 12px 12px 8px; gap: 8px; border-radius: 12px 12px 0 0;
-}
-.sl-vencido-card__badge {
-  padding: 3px 9px; border-radius: 20px;
-  font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
-}
-.sl-vencido-card__body {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-  padding: 8px 12px 12px; border-top: 1px solid rgba(0,0,0,0.06);
-  font-size: 12px; border-radius: 0 0 12px 12px;
-}
-.sl-vencido-card__key { display: block; color: #9e9e9e; font-weight: 600; margin-bottom: 1px; }
-.sl-vencido-card__val { font-weight: 700; color: #1a1a1a; }
 
 /* ── Toast ──────────────────────────────────────────────── */
 .sl-toast {
@@ -466,90 +408,11 @@
   white-space: normal;
 }
 
-/* ══════════════════════════════════════════════════════════
-   PAGINACIÓN
-══════════════════════════════════════════════════════════ */
-.sl-pagination {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 4px 2px;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.sl-pagination__info {
-  font-size: 12px;
-  color: #9e9e9e;
-  font-weight: 500;
-}
-.sl-pagination__info strong {
-  color: #424242;
-  font-weight: 700;
-}
-
-.sl-pagination__btns {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.sl-pg-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 6px;
-  border-radius: 8px;
-  border: 1.5px solid #e0e0e0;
-  background: #fff;
-  color: #616161;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-.sl-pg-btn:hover:not(:disabled) {
-  border-color: #4caf50;
-  color: #2e7d32;
-  background: #f1f8f1;
-}
-.sl-pg-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.sl-pg-btn--num {
-  min-width: 32px;
-}
-.sl-pg-btn--num.active {
-  background: #2e7d32;
-  border-color: #2e7d32;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(46,125,50,0.28);
-}
-.sl-pg-btn--num.active:hover {
-  background: #2e7d32;
-  color: #fff;
-}
-
-.sl-pg-ellipsis {
-  font-size: 13px;
-  color: #bdbdbd;
-  padding: 0 4px;
-  user-select: none;
-}
-
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 860px) {
   .sl-registrar-grid { grid-template-columns: 1fr; overflow-y: hidden; }
   .sl-tipos-grid     { grid-template-columns: repeat(3, 1fr); }
   .sl-page__body     { padding: 12px 14px; }
-  .sl-pagination     { justify-content: center; }
-  .sl-pagination__info { display: none; }
 }
 
 @keyframes skeletonPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -857,14 +720,17 @@
 .print-only { display: none; }
 
 @media print {
-  /* Ocultar TODO menos el reporte activo */
-  body > * { display: none !important; }
-  .sl-page { display: block !important; }
-  .sl-page__header,
-  .sl-page__tabs,
+  /* Ocultar navegación y controles, mostrar solo el reporte */
+  .navbar, .sidebar, .sidebar-overlay,
+  .sl-page__header, .sl-page__tabs,
   .no-print { display: none !important; }
-  .sl-page__body { display: block !important; }
-  .sl-tab-content { display: block !important; }
+
+  /* Asegurar visibilidad de todos los contenedores intermedios */
+  #root, .app-layout, .app-body, .main-content,
+  .sl-page, .sl-page__body, .sl-tab-content { display: block !important; }
+
+  /* Eliminar márgenes/padding del layout en impresión */
+  .app-body, .main-content { padding: 0 !important; margin: 0 !important; }
 
   /* Mostrar cabecera de impresión */
   .print-only { display: block !important; margin-bottom: 20px; }

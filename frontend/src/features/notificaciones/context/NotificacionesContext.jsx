@@ -4,6 +4,8 @@ import {
   marcarLeidaAPI,
   eliminarNotificacionAPI,
   getMisNotificacionesCliente,
+  getNotificacionesCocina,
+  getNotificacionesDomiciliario,
 } from "../../../services/notificacionesService";
 
 /* ══════════════════════════════════════════════════════════
@@ -26,6 +28,7 @@ export const TIPOS = {
   PEDIDO_EN_PRODUCCION:      "pedido_en_produccion",
   FECHA_PROPUESTA:           "fecha_propuesta",
   FECHA_RECHAZADA:           "fecha_rechazada",
+  DOMICILIO_ASIGNADO:        "domicilio_asignado",
 };
 
 export const TIPO_LABELS = {
@@ -45,6 +48,7 @@ export const TIPO_LABELS = {
   [TIPOS.PEDIDO_EN_PRODUCCION]: "Producción",
   [TIPOS.FECHA_PROPUESTA]:      "Fecha propuesta",
   [TIPOS.FECHA_RECHAZADA]:      "Fecha rechazada",
+  [TIPOS.DOMICILIO_ASIGNADO]:   "Entrega asignada",
 };
 
 export const TIPO_ICONS = {
@@ -64,6 +68,7 @@ export const TIPO_ICONS = {
   [TIPOS.PEDIDO_EN_PRODUCCION]: "🏭",
   [TIPOS.FECHA_PROPUESTA]:      "📅",
   [TIPOS.FECHA_RECHAZADA]:      "❌",
+  [TIPOS.DOMICILIO_ASIGNADO]:   "🛵",
 };
 
 export const TIPO_COLORS = {
@@ -83,6 +88,7 @@ export const TIPO_COLORS = {
   [TIPOS.PEDIDO_EN_PRODUCCION]: "#1565c0",
   [TIPOS.FECHA_PROPUESTA]:      "#283593",
   [TIPOS.FECHA_RECHAZADA]:      "#c62828",
+  [TIPOS.DOMICILIO_ASIGNADO]:   "#1565c0",
 };
 
 // Tipos backend → tipos frontend
@@ -94,8 +100,11 @@ const BACKEND_TYPE_MAP = {
   pedido_nuevo:           TIPOS.PEDIDO_NUEVO,
   produccion_requerida:   TIPOS.SISTEMA,
   domicilio_pendiente:    TIPOS.PEDIDO_NUEVO,
+  domicilio_asignado:     TIPOS.DOMICILIO_ASIGNADO,
   devolucion_pendiente:   TIPOS.DEVOLUCION_PENDIENTE,
   pedido_en_produccion:   TIPOS.PEDIDO_EN_PRODUCCION,
+  pedido_sobre_stock:     TIPOS.SISTEMA,
+  comprobante_rechazado:  TIPOS.SISTEMA,
   fecha_propuesta:        TIPOS.FECHA_PROPUESTA,
   fecha_rechazada:        TIPOS.FECHA_RECHAZADA,
 };
@@ -107,8 +116,18 @@ const TIPOS_CLIENTE = new Set([
   TIPOS.PEDIDO_CANCELADO,
   TIPOS.DEVOLUCION_APROBADA,
   TIPOS.DEVOLUCION_RECHAZADA,
-  TIPOS.PEDIDO_EN_PRODUCCION,
   TIPOS.FECHA_PROPUESTA,
+]);
+
+// Tipos derivados por rol — efímeros, se rehidratan por polling
+const TIPOS_COCINA = new Set([
+  TIPOS.PEDIDO_NUEVO,
+  TIPOS.PEDIDO_EN_PRODUCCION,
+]);
+
+const TIPOS_DOMICILIARIO = new Set([
+  TIPOS.DOMICILIO_ASIGNADO,
+  TIPOS.PEDIDO_CANCELADO,
 ]);
 
 const uid = () => `N-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -147,10 +166,13 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
   const [autoActivo, setAutoActivo]         = useState(() => loadFromLS("notif_autoActivo", true));
   const [bannerVisto, setBannerVisto]       = useState(false);
 
-  /* ── Persistencia (excluye notifs de API y cliente — se rehidratan por polling) ── */
+  /* ── Persistencia (excluye notifs efímeras — se rehidratan por polling) ── */
   useEffect(() => {
     const sinEfimeras = notificaciones.filter(
-      n => !n.clave?.startsWith('api-') && !TIPOS_CLIENTE.has(n.tipo)
+      n => !n.clave?.startsWith('api-')
+        && !TIPOS_CLIENTE.has(n.tipo)
+        && !TIPOS_COCINA.has(n.tipo)
+        && !TIPOS_DOMICILIARIO.has(n.tipo)
     );
     localStorage.setItem("notificaciones", JSON.stringify(sinEfimeras));
   }, [notificaciones]);
@@ -195,14 +217,18 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
   ══════════════════════════════════════════════════════ */
   const fetchAPINotifs = useCallback(async () => {
     if (!user) return;
-    const rol      = user.rol?.toLowerCase();
-    const isAdmin  = rol === 'admin' || rol === 'administrador';
-    const isCliente = user.tipo === 'cliente';
+    const rol           = user.rol?.toLowerCase();
+    const isAdmin       = rol === 'admin' || rol === 'administrador';
+    const isCliente     = user.tipo === 'cliente';
+    const isCocinero    = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+    const isDomiciliario = rol === 'domiciliario';
 
     if (isAdmin) {
       try {
         const data    = await getNotificacionesAdmin();
-        const backend = (data.notificaciones || []).map(n => ({
+        const vistas  = loadFromLS('notif_admin_vistas', []);
+        const notifs  = data.notificaciones || [];
+        const backend = notifs.map(n => ({
           id:             `api-${n.ID_Notificacion}`,
           clave:          `api-${n.ID_Notificacion}`,
           id_backend:     n.ID_Notificacion,
@@ -212,9 +238,15 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
           idReferencia:   n.Referencia_ID,
           ruta:           n.Ruta,
           fecha:          n.Fecha,
-          leida:          n.Leida,
+          leida:          n.Leida || vistas.includes(n.ID_Notificacion),
           idDestinatario: 'admin',
         }));
+        // Limpiar notif_admin_vistas: sólo conservar IDs que siguen existiendo en el backend
+        const backendIds = new Set(notifs.map(n => n.ID_Notificacion));
+        const vistasFiltradas = vistas.filter(id => backendIds.has(id));
+        if (vistasFiltradas.length !== vistas.length) {
+          localStorage.setItem('notif_admin_vistas', JSON.stringify(vistasFiltradas));
+        }
         setNotificaciones(prev => [
           ...backend,
           ...prev.filter(n => !n.clave?.startsWith('api-') && !TIPOS_CLIENTE.has(n.tipo)),
@@ -226,8 +258,7 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
         const data   = await getMisNotificacionesCliente();
         const vistas = loadFromLS('notif_cliente_vistas', []);
         const cliente = (data.notificaciones || []).map(n => {
-          // Extraer idPedido: viene explícito como id_venta, o se deriva del id_ref ("venta_28_16")
-          const parts = (n.id_ref || '').split('_');
+          const parts    = (n.id_ref || '').split('_');
           const idPedido = n.id_venta || (parts[0] === 'venta' ? Number(parts[1]) : null);
           return {
             id:             n.id_ref,
@@ -238,7 +269,7 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
             mensaje:        n.mensaje || "",
             ruta:           n.ruta,
             fecha:          n.fecha,
-            leida:          n.leida ?? n.Leida ?? vistas.includes(n.id_ref),
+            leida:          n.leida || n.Leida || vistas.includes(n.id_ref),
             idDestinatario: String(user.id),
             idPedido,
             fechaEntrega:   n.fecha_entrega || null,
@@ -249,27 +280,75 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
           ...prev.filter(n => !TIPOS_CLIENTE.has(n.tipo)),
         ]);
       } catch (_) {}
+
+    } else if (isCocinero) {
+      try {
+        const data   = await getNotificacionesCocina();
+        const vistas = loadFromLS('notif_cocina_vistas', []);
+        const cocina = (data.notificaciones || []).map(n => ({
+          id:             n.id_ref,
+          clave:          n.id_ref,
+          tipo:           n.tipo,
+          titulo:         n.titulo,
+          mensaje:        n.mensaje || "",
+          ruta:           n.ruta,
+          fecha:          n.fecha,
+          leida:          n.leida || vistas.includes(n.id_ref),
+          idDestinatario: 'produccion',
+          idPedido:       n.id_venta || null,
+        }));
+        setNotificaciones(prev => [
+          ...cocina,
+          ...prev.filter(n => !TIPOS_COCINA.has(n.tipo)),
+        ]);
+      } catch (_) {}
+
+    } else if (isDomiciliario) {
+      try {
+        const data  = await getNotificacionesDomiciliario();
+        const vistas = loadFromLS('notif_dom_vistas', []);
+        const domNotifs = (data.notificaciones || []).map(n => ({
+          id:             n.id_ref,
+          clave:          n.id_ref,
+          tipo:           n.tipo,
+          titulo:         n.titulo,
+          mensaje:        n.mensaje || "",
+          ruta:           n.ruta,
+          fecha:          n.fecha,
+          leida:          vistas.includes(n.id_ref),
+          idDestinatario: 'domiciliario',
+        }));
+        setNotificaciones(prev => [
+          ...domNotifs,
+          ...prev.filter(n => !TIPOS_DOMICILIARIO.has(n.tipo)),
+        ]);
+      } catch (_) {}
     }
   }, [user]);
 
   // Inicia el polling según el rol
   useEffect(() => {
     if (!user) return;
-    const rol      = user.rol?.toLowerCase();
-    const isAdmin  = rol === 'admin' || rol === 'administrador';
-    const isCliente = user.tipo === 'cliente';
-    if (!isAdmin && !isCliente) return;
+    const rol          = user.rol?.toLowerCase();
+    const isAdmin      = rol === 'admin' || rol === 'administrador';
+    const isCliente    = user.tipo === 'cliente';
+    const isCocinero   = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+    const isDomiciliario = rol === 'domiciliario';
+    if (!isAdmin && !isCliente && !isCocinero && !isDomiciliario) return;
 
     fetchAPINotifs();
-    const ms = isAdmin ? 30_000 : 60_000;
+    const ms = isAdmin ? 30_000 : isCocinero ? 30_000 : 60_000;
     const id = setInterval(fetchAPINotifs, ms);
     return () => clearInterval(id);
   }, [user, fetchAPINotifs]);
 
-  // Limpia notificaciones de API/cliente al cambiar de usuario
+  // Limpia notificaciones efímeras al cambiar de usuario
   useEffect(() => {
     setNotificaciones(prev => prev.filter(
-      n => !n.clave?.startsWith('api-') && !TIPOS_CLIENTE.has(n.tipo)
+      n => !n.clave?.startsWith('api-')
+        && !TIPOS_CLIENTE.has(n.tipo)
+        && !TIPOS_COCINA.has(n.tipo)
+        && !TIPOS_DOMICILIARIO.has(n.tipo)
     ));
   }, [user?.id]);
 
@@ -419,11 +498,30 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
       const notif = prev.find(n => n.id === id);
       if (notif?.id_backend) {
         marcarLeidaAPI(notif.id_backend).catch(() => {});
+        // fallback local para admin: persiste entre recargas aunque el API falle
+        if (notif.idDestinatario === 'admin') {
+          const vistas = loadFromLS('notif_admin_vistas', []);
+          if (!vistas.includes(notif.id_backend)) {
+            localStorage.setItem('notif_admin_vistas', JSON.stringify([...vistas, notif.id_backend]));
+          }
+        }
       }
       if (notif && TIPOS_CLIENTE.has(notif.tipo)) {
         const vistas = loadFromLS('notif_cliente_vistas', []);
         if (!vistas.includes(id)) {
           localStorage.setItem('notif_cliente_vistas', JSON.stringify([...vistas, id]));
+        }
+      }
+      if (notif && TIPOS_COCINA.has(notif.tipo)) {
+        const vistas = loadFromLS('notif_cocina_vistas', []);
+        if (!vistas.includes(id)) {
+          localStorage.setItem('notif_cocina_vistas', JSON.stringify([...vistas, id]));
+        }
+      }
+      if (notif && TIPOS_DOMICILIARIO.has(notif.tipo)) {
+        const vistas = loadFromLS('notif_dom_vistas', []);
+        if (!vistas.includes(id)) {
+          localStorage.setItem('notif_dom_vistas', JSON.stringify([...vistas, id]));
         }
       }
       return prev.map(n => n.id === id ? { ...n, leida: true } : n);
@@ -432,16 +530,31 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
 
   const marcarTodasLeidas = useCallback(() => {
     setNotificaciones(prev => {
-      const currentUser = JSON.parse(localStorage.getItem("usuario") || "null") || user;
-      const rol    = currentUser?.rol?.toLowerCase();
-      const isAdmin = rol === 'admin' || rol === 'administrador';
-      const isCook  = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+      const currentUser    = JSON.parse(localStorage.getItem("usuario") || "null") || user;
+      const rol            = currentUser?.rol?.toLowerCase();
+      const isAdmin        = rol === 'admin' || rol === 'administrador';
+      const isCook         = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+      const isDomiciliario = rol === 'domiciliario';
 
-      // Sincronizar lecturas con el backend (fire-and-forget)
+      // Sincronizar lecturas con el backend (fire-and-forget) + fallback localStorage
       if (isAdmin) {
-        prev.filter(n => n.id_backend && !n.leida).forEach(n => {
-          marcarLeidaAPI(n.id_backend).catch(() => {});
-        });
+        const adminUnread = prev.filter(n => n.id_backend && !n.leida && n.idDestinatario === 'admin');
+        adminUnread.forEach(n => { marcarLeidaAPI(n.id_backend).catch(() => {}); });
+        if (adminUnread.length > 0) {
+          const vistas = loadFromLS('notif_admin_vistas', []);
+          const nuevas = [...new Set([...vistas, ...adminUnread.map(n => n.id_backend)])];
+          localStorage.setItem('notif_admin_vistas', JSON.stringify(nuevas));
+        }
+      }
+
+      // Cocinero: guardar en localStorage para sobrevivir la recarga
+      if (isCook) {
+        const cocinaUnread = prev.filter(n => TIPOS_COCINA.has(n.tipo) && !n.leida);
+        if (cocinaUnread.length > 0) {
+          const vistas = loadFromLS('notif_cocina_vistas', []);
+          const nuevas = [...new Set([...vistas, ...cocinaUnread.map(n => n.id)])];
+          localStorage.setItem('notif_cocina_vistas', JSON.stringify(nuevas));
+        }
       }
 
       // Sincronizar lecturas de cliente con el backend y localStorage
@@ -455,31 +568,44 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
         localStorage.setItem('notif_cliente_vistas', JSON.stringify(nuevasVistas));
       }
 
+      // Domiciliario: guardar en localStorage para sobrevivir la recarga
+      if (isDomiciliario) {
+        const domUnread = prev.filter(n => TIPOS_DOMICILIARIO.has(n.tipo) && !n.leida);
+        if (domUnread.length > 0) {
+          const vistas = loadFromLS('notif_dom_vistas', []);
+          const nuevas = [...new Set([...vistas, ...domUnread.map(n => n.id)])];
+          localStorage.setItem('notif_dom_vistas', JSON.stringify(nuevas));
+        }
+      }
+
       return prev.map(n => {
         const isForCurrent = (isAdmin && n.idDestinatario === 'admin')
           || (n.idDestinatario === String(currentUser?.id));
-        const isForCook = isCook && n.idDestinatario === 'produccion';
-        return (isForCurrent || isForCook) ? { ...n, leida: true } : n;
+        const isForCook         = isCook         && n.idDestinatario === 'produccion';
+        const isForDomiciliario = isDomiciliario && n.idDestinatario === 'domiciliario';
+        return (isForCurrent || isForCook || isForDomiciliario) ? { ...n, leida: true } : n;
       });
     });
   }, [user]);
 
   const filtrar = useCallback(({ tipo, estado, texto }) => {
     return notificaciones.filter(n => {
-      const currentUser = JSON.parse(localStorage.getItem("usuario") || "null") || user;
-      const rol     = currentUser?.rol?.toLowerCase();
-      const isAdmin = rol === 'admin' || rol === 'administrador';
-      const isCook  = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
-      const isClient = rol === 'cliente';
+      const currentUser    = JSON.parse(localStorage.getItem("usuario") || "null") || user;
+      const rol            = currentUser?.rol?.toLowerCase();
+      const isAdmin        = rol === 'admin' || rol === 'administrador';
+      const isCook         = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+      const isClient       = currentUser?.tipo === 'cliente';
+      const isDomiciliario = rol === 'domiciliario';
 
-      const isForAdmin  = isAdmin  && n.idDestinatario === 'admin';
-      const isForCook   = isCook   && n.idDestinatario === 'produccion';
-      const isForClient = isClient && n.idDestinatario === String(currentUser?.id);
+      const isForAdmin       = isAdmin       && n.idDestinatario === 'admin';
+      const isForCook        = isCook        && n.idDestinatario === 'produccion';
+      const isForClient      = isClient      && n.idDestinatario === String(currentUser?.id);
+      const isForDomiciliario = isDomiciliario && n.idDestinatario === 'domiciliario';
 
-      if (!isForAdmin && !isForCook && !isForClient) return false;
-      if (tipo   && n.tipo  !== tipo)                                         return false;
-      if (estado === "leida"    && !n.leida)                                  return false;
-      if (estado === "no_leida" &&  n.leida)                                  return false;
+      if (!isForAdmin && !isForCook && !isForClient && !isForDomiciliario) return false;
+      if (tipo   && n.tipo  !== tipo)                                            return false;
+      if (estado === "leida"    && !n.leida)                                     return false;
+      if (estado === "no_leida" &&  n.leida)                                     return false;
       if (texto  && !n.titulo.toLowerCase().includes(texto.toLowerCase()) &&
                     !(n.mensaje || "").toLowerCase().includes(texto.toLowerCase())) return false;
       return true;
@@ -501,14 +627,16 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
   }, []);
 
   const notifUsuario = notificaciones.filter(n => {
-    const rol     = user?.rol?.toLowerCase();
-    const isAdmin = rol === 'admin' || rol === 'administrador';
-    const isCook  = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
-    const isClient = rol === 'cliente';
-    const isForAdmin  = isAdmin  && n.idDestinatario === 'admin';
-    const isForCook   = isCook   && n.idDestinatario === 'produccion';
-    const isForClient = isClient && n.idDestinatario === String(user?.id);
-    return isForAdmin || isForCook || isForClient;
+    const rol            = user?.rol?.toLowerCase();
+    const isAdmin        = rol === 'admin' || rol === 'administrador';
+    const isCook         = ['cocina', 'cocinero', 'produccion', 'producción'].includes(rol);
+    const isClient       = user?.tipo === 'cliente';
+    const isDomiciliario = rol === 'domiciliario';
+    const isForAdmin       = isAdmin       && n.idDestinatario === 'admin';
+    const isForCook        = isCook        && n.idDestinatario === 'produccion';
+    const isForClient      = isClient      && n.idDestinatario === String(user?.id);
+    const isForDomiciliario = isDomiciliario && n.idDestinatario === 'domiciliario';
+    return isForAdmin || isForCook || isForClient || isForDomiciliario;
   });
 
   const noLeidas       = notifUsuario.filter(n => !n.leida).length;

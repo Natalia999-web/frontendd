@@ -4,6 +4,7 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
+import { getCreditoCliente } from "../../../services/devolucionesService.js";
 import "./Pedidos.css";
 
 /* ─── Datos de transferencia ─────────────────────────────── */
@@ -41,16 +42,6 @@ const EMPTY_FORM = {
   anticipo_comp_preview: null,
 };
 
-/* ─── SelectArrow ────────────────────────────────────────── */
-function SelectArrow() {
-  return (
-    <div className="select-arrow">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
-  );
-}
 
 /* ─── ClienteSelect (inline — evita clipping del modal) ─────── */
 function ClienteSelect({ value, clientes, onChange, error }) {
@@ -283,10 +274,12 @@ export default function CrearPedido({ onClose, onSave }) {
   const [productos, setProductos] = useState([]);
   const [form, setForm]     = useState({ ...EMPTY_FORM });
   const [errors, setErrors] = useState({});
-  const [saved,     setSaved]     = useState(false);
-  const [step,      setStep]      = useState(1);
-  const [saveError, setSaveError] = useState(null);
-  const [pagarTodo, setPagarTodo] = useState(false);
+  const [saved,          setSaved]          = useState(false);
+  const [step,           setStep]           = useState(1);
+  const [saveError,      setSaveError]      = useState(null);
+  const [pagarTodo,      setPagarTodo]      = useState(false);
+  const [creditoCliente, setCreditoCliente] = useState(0);
+  const [usarCredito,    setUsarCredito]    = useState(false);
 
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
@@ -324,12 +317,14 @@ export default function CrearPedido({ onClose, onSave }) {
 
   /* ─── Cálculos ─── */
   const COSTO_DOMICILIO = 5000;
-  const subtotal   = form.productosItems.reduce((a, p) => a + p.precio * p.cantidad, 0);
-  const descuento  = Number(form.descuento) || 0;
-  const costoEnvio = form.domicilio ? COSTO_DOMICILIO : 0;
-  const total      = Math.max(0, subtotal - descuento + costoEnvio);
-  const requiereAnticipo = total > UMBRAL_ANTICIPO;
-  const montoAnticipo    = requiereAnticipo ? (pagarTodo ? total : Math.ceil(total * 0.5)) : 0;
+  const subtotal      = form.productosItems.reduce((a, p) => a + p.precio * p.cantidad, 0);
+  const descuento     = Number(form.descuento) || 0;
+  const costoEnvio    = form.domicilio ? COSTO_DOMICILIO : 0;
+  const total         = Math.max(0, subtotal - descuento + costoEnvio);
+  const creditoAplicar = usarCredito ? Math.min(creditoCliente, total) : 0;
+  const totalFinal    = Math.max(0, total - creditoAplicar);
+  const requiereAnticipo = totalFinal > UMBRAL_ANTICIPO;
+  const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   const hayProductosSinStock = form.productosItems.some(
     p => !p.stockOk || p.cantidad > p.stockActual
   );
@@ -445,7 +440,8 @@ export default function CrearPedido({ onClose, onSave }) {
       notas:             form.notas,
       descuento,
       subtotal,
-      total,
+      total:             totalFinal,
+      usar_credito:      usarCredito,
       estado:            "Pendiente",
       fecha_pedido:      new Date().toLocaleDateString("es-CO"),
       orden_produccion:  hayProductosSinStock,
@@ -534,6 +530,8 @@ export default function CrearPedido({ onClose, onSave }) {
                   onChange={cli => {
                     if (!cli) {
                       setForm(f => ({ ...f, idCliente: "", departamento: "", municipio: "", direccion_entrega: "" }));
+                      setCreditoCliente(0);
+                      setUsarCredito(false);
                       return;
                     }
                     setForm(f => ({
@@ -543,6 +541,8 @@ export default function CrearPedido({ onClose, onSave }) {
                       municipio: cli.municipio || "",
                       direccion_entrega: cli.direccion || "",
                     }));
+                    setUsarCredito(false);
+                    getCreditoCliente(cli.id).then(saldo => setCreditoCliente(saldo)).catch(() => setCreditoCliente(0));
                     setErrors(err => ({ ...err, idCliente: "" }));
                   }}
                 />
@@ -553,7 +553,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 <div className="info-box info-box--success" style={{ marginTop: 24, padding: "16px", borderRadius: "12px" }}>
                   <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
                     <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>👤</div>
-                    <div className="info-box__text">
+                    <div className="info-box__text" style={{ flex: 1 }}>
                       <span className="info-box__label" style={{ fontSize: 16, fontWeight: 700 }}>{clienteSeleccionado.nombre} {clienteSeleccionado.apellidos}</span>
                       <div style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
                         <span>📞 {clienteSeleccionado.telefono}</span>
@@ -561,6 +561,12 @@ export default function CrearPedido({ onClose, onSave }) {
                         <span>✉️ {clienteSeleccionado.correo}</span>
                       </div>
                     </div>
+                    {creditoCliente > 0 && (
+                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 14px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+                        <div style={{ fontSize: 11, color: "#757575", fontWeight: 600 }}>CRÉDITO</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoCliente)}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -620,7 +626,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#2e7d32", paddingTop: 10, borderTop: "1px dashed #c8e6c9" }}>
                   <span>Total estimado</span>
-                  <span>{fmt(total)}</span>
+                  <span>{fmt(totalFinal)}</span>
                 </div>
               </div>
             </div>
@@ -696,20 +702,19 @@ export default function CrearPedido({ onClose, onSave }) {
 
                   <div className="field-wrap" style={{ marginTop: 15 }}>
                       <label className="field-label">Municipio <span className="required">*</span></label>
-                      <div className="select-wrap">
-                        <select
-                          className={`field-select${errors.municipio ? " error" : ""}`}
-                          value={form.municipio}
-                          onChange={e => {
-                            setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
-                            setErrors(err => ({ ...err, municipio: e.target.value ? "" : "El municipio es obligatorio" }));
-                          }}
-                        >
-                          <option value="">— Valle de Aburrá —</option>
-                          {MUNICIPIOS_VALLE_ABURRA.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        <SelectArrow />
-                      </div>
+                      <SearchableSelect
+                        options={MUNICIPIOS_VALLE_ABURRA.map(m => ({ value: m, label: m }))}
+                        value={form.municipio}
+                        onChange={e => {
+                          setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
+                          setErrors(err => ({ ...err, municipio: e.target.value ? "" : "El municipio es obligatorio" }));
+                        }}
+                        getValue={o => o.value}
+                        getLabel={o => o.label}
+                        placeholder="— Valle de Aburrá —"
+                        searchPlaceholder="🔍 Buscar municipio…"
+                        className={`field-select${errors.municipio ? " error" : ""}`}
+                      />
                     </div>
                 </div>
               )}
@@ -922,7 +927,38 @@ export default function CrearPedido({ onClose, onSave }) {
                 </div>
               )}
 
-              <div className="discount-section" style={{ marginTop: 30, padding: "16px", background: "#fff9f0", borderRadius: "12px", border: "1px solid #ffe0b2" }}>
+              {creditoCliente > 0 && (
+                <div className="fade-in" style={{ marginTop: 24, background: "#e8f5e9", border: "1.5px solid #a5d6a7", borderRadius: 14, padding: 20 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
+                    <span style={{ fontSize: 24 }}>🎁</span>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Crédito disponible del cliente</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#388e3c" }}>
+                        El cliente tiene <strong>{fmt(creditoCliente)}</strong> de crédito acumulado por devoluciones.
+                      </p>
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: "#fff", padding: "12px 16px", borderRadius: 10, border: `2px solid ${usarCredito ? "#2e7d32" : "#c8e6c9"}` }}>
+                    <input
+                      type="checkbox"
+                      checked={usarCredito}
+                      onChange={e => { setUsarCredito(e.target.checked); setPagarTodo(false); }}
+                      style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
+                    />
+                    <span style={{ fontSize: 13, color: usarCredito ? "#1b5e20" : "#555", fontWeight: usarCredito ? 700 : 400 }}>
+                      Aplicar {fmt(Math.min(creditoCliente, total))} de crédito a este pedido
+                    </span>
+                  </label>
+                  {usarCredito && (
+                    <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del crédito</span>
+                      <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="discount-section" style={{ marginTop: 20, padding: "16px", background: "#fff9f0", borderRadius: "12px", border: "1px solid #ffe0b2" }}>
                 <label className="field-label" style={{ color: "#e65100" }}>¿Aplicar algún descuento manual?</label>
                 <div style={{ position: "relative", marginTop: 8 }}>
                   <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#e65100", fontWeight: 700 }}>$</span>
@@ -986,19 +1022,27 @@ export default function CrearPedido({ onClose, onSave }) {
                     <span>Subtotal</span>
                     <span>{fmt(subtotal)}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-                    <span>Descuento aplicado</span>
-                    <span>-{fmt(descuento)}</span>
-                  </div>
+                  {descuento > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
+                      <span>Descuento aplicado</span>
+                      <span>-{fmt(descuento)}</span>
+                    </div>
+                  )}
                   {costoEnvio > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
                       <span>🛵 Domicilio</span>
                       <span>+{fmt(costoEnvio)}</span>
                     </div>
                   )}
+                  {usarCredito && creditoAplicar > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
+                      <span>🎁 Crédito del cliente</span>
+                      <span>-{fmt(creditoAplicar)}</span>
+                    </div>
+                  )}
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, fontWeight: 900, marginTop: 12, paddingTop: 12, borderTop: "1px dashed rgba(255,255,255,0.3)" }}>
                     <span>TOTAL FINAL</span>
-                    <span>{fmt(total)}</span>
+                    <span>{fmt(totalFinal)}</span>
                   </div>
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
                     💳 Pago vía: <strong>{form.metodo_pago}</strong>
@@ -1012,7 +1056,7 @@ export default function CrearPedido({ onClose, onSave }) {
                       {!pagarTodo && (
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
                           <span>Saldo restante al entregar</span>
-                          <span style={{ fontWeight: 700 }}>{fmt(total - montoAnticipo)}</span>
+                          <span style={{ fontWeight: 700 }}>{fmt(totalFinal - montoAnticipo)}</span>
                         </div>
                       )}
                       {!pagarTodo && (

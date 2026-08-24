@@ -38,7 +38,6 @@ const ADAPT_INSUMO = raw => ({
   tieneFicha:         raw.tiene_ficha_tecnica ?? false,
   tieneOrden:         raw.tiene_orden_produccion ?? false,
   tieneCompra:        raw.tiene_compra ?? false,
-  ultimaActualizacion: raw.Fecha_Actualizacion ?? raw.ultima_actualizacion ?? null,
 });
 
 const ADAPT_CAT = raw => ({
@@ -190,7 +189,6 @@ function SkeletonRows() {
       <td><div className="skeleton-cell" style={{ width: 56 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 120 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 70 }} /></td>
-      <td><div className="skeleton-cell" style={{ width: 72 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 52 }} /></td>
       <td><div className="skeleton-cell" style={{ width: 90 }} /></td>
     </tr>
@@ -201,6 +199,7 @@ export default function GestionInsumos() {
   const puedeVer      = usePrivilegio("Insumos_ver");
   const puedeCrear    = usePrivilegio("Insumos_crear");
   const puedeEditar   = usePrivilegio("Insumos_editar");
+  const puedeSalida   = usePrivilegio("Insumos_generar_salida");
   const puedeEliminar = usePrivilegio("Insumos_eliminar");
 
   const [insumos,          setInsumos]          = useState([]);
@@ -265,7 +264,7 @@ export default function GestionInsumos() {
     // Fecha range
     let matchFecha = true;
     if (filterDesde || filterHasta) {
-      const val = getRecordDate(ins) || ins.ultimaActualizacion || ins.proxVencimiento;
+      const val = getRecordDate(ins) || ins.proxVencimiento;
       if (!val) matchFecha = false;
       else {
         const d = new Date(String(val).split('T')[0]);
@@ -279,9 +278,9 @@ export default function GestionInsumos() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const safePage   = Math.min(page, totalPages);
   const paginated  = filtered.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
-  useEffect(() => setPage(1), [search, filterCat, filterEst]);
+  useEffect(() => setPage(1), [search, filterCat, filterEst, filterDesde, filterHasta]);
 
-  const hasFilter = filterCat !== "todas" || filterEst !== "todos";
+  const hasFilter = filterCat !== "todas" || filterEst !== "todos" || !!filterDesde || !!filterHasta;
 
   /* ── Toggle optimista ── */
   const handleToggle = async (ins) => {
@@ -320,7 +319,7 @@ export default function GestionInsumos() {
   const handleDelete = async () => {
     try {
       await eliminarInsumo(modal.ins.id);
-      showToast("Insumo eliminado", "error");
+      showToast("Insumo eliminado");
       setModal(null);
       cargarDatos();
     } catch (e) {
@@ -443,7 +442,7 @@ export default function GestionInsumos() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("todas"); setFilterEst("todos"); }}>
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("todas"); setFilterEst("todos"); setFilterDesde(""); setFilterHasta(""); }}>
               ✕ Limpiar
             </button>
           )}
@@ -466,7 +465,6 @@ export default function GestionInsumos() {
                   <th>Lote</th>
                   <th>Stock</th>
                   <th>Próx. Venc.</th>
-                  <th>Última act.</th>
                   <th>Activo</th>
                   <th>Acciones</th>
                 </tr>
@@ -476,7 +474,7 @@ export default function GestionInsumos() {
                   <SkeletonRows />
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={8}>
                       <div className="empty-state">
                         <div className="empty-state__icon">🧺</div>
                         <p className="empty-state__text">
@@ -511,13 +509,6 @@ export default function GestionInsumos() {
                       <td><StockBar actual={ins.stockActual} minimo={ins.stockMinimo} simbolo={ins.simboloUnidad} /></td>
                       <td><VencCell fecha={ins.proxVencimiento} dias={ins.diasParaVencer} /></td>
                       <td>
-                        <span style={{ fontSize: 11, color: "#9e9e9e", whiteSpace: "nowrap" }}>
-                          {ins.ultimaActualizacion
-                            ? new Date(ins.ultimaActualizacion).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
-                            : "—"}
-                        </span>
-                      </td>
-                      <td>
                         <Toggle
                           value={ins.estado}
                           onChange={() => handleToggle(ins)}
@@ -528,7 +519,7 @@ export default function GestionInsumos() {
                         <div className="actions-cell">
                           {puedeVer      && <button className="act-btn act-btn--view"   data-tooltip="Ver detalle del insumo"   onClick={() => setModal({ type: "ver",      ins })}>👁</button>}
                           {puedeEditar   && <button className="act-btn act-btn--edit"   data-tooltip="Editar insumo"            onClick={() => setModal({ type: "editar",   ins })}>✎</button>}
-                          {puedeEditar   && <button className="act-btn act-btn--salida" data-tooltip="Registrar salida"         onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
+                          {puedeSalida   && <button className="act-btn act-btn--salida" data-tooltip="Registrar salida"         onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
                           {puedeEliminar && <button className="act-btn act-btn--delete" data-tooltip="Eliminar insumo"          onClick={() => setModal({ type: "eliminar", ins })}>🗑️</button>}
                         </div>
                       </td>

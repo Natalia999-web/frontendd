@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { soloLetras } from '../utils/inputFilters';
@@ -33,14 +33,44 @@ function PasswordChecklist({ password }) {
   );
 }
 
+function PanelIzquierdo() {
+  return (
+    <div className="auth-panel-left">
+      <div className="auth-shape auth-shape--1" />
+      <div className="auth-shape auth-shape--2" />
+      <div className="auth-shape auth-shape--3" />
+      <div className="auth-shape auth-shape--4" />
+      <div className="auth-shape auth-shape--5" />
+      <div className="auth-left-content">
+        <div className="auth-left-logo">
+          <Leaf size={28} color="white" />
+        </div>
+        <h1 className="auth-left-brand">Tostón App</h1>
+        <p className="auth-left-tagline">
+          Únete a nuestra comunidad y descubre el verdadero sabor artesanal del plátano.
+        </p>
+        <div className="auth-left-divider" />
+        <div className="auth-left-pills">
+          <span className="auth-left-pill">🎁 Registro gratis</span>
+          <span className="auth-left-pill">🍌 Productos únicos</span>
+          <span className="auth-left-pill">⚡ Pedidos fáciles</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Register = () => {
   const navigate = useNavigate();
   const [loading,      setLoading]      = useState(false);
   const [errors,       setErrors]       = useState({});
   const [showPass,     setShowPass]     = useState(false);
   const [showConf,     setShowConf]     = useState(false);
-  const [success,      setSuccess]      = useState(false);
-  const [successEmail, setSuccessEmail] = useState('');
+  const [success,        setSuccess]        = useState(false);
+  const [successEmail,   setSuccessEmail]   = useState('');
+  const [emailChecking,  setEmailChecking]  = useState(false);
+  const [emailTaken,     setEmailTaken]     = useState(false);
+  const emailDebounceRef = useRef(null);
 
   const [form, setForm] = useState({
     Nombre:               '',
@@ -91,12 +121,38 @@ const Register = () => {
       }
       if (k === 'Numero_documento') {
         if (!val.trim()) n.Numero_documento = 'El número de documento es obligatorio';
+        else if (val.length < 8 || val.length > 11) n.Numero_documento = 'Debe tener entre 8 y 11 dígitos';
         else delete n.Numero_documento;
       }
       if (k === 'Correo') {
-        if (!val.trim()) n.Correo = 'El correo es obligatorio';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) n.Correo = 'Formato de correo inválido';
-        else delete n.Correo;
+        setEmailTaken(false);
+        clearTimeout(emailDebounceRef.current);
+        if (!val.trim()) {
+          n.Correo = 'El correo es obligatorio';
+          setEmailChecking(false);
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+          n.Correo = 'Formato de correo inválido';
+          setEmailChecking(false);
+        } else {
+          delete n.Correo;
+          setEmailChecking(true);
+          emailDebounceRef.current = setTimeout(async () => {
+            try {
+              await apiFetch('/auth/verificar-correo', {
+                method: 'POST',
+                body: JSON.stringify({ correo: val }),
+              });
+              setEmailChecking(false);
+              setEmailTaken(false);
+            } catch (err) {
+              setEmailChecking(false);
+              if (err.statusCode === 409) {
+                setEmailTaken(true);
+                setErrors(p => ({ ...p, Correo: 'Este correo ya está registrado.' }));
+              }
+            }
+          }, 600);
+        }
       }
       if (k === 'Contrasena') {
         if (!val) n.Contrasena = 'La contraseña es obligatoria';
@@ -121,6 +177,8 @@ const Register = () => {
 
   const validate = () => {
     const e = {};
+    if (emailChecking) { e.Correo = 'Verificando correo, espera un momento…'; }
+    else if (emailTaken) { e.Correo = 'Este correo ya está registrado.'; }
     const esNIT = form.Tipo_documento === 'NIT';
     if (esNIT) {
       if (!form.RazonSocial.trim()) e.RazonSocial = 'La razón social es obligatoria';
@@ -129,6 +187,7 @@ const Register = () => {
       if (!form.Apellidos.trim()) e.Apellidos = 'Los apellidos son obligatorios';
     }
     if (!form.Numero_documento.trim()) e.Numero_documento = 'El número de documento es obligatorio';
+    else if (form.Numero_documento.length < 8 || form.Numero_documento.length > 11) e.Numero_documento = 'Debe tener entre 8 y 11 dígitos';
     if (!form.Correo.trim())           e.Correo           = 'El correo es obligatorio';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.Correo)) e.Correo = 'Formato de correo inválido';
     if (!form.Contrasena) {
@@ -168,31 +227,6 @@ const Register = () => {
       setLoading(false);
     }
   };
-
-  const PanelIzquierdo = () => (
-    <div className="auth-panel-left">
-      <div className="auth-shape auth-shape--1" />
-      <div className="auth-shape auth-shape--2" />
-      <div className="auth-shape auth-shape--3" />
-      <div className="auth-shape auth-shape--4" />
-      <div className="auth-shape auth-shape--5" />
-      <div className="auth-left-content">
-        <div className="auth-left-logo">
-          <Leaf size={28} color="white" />
-        </div>
-        <h1 className="auth-left-brand">Tostón App</h1>
-        <p className="auth-left-tagline">
-          Únete a nuestra comunidad y descubre el verdadero sabor artesanal del plátano.
-        </p>
-        <div className="auth-left-divider" />
-        <div className="auth-left-pills">
-          <span className="auth-left-pill">🎁 Registro gratis</span>
-          <span className="auth-left-pill">🍌 Productos únicos</span>
-          <span className="auth-left-pill">⚡ Pedidos fáciles</span>
-        </div>
-      </div>
-    </div>
-  );
 
   if (success) {
     return (
@@ -304,6 +338,7 @@ const Register = () => {
                     value={form.Numero_documento}
                     onChange={set('Numero_documento')}
                     inputMode="numeric"
+                    maxLength={11}
                   />
                 </div>
               </div>
@@ -317,6 +352,12 @@ const Register = () => {
                 <span className="auth-input-icon"><Mail size={15} /></span>
                 <input type="email" placeholder="tu@correo.com" className="auth-input"
                   value={form.Correo} onChange={set('Correo')} />
+                {emailChecking && (
+                  <span className="auth-spinner" style={{ width: 14, height: 14, marginRight: 10, flexShrink: 0 }} />
+                )}
+                {!emailChecking && form.Correo && !errors.Correo && !emailTaken && (
+                  <span style={{ marginRight: 10, color: '#16a34a', flexShrink: 0 }}><Check size={15} /></span>
+                )}
               </div>
               {errors.Correo && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#dc2626' }}>{errors.Correo}</p>}
             </div>

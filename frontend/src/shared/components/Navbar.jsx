@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { getUser, logout } from "../../services/authService";
 import { crearPedido, getMiCredito } from "../../services/pedidosService";
-import { Menu, X, ShoppingCart, Bell, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, Bell, LogOut, MessageSquare } from "lucide-react";
 import "./Navbar.css";
 import { getCartCount, getCart, getTotal } from "../../features/sales/orders/services/cartService";
 import CartAside from "../../features/sales/orders/components/CartAside";
@@ -12,6 +12,7 @@ import { useNotificaciones } from "../../features/notificaciones/context/Notific
 import NotificacionesPanel from "../../features/notificaciones/components/NotificacionesPanel";
 import AlertaBanner from "../../features/notificaciones/components/AlertaBanner";
 import "../../features/notificaciones/components/notificaciones.css";
+import { useChat } from "../../features/chat/context/ChatContext";
 
 export default function Navbar({ isLanding = false, onToggleSidebar }) {
   const [menuOpen,         setMenuOpen]         = useState(false);
@@ -28,6 +29,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
   const location = useLocation();
 
   const { noLeidas, agregarNotificacion } = useNotificaciones();
+  const { totalNoLeidos: chatNoLeidos } = useChat();
 
   useEffect(() => {
     const u = getUser();
@@ -172,6 +174,24 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
                   <Link to="/admin" className="nav-link" style={{ fontWeight: 700, color: 'var(--g)' }}>Dashboard</Link>
                 )}
               </div>
+            )}
+
+            {/* Botón de chats — solo admin */}
+            {mostrarCampana && user?.tipo === "empleado" &&
+             (user?.rol?.toLowerCase() === "admin" || user?.rol?.toLowerCase() === "administrador") && (
+              <button
+                className="bell-btn"
+                onClick={() => navigate("/admin/chats")}
+                data-tooltip="Centro de chats"
+                aria-label={`${chatNoLeidos} mensajes sin leer`}
+              >
+                <MessageSquare size={22} />
+                {chatNoLeidos > 0 && (
+                  <span className="bell-badge">
+                    {chatNoLeidos > 99 ? "99+" : chatNoLeidos}
+                  </span>
+                )}
+              </button>
             )}
 
             {/* Campanita */}

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ROLES_EMPLEADO, ITEMS_PER_PAGE, INIT_EMPLEADOS } from "./empleadosUtils.js";
+import { ITEMS_PER_PAGE } from "./empleadosUtils.js";
 import { RolBadge } from "./CrearEmpleado.jsx";
 import CrearEmpleado from "./CrearEmpleado.jsx";
 import EditarEmpleado, { ModalVerEmpleado, ModalEliminarEmpleado } from "./EditarEmpleado.jsx";
+import { getUsuarios, crearEmpleado, editarUsuario, eliminarUsuario, toggleEstadoUsuario } from "../../../services/usuariosService.js";
+import { getRoles } from "../../../services/rolesService.js";
 import "./Empleados.css";
 
 /* ─── Toggle ─────────────────────────────────────────────── */
@@ -28,9 +30,28 @@ function Toast({ toast }) {
   );
 }
 
+const adaptarEmpleado = (u) => ({
+  id:           u.id,
+  tipoDoc:      u.tipoDocumento || "CC",
+  numDoc:       u.cedula || "",
+  nombre:       u.nombre || "",
+  apellidos:    u.apellidos || "",
+  correo:       u.correo || "",
+  telefono:     u.telefono || "",
+  direccion:    u.direccion || "",
+  departamento: u.departamento || "",
+  municipio:    u.municipio || "",
+  idRol:        u.idRol || "",
+  estado:       u.estado,
+  fotoPreview:  u.foto || null,
+  fechaIngreso: "",
+});
+
 /* ─── Main ───────────────────────────────────────────────── */
 export default function GestionEmpleados() {
-  const [empleados, setEmpleados]   = useState(INIT_EMPLEADOS);
+  const [empleados, setEmpleados]   = useState([]);
+  const [roles, setRoles]           = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState("");
   const [filter, setFilter]         = useState("todos");
   const [filterRol, setFilterRol]   = useState(0);
@@ -40,19 +61,37 @@ export default function GestionEmpleados() {
   const [toast, setToast]           = useState(null);
   const filterRef                   = useRef();
 
+  const showToast = (msg, type = "success") => { setToast({ message:msg, type }); setTimeout(() => setToast(null), 3000); };
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      const [todos, rolesData] = await Promise.all([
+        getUsuarios({ porPagina: 100 }),
+        getRoles().catch(() => []),
+      ]);
+      setEmpleados(todos.filter(u => u.tipo === "empleado").map(adaptarEmpleado));
+      setRoles(rolesData);
+    } catch (e) {
+      showToast(e.message || "Error al cargar empleados", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { cargarDatos(); }, []);
+
   useEffect(() => {
     const h = e => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const showToast = (msg, type = "success") => { setToast({ message:msg, type }); setTimeout(() => setToast(null), 3000); };
-
   const filtered = empleados.filter(e => {
-    const q   = search.toLowerCase();
-    const rol = ROLES_EMPLEADO.find(r => r.id === e.idRol)?.nombre || "";
-    const matchQ   = `${e.nombre} ${e.apellidos}`.toLowerCase().includes(q) || e.correo.toLowerCase().includes(q) || e.municipio.toLowerCase().includes(q) || (e.numDoc||"").toLowerCase().includes(q) || rol.toLowerCase().includes(q);
-    const matchE   = filter    === "todos" || (filter    === "activo" ? e.estado : !e.estado);
+    const q      = search.toLowerCase();
+    const rolNom = roles.find(r => r.id === Number(e.idRol))?.nombre || "";
+    const matchQ   = `${e.nombre} ${e.apellidos}`.toLowerCase().includes(q) || (e.correo||"").toLowerCase().includes(q) || (e.municipio||"").toLowerCase().includes(q) || (e.numDoc||"").toLowerCase().includes(q) || rolNom.toLowerCase().includes(q);
+    const matchE   = filter    === "todos" || (filter === "activo" ? e.estado : !e.estado);
     const matchRol = filterRol === 0       || e.idRol === filterRol;
     return matchQ && matchE && matchRol;
   });
@@ -65,10 +104,78 @@ export default function GestionEmpleados() {
   const handleFilterChange = value => { setFilter(value); setPage(1); };
   const handleFilterRolChange = value => { setFilterRol(value); setPage(1); };
 
-  const handleCreate = data => { setEmpleados(p => [data, ...p]);                              showToast("Empleado creado");          setModal(null); };
-  const handleEdit   = data => { setEmpleados(p => p.map(e => e.id === data.id ? data : e));  showToast("Cambios guardados");        setModal(null); };
-  const handleDelete = ()   => { setEmpleados(p => p.filter(e => e.id !== modal.empleado.id)); showToast("Empleado eliminado","error"); setModal(null); };
-  const toggleEstado = id   => setEmpleados(p => p.map(e => e.id === id ? { ...e, estado:!e.estado } : e));
+  const handleCreate = async (data) => {
+    const payload = {
+      Cedula:         data.numDoc,
+      Tipo_Documento: data.tipoDoc,
+      Nombre:         data.nombre,
+      Apellidos:      data.apellidos,
+      Correo:         data.correo,
+      Contrasena:     data.contrasena,
+      ID_Rol:         Number(data.idRol),
+      Direccion:      data.direccion    || null,
+      Municipio:      data.municipio    || null,
+      Departamento:   data.departamento || null,
+      Telefono:       data.telefono ? data.telefono.replace(/\s/g, "") : null,
+      Foto:           data.fotoPreview  || null,
+    };
+    try {
+      await crearEmpleado(payload);
+      showToast("Empleado creado");
+      setModal(null);
+      await cargarDatos();
+    } catch (e) {
+      showToast(e.message || "Error al crear empleado", "error");
+      throw e;
+    }
+  };
+
+  const handleEdit = async (data) => {
+    const payload = {
+      Cedula:         data.numDoc,
+      Tipo_Documento: data.tipoDoc,
+      Nombre:         data.nombre,
+      Apellidos:      data.apellidos,
+      Correo:         data.correo,
+      ID_Rol:         Number(data.idRol),
+      Direccion:      data.direccion    || null,
+      Municipio:      data.municipio    || null,
+      Departamento:   data.departamento || null,
+      Telefono:       data.telefono ? data.telefono.replace(/\s/g, "") : null,
+      Foto:           data.fotoPreview  || null,
+      ...(data.contrasena ? { Contrasena: data.contrasena } : {}),
+    };
+    try {
+      await editarUsuario("empleado", data.id, payload);
+      showToast("Cambios guardados");
+      setModal(null);
+      await cargarDatos();
+    } catch (e) {
+      showToast(e.message || "Error al guardar cambios", "error");
+      throw e;
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await eliminarUsuario("empleado", modal.empleado.id);
+      showToast("Empleado eliminado");
+    } catch (e) {
+      showToast(e.message || "No se puede eliminar este empleado", "error");
+    }
+    setModal(null);
+    await cargarDatos();
+  };
+
+  const toggleEstado = async (emp) => {
+    setEmpleados(p => p.map(e => e.id === emp.id ? { ...e, estado: !e.estado } : e));
+    try {
+      await toggleEstadoUsuario("empleado", emp.id, emp.estado);
+    } catch {
+      setEmpleados(p => p.map(e => e.id === emp.id ? { ...e, estado: emp.estado } : e));
+      showToast("Error al cambiar estado", "error");
+    }
+  };
 
   const hasFilter = filter !== "todos" || filterRol !== 0;
 
@@ -104,9 +211,9 @@ export default function GestionEmpleados() {
                 <button className={"filter-option"+(filterRol===0?" active":"")} onClick={() => { handleFilterRolChange(0); setShowFilter(false); }}>
                   <span className="filter-dot" style={{ background:"#bdbdbd" }} />Todos
                 </button>
-                {ROLES_EMPLEADO.map(r => (
+                {roles.map(r => (
                   <button key={r.id} className={"filter-option"+(filterRol===r.id?" active":"")} onClick={() => { handleFilterRolChange(r.id); setShowFilter(false); }}>
-                    <span style={{ fontSize:13 }}>{r.icon}</span>{r.nombre}
+                    <span style={{ fontSize:13 }}>{r.icono}</span>{r.nombre}
                   </button>
                 ))}
               </div>
@@ -141,7 +248,11 @@ export default function GestionEmpleados() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 5 }, (_, i) => (
+                    <tr key={i}>{Array.from({ length: 8 }, (_, j) => <td key={j}><div className="skeleton-cell" /></td>)}</tr>
+                  ))
+                ) : paginated.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
                       <div className="empty-state__icon">👷</div>
@@ -161,10 +272,10 @@ export default function GestionEmpleados() {
                       </div>
                     </td>
                     <td><div className="doc-badge"><span className="doc-type">{emp.tipoDoc}</span><span className="doc-num">{emp.numDoc}</span></div></td>
-                    <td><RolBadge idRol={emp.idRol} /></td>
+                    <td><RolBadge idRol={emp.idRol} roles={roles} /></td>
                     <td><span className="phone-cell"><span className="phone-icon">📞</span>{emp.telefono}</span></td>
                     <td><div className="location-city">{emp.municipio}</div><div className="location-dept">{emp.departamento}</div></td>
-                    <td><Toggle value={emp.estado} onChange={() => toggleEstado(emp.id)} /></td>
+                    <td><Toggle value={emp.estado} onChange={() => toggleEstado(emp)} /></td>
                     <td>
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view"   onClick={() => setModal({ type:"ver",      empleado:emp })}>👁</button>
@@ -191,9 +302,9 @@ export default function GestionEmpleados() {
         </div>
       </div>
 
-      {modal?.type === "crear"    && <CrearEmpleado onClose={() => setModal(null)} onSave={handleCreate} />}
-      {modal?.type === "editar"   && <EditarEmpleado empleado={modal.empleado} onClose={() => setModal(null)} onSave={handleEdit} />}
-      {modal?.type === "ver"      && <ModalVerEmpleado empleado={modal.empleado} onClose={() => setModal(null)} />}
+      {modal?.type === "crear"    && <CrearEmpleado onClose={() => setModal(null)} onSave={handleCreate} roles={roles} />}
+      {modal?.type === "editar"   && <EditarEmpleado empleado={modal.empleado} onClose={() => setModal(null)} onSave={handleEdit} roles={roles} />}
+      {modal?.type === "ver"      && <ModalVerEmpleado empleado={modal.empleado} onClose={() => setModal(null)} roles={roles} />}
       {modal?.type === "eliminar" && <ModalEliminarEmpleado empleado={modal.empleado} onClose={() => setModal(null)} onConfirm={handleDelete} />}
 
       <Toast toast={toast} />

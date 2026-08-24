@@ -84,7 +84,7 @@ export default function CrearCategoriaInsumo({ onClose, onSave, existingCategori
         <div className="form-group">
           <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Nombre <span style={{ color: "#e53935", fontWeight: 800 }}>*</span></span>
-            <CharCount value={form.nombre} max={100} min={2} />
+            <CharCount value={form.nombre} max={50} min={2} />
           </label>
           <input
             className={`field-input${errors.nombre ? " field-input--error" : ""}`}

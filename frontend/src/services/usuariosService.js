@@ -16,6 +16,7 @@ function adaptarUsuario(u) {
     idRol:         u.ID_Rol,
     rol:           u.nombre_rol,
     estado:        u.Estado === 1,
+    fecha_creacion: u.Fecha_Creacion ?? u.Fecha_creacion,
     fechaCreacion: fmtFecha(u.Fecha_Creacion ?? u.Fecha_creacion),
     tipo:          u.tipo,
     foto:          null,

@@ -37,13 +37,21 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
   // Obtener usuario para filtrar las opciones del select
   const user = JSON.parse(localStorage.getItem("usuario") || "null");
   const rol = user?.rol?.toLowerCase();
-  const isAdmin = user?.tipo === "empleado" && (rol === "admin" || rol === "administrador");
+  const isAdmin        = user?.tipo === "empleado" && (rol === "admin" || rol === "administrador");
+  const isCocinero     = ["cocina", "cocinero", "produccion", "producción"].includes(rol);
+  const isDomiciliario = rol === "domiciliario";
 
-  // Tipos relevantes segun rol
+  // Tipos relevantes según rol
   const tiposRelevantes = Object.entries(TIPO_LABELS).filter(([tipo]) => {
-    if (isAdmin) return true; // El admin ve todo
-    // El cliente solo ve Pedido y Sistema
-    return [TIPOS.PEDIDO_NUEVO, TIPOS.SISTEMA].includes(tipo);
+    if (isAdmin) return true;
+    if (isCocinero) return [TIPOS.PEDIDO_NUEVO, TIPOS.PEDIDO_EN_PRODUCCION].includes(tipo);
+    if (isDomiciliario) return [TIPOS.DOMICILIO_ASIGNADO, TIPOS.PEDIDO_CANCELADO].includes(tipo);
+    // Cliente
+    return [
+      TIPOS.PEDIDO_CONFIRMADO, TIPOS.PEDIDO_ENTREGADO, TIPOS.PEDIDO_CANCELADO,
+      TIPOS.DEVOLUCION_APROBADA, TIPOS.DEVOLUCION_RECHAZADA,
+      TIPOS.PEDIDO_EN_PRODUCCION, TIPOS.FECHA_PROPUESTA,
+    ].includes(tipo);
   });
 
   // Cerrar con Escape

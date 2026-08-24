@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from src.shared.services.models import Salida, Insumo, Producto, Usuario, Estado, CategoriaInsumo, CategoriaProducto, LoteCompra, LoteProducto
+from src.shared.services.models import Salida, Insumo, Producto, Usuario, Estado, CategoriaInsumo, CategoriaProducto, LoteCompra, LoteProducto, UnidadMedida
 from src.shared.services.notificaciones_utils import notificar_stock_insumo, notificar_stock_producto
 from .schemas import SalidaCreate
 
@@ -65,6 +65,11 @@ def _formato_salida(salida: Salida, db: Session) -> dict:
         cat = db.query(CategoriaProducto).filter(CategoriaProducto.ID_Categoria == producto.ID_Categoria).first()
         cat_nombre = cat.Nombre_Categoria if cat else None
 
+    simbolo_unidad = None
+    if insumo and insumo.Unidad_Medida:
+        um = db.query(UnidadMedida).filter(UnidadMedida.ID_Unidad_Medida == insumo.Unidad_Medida).first()
+        simbolo_unidad = um.Simbolo if um else None
+
     return {
         "ID_Salida":          salida.ID_Salida,
         "Tipo":               salida.Tipo,
@@ -73,6 +78,7 @@ def _formato_salida(salida: Salida, db: Session) -> dict:
         "ID_Producto":        salida.ID_Producto,
         "nombre_producto":    producto.nombre if producto else None,
         "nombre_categoria":   cat_nombre,
+        "simbolo_unidad":     simbolo_unidad,
         "Cantidad":           salida.Cantidad,
         "Motivo":             salida.Motivo,
         "ID_Empleado":        salida.ID_Empleado,
@@ -246,7 +252,7 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
         Cantidad    = datos.Cantidad,
         Motivo      = datos.Motivo,
         ID_Empleado = datos.ID_Empleado,
-        Fecha       = datos.Fecha or datetime.now(),
+        Fecha       = datos.Fecha or _now(),
         Estado      = ESTADO_ACTIVO,
     )
     db.add(nueva)
@@ -341,7 +347,7 @@ def procesar_lotes_vencidos(db: Session) -> dict:
             lote.Estado = ESTADO_ANULADA
             continue
 
-        cantidad = min(lote.Cantidad_Inicial or 0, insumo.Stock_Actual or 0)
+        cantidad = min(lote.Cantidad_Actual or lote.Cantidad_Inicial or 0, insumo.Stock_Actual or 0)
         lote.Estado = ESTADO_ANULADA
 
         if cantidad > 0:

@@ -1,9 +1,6 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, ConfigDict
 from typing import Optional, Literal
 from datetime import datetime
-
-TIPOS_SALIDA = ["vencimiento", "daño", "ajuste", "consumo", "devolución"]
-
 
 class SalidaCreate(BaseModel):
     Tipo:        Literal["vencimiento", "daño", "ajuste", "consumo", "devolución"]
@@ -12,7 +9,7 @@ class SalidaCreate(BaseModel):
     Cantidad:    int
     Motivo:      Optional[str] = None
     ID_Empleado: Optional[int] = None
-    Fecha:       Optional[datetime] = None  # si no se envía, se usa datetime.now()
+    Fecha:       Optional[datetime] = None  # si no se envía, se usa _now() (zona Bogotá)
 
     @model_validator(mode="after")
     def validar_item_y_cantidad(self):
@@ -35,6 +32,7 @@ class SalidaResponse(BaseModel):
     ID_Producto:       Optional[int] = None
     nombre_producto:   Optional[str] = None
     nombre_categoria:  Optional[str] = None
+    simbolo_unidad:    Optional[str] = None
     Cantidad:          int
     Motivo:            Optional[str] = None
     ID_Empleado:       Optional[int] = None
@@ -46,8 +44,7 @@ class SalidaResponse(BaseModel):
     nombre_anulado_por: Optional[str] = None
     Fecha_Anulacion:   Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SalidaListResponse(BaseModel):

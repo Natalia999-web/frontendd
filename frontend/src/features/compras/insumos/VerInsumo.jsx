@@ -177,7 +177,22 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
 
 export default function VerInsumo({ ins, categorias, unidades, onClose }) {
   const navigate = useNavigate();
-  const [tab,     setTab]     = useState("info");
+  const [tab,          setTab]          = useState("info");
+  const [lotes,        setLotes]        = useState([]);
+  const [lotesLoading, setLotesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!ins) return;
+    if (tab === "lotes" || tab === "vencidos") {
+      if (lotes.length === 0) {
+        setLotesLoading(true);
+        getLotesInsumo(ins.id)
+          .then(d => setLotes(d.lotes || []))
+          .catch(() => {})
+          .finally(() => setLotesLoading(false));
+      }
+    }
+  }, [tab, ins?.id]);
 
   // Guardia: si el insumo no existe o fue eliminado
   if (!ins) {
@@ -201,20 +216,6 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
       </div>
     );
   }
-  const [lotes,   setLotes]   = useState([]);
-  const [lotesLoading, setLotesLoading] = useState(false);
-
-  useEffect(() => {
-    if (tab === "lotes" || tab === "vencidos") {
-      if (lotes.length === 0) {
-        setLotesLoading(true);
-        getLotesInsumo(ins.id)
-          .then(d => setLotes(d.lotes || []))
-          .catch(() => {})
-          .finally(() => setLotesLoading(false));
-      }
-    }
-  }, [tab]);
 
   const cat    = (categorias ?? []).find(c => c.id === ins.idCategoria) ?? { icon: "🧺", nombre: "—" };
   const unidad = (unidades   ?? []).find(u => u.id === ins.idUnidad)    ?? { simbolo: ins.simboloUnidad || "uds.", nombre: "Unidad" };

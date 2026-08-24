@@ -93,6 +93,7 @@ class InsumoResponse(BaseModel):
     lote_id:                 Optional[int] = None
     tiene_ficha_tecnica:     Optional[bool] = None
     tiene_orden_produccion:  Optional[bool] = None
+    tiene_compra:            Optional[bool] = None
 
     class Config:
         from_attributes = True

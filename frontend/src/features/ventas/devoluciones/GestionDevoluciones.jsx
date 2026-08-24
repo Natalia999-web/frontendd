@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import CrearDevolucion from "./CrearDevolucion.jsx";
-import { getDevoluciones, crearDevolucion, resolverDevolucion } from "../../../services/devolucionesService.js";
-import { crearNotificacionCliente } from "../../../services/notificacionesService.js";
+import { getDevoluciones, crearDevolucion, resolverDevolucion, getCreditoCliente } from "../../../services/devolucionesService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import "./Devoluciones.css";
@@ -41,15 +40,6 @@ function Toast({ toast }) {
   );
 }
 
-function SelectArrow() {
-  return (
-    <div className="select-arrow">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
-  );
-}
 
 /* ─── Evidencia inline en modal detalle ─────────────────── */
 function EvidenciaVer({ evidencia }) {
@@ -353,6 +343,7 @@ export default function GestionDevoluciones() {
   const [showFilter,   setShowFilter]   = useState(false);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
+  const [creditoVer,   setCreditoVer]   = useState(0);
   const [toast,        setToast]        = useState(null);
   const filterRef = useRef();
 
@@ -435,14 +426,6 @@ export default function GestionDevoluciones() {
         });
       }
 
-      if (dev.idCliente) {
-        crearNotificacionCliente(
-          dev.idCliente,
-          "devolucion_aprobada",
-          "Devolución aprobada ✅",
-          `Tu solicitud de devolución ${dev.numero} fue aprobada. El reembolso se aplicó a tu crédito.`,
-        ).catch(() => {});
-      }
       window.dispatchEvent(new Event('credito-updated'));
       await cargarDatos();
       showToast("Devolución aprobada y reembolso procesado");
@@ -458,16 +441,8 @@ export default function GestionDevoluciones() {
     setActionSaving(true);
     try {
       const dev = await resolverDevolucion(id, "rechazar", motivo);
-      if (dev.idCliente) {
-        crearNotificacionCliente(
-          dev.idCliente,
-          "devolucion_rechazada",
-          "Devolución rechazada ❌",
-          `Tu solicitud de devolución ${dev.numero} fue rechazada. Motivo: ${motivo}`,
-        ).catch(() => {});
-      }
       await cargarDatos();
-      showToast("Devolución rechazada", "error");
+      showToast("Devolución rechazada", "warn");
       setModal(null);
     } catch (err) {
       showToast(err.message || "Error al rechazar devolución", "error");
@@ -655,7 +630,15 @@ export default function GestionDevoluciones() {
                     <td>
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view" data-tooltip="Ver detalle de devolución"
-                          onClick={() => setModal({ type: "ver", dev })}>👁</button>
+                          onClick={() => {
+                            setCreditoVer(0);
+                            setModal({ type: "ver", dev });
+                            if (dev.idCliente) {
+                              getCreditoCliente(dev.idCliente)
+                                .then(s => setCreditoVer(s))
+                                .catch(() => {});
+                            }
+                          }}>👁</button>
                         <button className="act-btn act-btn--approve" data-tooltip="Aprobar y reembolsar"
                           onClick={() => abrirAprobar(dev)}
                           style={{ opacity: dev.estado === "Pendiente" ? 1 : 0.35, cursor: dev.estado === "Pendiente" ? "pointer" : "default" }}>
@@ -692,7 +675,7 @@ export default function GestionDevoluciones() {
       </div>
 
       {modal?.type === "crear"    && <CrearDevolucion onClose={() => setModal(null)} onSave={handleCrear} saving={actionSaving} />}
-      {modal?.type === "ver"      && <ModalVerDevolucion dev={modal.dev} creditoCliente={0} onClose={() => setModal(null)} />}
+      {modal?.type === "ver"      && <ModalVerDevolucion dev={modal.dev} creditoCliente={creditoVer} onClose={() => setModal(null)} />}
       {modal?.type === "aprobar"  && <ModalAprobar  dev={modal.dev} onClose={() => setModal(null)} onConfirm={handleAprobar} />}
       {modal?.type === "rechazar" && <ModalRechazar dev={modal.dev} onClose={() => setModal(null)} onConfirm={handleRechazar} />}
 

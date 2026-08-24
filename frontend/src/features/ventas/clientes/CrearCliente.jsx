@@ -130,6 +130,7 @@ export default function CrearCliente({ onClose, onSave }) {
     if (k === 'tipoDoc' && !val) err = "Requerido";
     if (k === 'numDoc') {
       if (!val.trim()) err = "El número de documento es obligatorio";
+      else if (val.length < 8 || val.length > 11) err = "Debe tener entre 8 y 11 dígitos";
       else if (users.some(u => u.cedula === val)) err = "Este documento ya está registrado";
     }
     if (k === 'nombre' && !val.trim()) err = "El nombre es obligatorio";
@@ -178,6 +179,7 @@ export default function CrearCliente({ onClose, onSave }) {
     if (s === 1) {
       if (!form.tipoDoc)       e.tipoDoc = "Requerido";
       if (!form.numDoc.trim()) e.numDoc  = "El número de documento es obligatorio";
+      else if (form.numDoc.length < 8 || form.numDoc.length > 11) e.numDoc = "Debe tener entre 8 y 11 dígitos";
       else if (users.some(u => u.cedula === form.numDoc)) e.numDoc = "Este documento ya está registrado";
     }
     if (s === 2) {
@@ -222,17 +224,20 @@ export default function CrearCliente({ onClose, onSave }) {
     const e = validateStep(3);
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    const { confirmar, razonSocial, ...data } = form;
-    const esNIT = form.tipoDoc === 'NIT';
-    onSave({
-      ...data,
-      nombre:    esNIT ? razonSocial : data.nombre,
-      apellidos: esNIT ? '-'         : data.apellidos,
-      id: Date.now(),
-      fechaCreacion: form.fechaCreacion || new Date().toLocaleDateString("es-CO"),
-    });
-    setSaving(false);
+    try {
+      const { confirmar, razonSocial, ...data } = form;
+      const esNIT = form.tipoDoc === 'NIT';
+      await onSave({
+        ...data,
+        nombre:    esNIT ? razonSocial : data.nombre,
+        apellidos: esNIT ? '-'         : data.apellidos,
+        fechaCreacion: form.fechaCreacion || new Date().toLocaleDateString("es-CO"),
+      });
+    } catch {
+      // parent shows toast on error
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -277,7 +282,7 @@ export default function CrearCliente({ onClose, onSave }) {
                   </select>
                   <input className={"field-input doc-input" + (errors.numDoc ? " field-input--error" : "")}
                     type="text" value={form.numDoc} onChange={e => set("numDoc", e.target.value)}
-                    placeholder="Número de documento"
+                    placeholder="Número de documento" maxLength={11}
                     onFocus={e => e.target.style.borderColor = "#4caf50"}
                     onBlur={e  => e.target.style.borderColor = errors.numDoc ? "#e53935" : "#e0e0e0"} />
                 </div>

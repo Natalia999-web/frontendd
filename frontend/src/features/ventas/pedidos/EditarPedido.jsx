@@ -54,16 +54,6 @@ const PERMISOS_POR_ESTADO = {
   },
 };
 
-/* ─── SelectArrow ────────────────────────────────────────── */
-function SelectArrow() {
-  return (
-    <div className="select-arrow">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
-  );
-}
 
 /* ─── Campo solo lectura ─────────────────────────────────── */
 function FieldReadOnly({ label, value }) {
@@ -679,26 +669,21 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
             <>
               {!editandoCliente && (
                 <>
-                  <div className="select-wrap">
-                    <select
-                      className={`field-select${errors.idCliente ? " error" : ""}`}
-                      value={form.idCliente || ""}
-                      onChange={e => {
-                        const id  = e.target.value;
-                        const cli = clientes.find(c => c.id === id);
-                        set("idCliente", id);
-                        if (cli && form.domicilio) set("direccion_entrega", cli.direccion || "");
-                      }}
-                    >
-                      <option value="">Seleccione un cliente…</option>
-                      {clientes.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre} {c.apellidos} — {c.correo}
-                        </option>
-                      ))}
-                    </select>
-                    <SelectArrow />
-                  </div>
+                  <SearchableSelect
+                    options={clientes}
+                    value={form.idCliente || ""}
+                    onChange={e => {
+                      const id  = e.target.value;
+                      const cli = clientes.find(c => c.id === id);
+                      set("idCliente", id);
+                      if (cli && form.domicilio) set("direccion_entrega", cli.direccion || "");
+                    }}
+                    getValue={c => c.id}
+                    getLabel={c => `${c.nombre} ${c.apellidos} — ${c.correo}`}
+                    placeholder="Seleccione un cliente…"
+                    searchPlaceholder="🔍 Buscar cliente…"
+                    className={`field-select${errors.idCliente ? " error" : ""}`}
+                  />
                   {errors.idCliente && <span className="field-error">{errors.idCliente}</span>}
 
                   {clienteActual && (
@@ -784,17 +769,16 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <label className="form-label">Municipio</label>
-                      <div className="select-wrap">
-                        <select
-                          className="field-select"
-                          value={datosCliente.municipio || ""}
-                          onChange={e => { setDato("municipio", e.target.value); setDato("departamento", "Antioquia"); }}
-                        >
-                          <option value="">— Valle de Aburrá —</option>
-                          {MUNICIPIOS_VALLE_ABURRA.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        <SelectArrow />
-                      </div>
+                      <SearchableSelect
+                        options={MUNICIPIOS_VALLE_ABURRA.map(m => ({ value: m, label: m }))}
+                        value={datosCliente.municipio || ""}
+                        onChange={e => { setDato("municipio", e.target.value); setDato("departamento", "Antioquia"); }}
+                        getValue={o => o.value}
+                        getLabel={o => o.label}
+                        placeholder="— Valle de Aburrá —"
+                        searchPlaceholder="🔍 Buscar municipio…"
+                        className="field-select"
+                      />
                     </div>
                     <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 4 }}>
                       <label className="form-label">
@@ -886,13 +870,16 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
             {permisos.metodo_pago ? (
               <div className="field-wrap">
                 <label className="field-label">Método de pago <span className="required">*</span></label>
-                <div className="select-wrap">
-                  <select className={`field-select${errors.metodo_pago ? " error" : ""}`} value={form.metodo_pago} onChange={e => set("metodo_pago", e.target.value)}>
-                    <option value="">Seleccione…</option>
-                    {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <SelectArrow />
-                </div>
+                <SearchableSelect
+                  options={METODOS_PAGO.map(m => ({ value: m, label: m }))}
+                  value={form.metodo_pago}
+                  onChange={e => set("metodo_pago", e.target.value)}
+                  getValue={o => o.value}
+                  getLabel={o => o.label}
+                  placeholder="Seleccione…"
+                  searchPlaceholder="🔍 Método…"
+                  className={`field-select${errors.metodo_pago ? " error" : ""}`}
+                />
                 {errors.metodo_pago && <span className="field-error">{errors.metodo_pago}</span>}
               </div>
             ) : (
@@ -980,20 +967,19 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                 <div className="form-grid-2" style={{ marginTop: 12 }}>
                   <div className="field-wrap">
                     <label className="field-label">Municipio <span className="required">*</span></label>
-                    <div className="select-wrap">
-                      <select
-                        className={`field-select${errors.municipio ? " error" : ""}`}
-                        value={form.municipio}
-                        onChange={e => {
-                          setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
-                          setErrors(err => ({ ...err, municipio: e.target.value ? "" : "Selecciona el municipio" }));
-                        }}
-                      >
-                        <option value="">— Valle de Aburrá —</option>
-                        {MUNICIPIOS_VALLE_ABURRA.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                      <SelectArrow />
-                    </div>
+                    <SearchableSelect
+                      options={MUNICIPIOS_VALLE_ABURRA.map(m => ({ value: m, label: m }))}
+                      value={form.municipio}
+                      onChange={e => {
+                        setForm(f => ({ ...f, municipio: e.target.value, departamento: "Antioquia" }));
+                        setErrors(err => ({ ...err, municipio: e.target.value ? "" : "Selecciona el municipio" }));
+                      }}
+                      getValue={o => o.value}
+                      getLabel={o => o.label}
+                      placeholder="— Valle de Aburrá —"
+                      searchPlaceholder="🔍 Buscar municipio…"
+                      className={`field-select${errors.municipio ? " error" : ""}`}
+                    />
                     {errors.municipio && <span className="field-error">{errors.municipio}</span>}
                   </div>
                 </div>

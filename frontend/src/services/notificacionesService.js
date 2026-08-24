@@ -20,3 +20,9 @@ export const crearNotificacionCliente = (idUsuario, tipo, titulo, mensaje) =>
     method: "POST",
     body: JSON.stringify({ ID_Usuario: idUsuario, tipo, Titulo: titulo, Mensaje: mensaje }),
   });
+
+export const getNotificacionesCocina = () =>
+  apiFetch("/notificaciones/cocina");
+
+export const getNotificacionesDomiciliario = () =>
+  apiFetch("/notificaciones/domiciliario");

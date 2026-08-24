@@ -785,8 +785,9 @@ export default function GestionProductos() {
   const canDeleteProducto = null;
 
   const location   = useLocation();
-  const puedeCrear   = usePrivilegio("GestionProductos_crear");
-  const puedeEditar  = usePrivilegio("GestionProductos_editar");
+  const puedeCrear    = usePrivilegio("GestionProductos_crear");
+  const puedeEditar   = usePrivilegio("GestionProductos_editar");
+  const puedeSalida   = usePrivilegio("GestionProductos_generar_salida");
   const puedeEliminar = usePrivilegio("GestionProductos_eliminar");
 
   /* ── Estado ── */
@@ -1211,11 +1212,13 @@ export default function GestionProductos() {
                                 data-tooltip="Ver ficha técnica"
                                 onClick={() => setModal({ type: "ficha", product: p })}
                               >📋</button>
-                              <button
-                                className="act-btn act-btn--salida"
-                                data-tooltip="Registrar salida de producto"
-                                onClick={() => setModal({ type: "salida", product: p })}
-                              >🚚</button>
+                              {puedeSalida && (
+                                <button
+                                  className="act-btn act-btn--salida"
+                                  data-tooltip="Registrar salida de producto"
+                                  onClick={() => setModal({ type: "salida", product: p })}
+                                >🚚</button>
+                              )}
                               {puedeEliminar && (
                                 <button
                                   className="act-btn act-btn--delete"
