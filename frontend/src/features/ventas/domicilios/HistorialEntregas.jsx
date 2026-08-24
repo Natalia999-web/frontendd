@@ -76,7 +76,7 @@ export default function HistorialEntregas() {
           new Date(a.fecha_entrega_real || a.fecha_pedido)
         );
         setDomicilios(historial);
-      } catch (e) {
+      } catch {
         setError("Error al cargar el historial");
       } finally {
         setLoading(false);

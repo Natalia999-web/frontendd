@@ -1011,6 +1011,19 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
         if domicilio_abierto:
             domicilio_abierto.Estado = 5  # Cancelado
 
+    # Cerrar el domicilio cuando la venta se marca como entregada desde Gestión
+    # de pedidos: si no, el domicilio se quedaba "En camino" para siempre y
+    # seguía apareciendo como activo en Gestión de domicilios.
+    if nuevo_estado == EstadoPedido.ENTREGADO:
+        domicilio_pendiente = db.query(Domicilio).filter(
+            Domicilio.ID_Venta == id_venta,
+            Domicilio.Estado.notin_([8, 5]),
+        ).first()
+        if domicilio_pendiente:
+            domicilio_pendiente.Estado = 8  # Entregado
+            if not domicilio_pendiente.Fecha_entrega:
+                domicilio_pendiente.Fecha_entrega = _now()
+
     venta.Estado = nuevo_estado
     db.commit()
     db.refresh(venta)

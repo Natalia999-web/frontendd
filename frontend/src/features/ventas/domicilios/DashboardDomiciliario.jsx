@@ -4,8 +4,6 @@ import { getUser } from "../../../services/authService";
 import { getDomicilios, getResumenDia } from "../../../services/domiciliosService";
 import "./Domicilios.css";
 
-const fmt = (n) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
 const DISPONIBILIDAD = {
   disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", icon: "🟢" },
@@ -51,10 +49,7 @@ export default function DashboardDomiciliario() {
       }
     };
     cargar();
-  }, [user?.id]);
-
-  const statusInfo = DISPONIBILIDAD[status] || DISPONIBILIDAD.disponible;
-  const hoy = new Date().toLocaleDateString("es-CO", {
+  }, [user?.id]);  const hoy = new Date().toLocaleDateString("es-CO", {
     weekday: "long", day: "numeric", month: "long",
   });
 

@@ -86,7 +86,7 @@ function CambiarEstadoModal({ domicilio, onClose, onSave }) {
     try {
       await onSave(domicilio.id, nuevoEstado, obs.trim() || null);
       onClose();
-    } catch (e) {
+    } catch {
       setSaving(false);
     }
   };

@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio } from "../../../services/domiciliosService.js";
-import { getUsuarios, toggleEstadoUsuario, crearEmpleado, editarUsuario } from "../../../services/usuariosService.js";
+import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
-  ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, FILTRO_ESTADOS_DOM,
-  esDomicilioActivo, transicionesDom,
+  ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, ESTADO_PAGO_LABEL, FILTRO_ESTADOS_DOM,
+  bloqueoEntrega, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
+  transicionesDom,
 } from "./estadosDomicilio";
 import "./Domicilios.css";
 
@@ -50,6 +51,44 @@ const VENTA_ESTADO_CONFIG = {
 const FILTER_OPTIONS = FILTRO_ESTADOS_DOM;
 
 /* ─── Componentes pequeños ───────────────────────────────── */
+/** Método de pago del pedido: el admin necesita saber si hay que cobrar. */
+function MetodoPagoChip({ metodo }) {
+  const texto = (metodo || "").trim();
+  if (!texto) return <span style={{ fontSize: 11, color: "#bdbdbd" }}>—</span>;
+  const efectivo = esPagoEfectivo(texto);
+  const transfer = esPagoTransferencia(texto);
+  const cfg = efectivo
+    ? { label: "Efectivo",      icon: "💵", dot: "#2e7d32", bg: "#e8f5e9" }
+    : transfer
+      ? { label: "Transferencia", icon: "🏦", dot: "#1565c0", bg: "#e3f2fd" }
+      : { label: texto,          icon: "💳", dot: "#616161", bg: "#f5f5f5" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700,
+      background: cfg.bg, color: cfg.dot, border: `1px solid ${cfg.dot}44`,
+    }}>
+      <span>{cfg.icon}</span>{cfg.label}
+    </span>
+  );
+}
+
+/** Estado del cobro (Ventas.Estado_Pago). */
+function EstadoPagoChip({ estadoPago }) {
+  const cfg = ESTADO_PAGO_LABEL[estadoPago] || null;
+  if (!cfg) return null;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "2px 7px", borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+      background: cfg.bg, color: cfg.dot, border: `1px solid ${cfg.dot}44`,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot }} />
+      {cfg.label}
+    </span>
+  );
+}
+
 function EstadoBadge({ estado, estadoId }) {
   const cfg = ESTADO_CONFIG[estadoId] || { dot: "#bdbdbd", label: estado || estadoId, desc: "" };
   const label = cfg.label || estado || estadoId;
@@ -137,19 +176,6 @@ function Toast({ toast }) {
   );
 }
 
-
-const safeParseDate = (iso) => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
-
-const formatDuration = (minutes) => {
-  if (!Number.isFinite(minutes)) return "—";
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
 
 // Igual que en la app móvil: la búsqueda incluye municipio, departamento y país
 // para que el geocoding no confunda direcciones repetidas entre ciudades.
@@ -327,6 +353,8 @@ function ModalCambiarEstado({ pedido, esRepartidor = false, onClose, onSave }) {
 const NAV_VER = [
   { id: "cliente",      label: "Cliente",      icon: "👤" },
   { id: "direccion",    label: "Dirección",    icon: "📍" },
+  { id: "productos",    label: "Productos",    icon: "🛍️" },
+  { id: "pago",         label: "Pago",         icon: "💳" },
   { id: "domiciliario", label: "Domiciliario", icon: "🛵" },
   { id: "fechas",       label: "Fechas",       icon: "📅" },
 ];
@@ -474,9 +502,21 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                     style={{ marginTop: 12, display: "inline-block", fontSize: 13 }}
                   >Abrir en Google Maps</a>
                 )}
+                {/* Indicaciones que el cliente guardó en su perfil (referencia del
+                    punto de entrega). Es un dato distinto de las observaciones
+                    de esta entrega, igual que en la app móvil. */}
+                {pedido.indicaciones_cliente && (
+                  <>
+                    <p className="section-label">Indicaciones del cliente</p>
+                    <div className="info-box">
+                      <span className="info-box__icon">🧭</span>
+                      <span className="info-box__text">{pedido.indicaciones_cliente}</span>
+                    </div>
+                  </>
+                )}
                 {pedido.obs_domicilio ? (
                   <>
-                    <p className="section-label">Observaciones</p>
+                    <p className="section-label">Observaciones de la entrega</p>
                     <div className="info-box info-box--warn">
                       <span className="info-box__icon">📝</span>
                       <span className="info-box__text">{pedido.obs_domicilio}</span>
@@ -484,6 +524,120 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   </>
                 ) : (
                   <p style={{ fontSize: 12, color: "#bdbdbd", marginTop: 12 }}>Sin observaciones registradas.</p>
+                )}
+              </>
+            )}
+
+            {/* ── Productos del pedido ── */}
+            {activeSection === "productos" && (
+              <>
+                <p className="section-label" style={{ marginTop: 0 }}>
+                  Productos {pedido.idVenta ? `del pedido #${pedido.idVenta}` : ""}
+                </p>
+                {(pedido.productos || []).length === 0 ? (
+                  <p style={{ fontSize: 12, color: "#bdbdbd" }}>
+                    Este domicilio no tiene productos registrados.
+                  </p>
+                ) : (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {pedido.productos.map((pr, i) => (
+                      <div key={pr.ID_Producto ?? i} style={{
+                        display: "flex", alignItems: "center", gap: 12,
+                        padding: "10px 12px", borderRadius: 10,
+                        border: "1px solid #eeeeee", background: "#fafafa",
+                      }}>
+                        {pr.imagen ? (
+                          <img
+                            src={pr.imagen}
+                            alt={pr.nombre_producto || "Producto"}
+                            loading="lazy"
+                            style={{
+                              width: 46, height: 46, borderRadius: 8,
+                              objectFit: "cover", flexShrink: 0, background: "#e8f5e9",
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 46, height: 46, borderRadius: 8, background: "#e8f5e9",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 20, flexShrink: 0,
+                          }}>🍽️</div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
+                            {pr.nombre_producto || "Producto"}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#9e9e9e", marginTop: 2 }}>
+                            {pr.Cantidad} × {fmt(pr.precio_unitario)}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#2e7d32" }}>
+                          {fmt(pr.subtotal)}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{
+                      display: "flex", justifyContent: "space-between",
+                      paddingTop: 10, borderTop: "1px solid #eeeeee",
+                      fontSize: 14, fontWeight: 800,
+                    }}>
+                      <span>Total del pedido</span>
+                      <span style={{ color: "#2e7d32" }}>{fmt(pedido.total)}</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Pago ── */}
+            {activeSection === "pago" && (
+              <>
+                <p className="section-label" style={{ marginTop: 0 }}>Método de pago</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <MetodoPagoChip metodo={pedido.metodo_pago} />
+                  <EstadoPagoChip estadoPago={pedido.estado_pago} />
+                </div>
+
+                <p className="section-label">Total a cobrar</p>
+                <div className="info-box">
+                  <span className="info-box__icon">💰</span>
+                  <span className="info-box__text" style={{ fontWeight: 800 }}>{fmt(pedido.total)}</span>
+                </div>
+
+                {/* Mismo criterio que aplica el backend al marcar entregado */}
+                {bloqueoEntrega(pedido) ? (
+                  <div className="info-box info-box--warn" style={{ marginTop: 12 }}>
+                    <span className="info-box__icon">⚠️</span>
+                    <span className="info-box__text">{bloqueoEntrega(pedido)}</span>
+                  </div>
+                ) : (
+                  <div className="info-box" style={{ marginTop: 12 }}>
+                    <span className="info-box__icon">✅</span>
+                    <span className="info-box__text">
+                      El cobro está registrado: se puede marcar como entregado.
+                    </span>
+                  </div>
+                )}
+
+                <p className="section-label">Comprobante</p>
+                {pedido.comprobante_pago ? (
+                  <a href={pedido.comprobante_pago} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={pedido.comprobante_pago}
+                      alt="Comprobante de pago"
+                      loading="lazy"
+                      style={{
+                        maxWidth: "100%", maxHeight: 260, borderRadius: 10,
+                        border: "1px solid #eeeeee", display: "block",
+                      }}
+                    />
+                  </a>
+                ) : (
+                  <p style={{ fontSize: 12, color: "#bdbdbd" }}>
+                    {esPagoTransferencia(pedido.metodo_pago)
+                      ? "El cliente aún no adjuntó el comprobante."
+                      : "No aplica: el pago es en efectivo."}
+                  </p>
                 )}
               </>
             )}
@@ -807,7 +961,7 @@ export default function GestionDomicilios() {
   const [domicilios,   setDomicilios]   = useState([]);
   const [empleados,    setEmpleados]    = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [actionSaving, setActionSaving] = useState(false);
+  const [, setActionSaving] = useState(false);
   const [tab,          setTab]          = useState("tabla");
   const [search,       setSearch]       = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -924,9 +1078,15 @@ export default function GestionDomicilios() {
   };
 
   const handleCambiarEstado = async (domicilioId, nuevoEstadoId, pedido = null) => {
-    if (nuevoEstadoId === 8 && pedido && !pedido.comprobante_pago) {
-      showToast("No se puede entregar: el domicilio no tiene comprobante de pago adjunto.", "error");
-      return;
+    // Misma regla que el backend: hace falta el cobro registrado y el
+    // comprobante SOLO si el pago fue por transferencia. Antes se exigía
+    // comprobante siempre, así que un pedido en efectivo no se podía entregar.
+    if (nuevoEstadoId === ESTADO_DOMICILIO.ENTREGADO && pedido) {
+      const bloqueo = bloqueoEntrega(pedido);
+      if (bloqueo) {
+        showToast(`No se puede entregar: ${bloqueo}`, "error");
+        return;
+      }
     }
     setActionSaving(true);
     try {
@@ -1111,6 +1271,7 @@ export default function GestionDomicilios() {
                       <th>Dirección</th>
                       <th>Domiciliario</th>
                       <th>Fechas</th>
+                      <th>Pago</th>
                       <th>Estado venta</th>
                       <th>Estado entrega</th>
                       <th>Acciones</th>
@@ -1118,9 +1279,9 @@ export default function GestionDomicilios() {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <SkeletonRows cols={9} rows={5} />
+                      <SkeletonRows cols={10} rows={5} />
                     ) : paged.length === 0 ? (
-                      <tr><td colSpan={9}>
+                      <tr><td colSpan={10}>
                         <div className="empty-state">
                           <div className="empty-state__icon">🛵</div>
                           <p className="empty-state__text">
@@ -1193,6 +1354,15 @@ export default function GestionDomicilios() {
                               ? <VentaEstadoBadge estadoId={ped.venta_estado_id} />
                               : <span style={{ color: "#bdbdbd", fontSize: 11 }}>—</span>
                             }
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                              <MetodoPagoChip metodo={ped.metodo_pago} />
+                              <EstadoPagoChip estadoPago={ped.estado_pago} />
+                              <span style={{ fontSize: 11, fontWeight: 800, color: "#2e7d32" }}>
+                                {fmt(ped.total)}
+                              </span>
+                            </div>
                           </td>
                           <td>
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { getUser } from "../../../services/authService";
-import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, verificarOTP, registrarPagoEfectivo } from "../../../services/domiciliosService";
+import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService";
 import { subirImagenCloudinary } from "../../../utils/cloudinary";
 import "./Domicilios.css";
 
@@ -413,7 +413,7 @@ export default function PedidoActual() {
         const detalle = await getDomicilio(activos[0].id);
         setPedido(detalle);
       }
-    } catch (e) {
+    } catch {
       showToast("Error al cargar el pedido", "error");
     } finally {
       setLoading(false);

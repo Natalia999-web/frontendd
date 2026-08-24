@@ -41,7 +41,7 @@ export default function PerfilDomiciliario() {
       const data = await apiFetch("/auth/perfil");
       setPerfil(data);
       setForm({ Telefono: data.Telefono || "" });
-    } catch (e) {
+    } catch {
       showToast("Error al cargar perfil", "error");
     } finally {
       setLoading(false);
@@ -70,7 +70,7 @@ export default function PerfilDomiciliario() {
       await cargar();
       setEditando(false);
       showToast("Perfil actualizado");
-    } catch (e) {
+    } catch {
       showToast("Error al guardar", "error");
     } finally {
       setSaving(false);

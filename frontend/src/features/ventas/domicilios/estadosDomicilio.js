@@ -97,3 +97,49 @@ export const FILTRO_ESTADOS_DOM = [
   { val: ESTADO_DOMICILIO.CANCELADO, label: "Cancelado", dot: ESTADO_DOM_CONFIG[5].dot },
   { val: "sin-asignar", label: "Sin asignar", dot: "#e53935" },
 ];
+
+/**
+ * Estados de pago con los que el backend permite marcar la entrega
+ * (`_ESTADOS_PAGO_ENTREGA` en domicilios/services/service.py). Se replica aquí
+ * solo para avisar ANTES de la llamada; la regla la sigue aplicando el backend.
+ */
+export const ESTADOS_PAGO_ENTREGA = [
+  "efectivo_recibido", "pagado_completo", "anticipo_pagado",
+  "no_recibido", "pendiente_validacion",
+];
+
+export const ESTADO_PAGO_LABEL = {
+  pendiente:             { label: "Pago pendiente",       dot: "#f9a825", bg: "#fff8e1" },
+  pendiente_validacion:  { label: "Comprobante por validar", dot: "#1976d2", bg: "#e3f2fd" },
+  comprobante_rechazado: { label: "Comprobante rechazado", dot: "#c62828", bg: "#ffebee" },
+  efectivo_recibido:     { label: "Efectivo recibido",    dot: "#43a047", bg: "#e8f5e9" },
+  anticipo_pagado:       { label: "Anticipo pagado",      dot: "#43a047", bg: "#e8f5e9" },
+  pagado_completo:       { label: "Pagado",               dot: "#43a047", bg: "#e8f5e9" },
+  no_recibido:           { label: "Cobro no recibido",    dot: "#c62828", bg: "#ffebee" },
+};
+
+/** True si el método de pago es transferencia (o equivalente digital). */
+export const esPagoTransferencia = (metodo) =>
+  /transf|nequi|daviplata|bancol|qr/i.test(metodo || "");
+
+/** True si el método de pago es efectivo / contra entrega. */
+export const esPagoEfectivo = (metodo) =>
+  /efectiv|contra|cash/i.test(metodo || "");
+
+/**
+ * Motivo por el que no se puede marcar entregado, o null si sí se puede.
+ * Refleja la regla del backend: hace falta el cobro registrado, y el
+ * comprobante solo se exige cuando el pago fue por transferencia (los pedidos
+ * en efectivo se cobran en mano).
+ */
+export const bloqueoEntrega = (dom) => {
+  if (!dom) return null;
+  const pagoOk = ESTADOS_PAGO_ENTREGA.includes(dom.estado_pago || "");
+  if (!pagoOk) {
+    return "Falta registrar el cobro de este pedido antes de marcarlo como entregado.";
+  }
+  if (esPagoTransferencia(dom.metodo_pago) && !dom.comprobante_pago) {
+    return "El pago es por transferencia y no tiene comprobante adjunto.";
+  }
+  return null;
+};

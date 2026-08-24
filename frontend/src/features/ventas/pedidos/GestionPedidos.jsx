@@ -43,12 +43,6 @@ const esProductoConProduccion = (producto) => {
   return rawValue === 1 || rawValue === true || rawValue === "1" || rawValue === "true";
 };
 
-// GestionPedidos solo gestiona órdenes activas (Pendiente y En producción).
-// La única acción de avance es Confirmar → Estado=4 (Confirmado), que mueve
-// el pedido a GestionVentas. Los estados "Listo", "En camino", "Entregado"
-// se gestionan en Domicilios / GestionVentas, no aquí.
-const ESTADOS_ACTIVOS_PEDIDO = ["Pendiente", "En producción", "Fecha propuesta"];
-
 const ESTADO_CONFIG = {
   "Pendiente":     { bg: "#fff8e1", color: "#f9a825", border: "#ffe082", dot: "#f9a825" },
   "En producción": { bg: "#e3f2fd", color: "#1565c0", border: "#90caf9", dot: "#1976d2" },
@@ -1292,7 +1286,6 @@ function SkeletonRows({ cols = 8, rows = 5 }) {
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default function GestionPedidos() {
-  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const empleados = (usuarios || []).filter(u =>
     u.tipo === "empleado" && u.estado && (
@@ -1659,8 +1652,11 @@ export default function GestionPedidos() {
     try {
       if (!ped.id_domicilio) throw new Error("Este pedido no tiene domicilio asociado.");
       await asignarRepartidor(ped.id_domicilio, empId);
-      setPedidos(prev => prev.map(p => p.id === pedidoId ? { ...p, estado: "Asignado", idEmpleado: empId } : p));
+      // La asignación no mueve el estado del pedido (sigue Listo): solo se
+      // refleja el domiciliario, y se recargan los datos reales.
+      setPedidos(prev => prev.map(p => p.id === pedidoId ? { ...p, idEmpleado: empId } : p));
       showToast(`Domiciliario asignado para ${ped.numero}`);
+      cargarDatos();
       setModal(null);
     } catch (err) {
       const errorMsg = err.message || "No se pudo asignar el domiciliario.";
