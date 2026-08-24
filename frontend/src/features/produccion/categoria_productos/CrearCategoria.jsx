@@ -16,12 +16,14 @@ export default function CrearCategoria({ onClose, onSave, existingCategories = [
     if (k === "nombre") {
       const t = v.trim();
       if (!t)                   err = "Campo requerido";
+      else if (t.length < 3)   err = "Mínimo 3 caracteres";
       else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === t.toLowerCase()))
         err = "Ya existe una categoría con este nombre";
     }
     if (k === "descripcion") {
       const t = v.trim();
       if (!t)                   err = "Campo requerido";
+      else if (t.length < 5)   err = "Mínimo 5 caracteres";
       else if (!tieneLetras(v)) err = "La descripción debe contener letras";
     }
     if (k === "icon") {
@@ -35,9 +37,11 @@ export default function CrearCategoria({ onClose, onSave, existingCategories = [
     const e = {};
     const nom = form.nombre.trim().toLowerCase();
     if (!form.nombre.trim())                 e.nombre = "Campo requerido";
+    else if (form.nombre.trim().length < 3)  e.nombre = "Mínimo 3 caracteres";
     else if (existingCategories.some(c => c.nombre.trim().toLowerCase() === nom))
       e.nombre = "Ya existe una categoría con este nombre";
     if (!form.descripcion.trim())            e.descripcion = "Campo requerido";
+    else if (form.descripcion.trim().length < 5) e.descripcion = "Mínimo 5 caracteres";
     else if (!tieneLetras(form.descripcion)) e.descripcion = "La descripción debe contener letras";
     if (existingCategories.some(c => c.icon === form.icon))
       e.icon = "Este icono ya está en uso por otra categoría";
@@ -78,12 +82,12 @@ export default function CrearCategoria({ onClose, onSave, existingCategories = [
         <div className="form-group">
           <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Nombre <span style={{ color: "#e53935", fontWeight: 800 }}>*</span></span>
-            <CharCount value={form.nombre} max={100} min={2} />
+            <CharCount value={form.nombre} max={100} min={3} />
           </label>
           <input
             className={`field-input${errors.nombre ? " field-input--error" : ""}`}
             value={form.nombre}
-            maxLength={50}
+            maxLength={100}
             onChange={e => set("nombre", soloLetras(e.target.value))}
             placeholder="Ej. Snacks Premium"
             onFocus={e => (e.target.style.borderColor = "#4caf50")}
