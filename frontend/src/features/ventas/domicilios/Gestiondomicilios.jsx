@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio } from "../../../services/domiciliosService.js";
+import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
@@ -90,13 +90,18 @@ function EstadoPagoChip({ estadoPago }) {
 }
 
 function EstadoBadge({ estado, estadoId }) {
-  const cfg = ESTADO_CONFIG[estadoId] || { dot: "#bdbdbd", label: estado || estadoId, desc: "" };
-  const label = cfg.label || estado || estadoId;
-  const cls = `estado-badge estado--${String(label).replace(/ /g, "-")}`;
+  const cfg = ESTADO_CONFIG[estadoId] || {
+    dot: "#9e9e9e", bg: "#f5f5f5", border: "#e0e0e0",
+    label: estado || estadoId, desc: "",
+  };
   return (
-    <span className={cls} title={cfg.desc}>
-      <span className="estado-badge__dot" />
-      {label}
+    <span
+      className="estado-badge"
+      title={cfg.desc}
+      style={{ background: cfg.bg, color: cfg.dot, borderColor: cfg.border }}
+    >
+      <span className="estado-badge__dot" style={{ background: cfg.dot }} />
+      {cfg.label || estado || estadoId}
     </span>
   );
 }
@@ -265,6 +270,112 @@ function ModalConfirmarDesactivar({ usuario, pedidosActivos, onConfirm, onClose 
             onClick={onConfirm}
           >
             Desactivar de todas formas
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL REGISTRAR COBRO EN EFECTIVO
+   Usa PATCH /domicilios/{id}/registrar-pago-efectivo (ya existente).
+   Replica las validaciones del backend: monto exacto si se recibió,
+   motivo de al menos 10 caracteres si no.
+   ═══════════════════════════════════════════════════════════ */
+function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
+  const [recibido, setRecibido] = useState(null);
+  const [motivo,   setMotivo]   = useState("");
+  const [error,    setError]    = useState(null);
+
+  const handleConfirm = () => {
+    if (recibido === null) {
+      setError("Indica si recibiste el efectivo.");
+      return;
+    }
+    if (recibido === false && motivo.trim().length < 10) {
+      setError("Explica por qué no se recibió (mínimo 10 caracteres).");
+      return;
+    }
+    setError(null);
+    onConfirm(pedido, recibido, recibido ? pedido.total : null, recibido ? null : motivo.trim());
+  };
+
+  const opcion = (valor, icono, titulo, detalle, color) => {
+    const activo = recibido === valor;
+    return (
+      <button
+        type="button"
+        onClick={() => { setRecibido(valor); setError(null); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 12, width: "100%",
+          padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+          textAlign: "left", background: activo ? `${color}14` : "#fff",
+          border: `1.5px solid ${activo ? color : "#e0e0e0"}`,
+        }}
+      >
+        <span style={{ fontSize: 22 }}>{icono}</span>
+        <span>
+          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#1a1a1a" }}>{titulo}</span>
+          <span style={{ display: "block", fontSize: 11.5, color: "#757575", marginTop: 2 }}>{detalle}</span>
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <p className="modal-header__eyebrow">Domicilio {pedido.numero}</p>
+            <h2 className="modal-header__title">Registrar cobro en efectivo</h2>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="info-box" style={{ marginBottom: 14 }}>
+            <span className="info-box__icon">💰</span>
+            <span className="info-box__text">
+              Total a cobrar: <strong>{fmt(pedido.total)}</strong>
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            {opcion(true,  "✅", "Sí, se recibió completo",
+                    `Se registra el monto exacto: ${fmt(pedido.total)}`, "#2e7d32")}
+            {opcion(false, "❌", "No se recibió",
+                    "Requiere explicar el motivo", "#c62828")}
+          </div>
+
+          {recibido === false && (
+            <>
+              <p className="section-label">Motivo</p>
+              <textarea
+                className="form-input"
+                rows={3}
+                value={motivo}
+                onChange={e => { setMotivo(e.target.value); setError(null); }}
+                placeholder="Ej: el cliente no tenía el efectivo completo al recibir"
+                style={{ width: "100%", resize: "vertical" }}
+              />
+              <p style={{ fontSize: 11, color: motivo.trim().length < 10 ? "#c62828" : "#9e9e9e", marginTop: 4 }}>
+                {motivo.trim().length}/10 caracteres mínimos
+              </p>
+            </>
+          )}
+
+          {error && (
+            <div className="info-box info-box--warn" style={{ marginTop: 12 }}>
+              <span className="info-box__icon">⚠️</span>
+              <span className="info-box__text">{error}</span>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button className="btn-primary" onClick={handleConfirm} disabled={saving}>
+            {saving ? "Registrando…" : "Registrar cobro"}
           </button>
         </div>
       </div>
@@ -961,7 +1072,8 @@ export default function GestionDomicilios() {
   const [domicilios,   setDomicilios]   = useState([]);
   const [empleados,    setEmpleados]    = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [, setActionSaving] = useState(false);
+  const [errorCarga,   setErrorCarga]   = useState(null);
+  const [actionSaving, setActionSaving] = useState(false);
   const [tab,          setTab]          = useState("tabla");
   const [search,       setSearch]       = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -980,6 +1092,7 @@ export default function GestionDomicilios() {
 
   const cargarDatos = async () => {
     setLoading(true);
+    setErrorCarga(null);
     try {
       const [dData, uData] = await Promise.all([
         getDomicilios({ porPagina: 100 }),
@@ -993,7 +1106,13 @@ export default function GestionDomicilios() {
         )
       ));
     } catch (err) {
-      showToast(err.message || "Error al cargar domicilios", "error");
+      // Antes solo salía un toast y la tabla mostraba "No hay domicilios
+      // registrados", que es falso cuando lo que falló fue la carga.
+      const msg = /403|permiso/i.test(err?.message || "")
+        ? "No tienes permiso para ver los domicilios (ver_domicilios)."
+        : (err?.message || "No se pudieron cargar los domicilios.");
+      setErrorCarga(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -1077,6 +1196,25 @@ export default function GestionDomicilios() {
     }
   };
 
+  // El cobro en efectivo se registra con el endpoint que ya usa el repartidor;
+  // el administrador tiene el mismo permiso (cambiar_estado_domicilios) con el
+  // que cambia estados aquí, así que no se añaden permisos nuevos.
+  const handleRegistrarCobro = async (pedido, recibido, monto, motivo) => {
+    setActionSaving(true);
+    try {
+      await registrarPagoEfectivo(pedido.id, { recibido, monto, motivo });
+      await cargarDatos();
+      showToast(recibido
+        ? `Cobro de ${fmt(pedido.total)} registrado para ${pedido.numero}`
+        : `Se registró que ${pedido.numero} no fue cobrado`);
+      setModal(null);
+    } catch (err) {
+      showToast(err.message || "No se pudo registrar el cobro", "error");
+    } finally {
+      setActionSaving(false);
+    }
+  };
+
   const handleCambiarEstado = async (domicilioId, nuevoEstadoId, pedido = null) => {
     // Misma regla que el backend: hace falta el cobro registrado y el
     // comprobante SOLO si el pago fue por transferencia. Antes se exigía
@@ -1149,7 +1287,7 @@ export default function GestionDomicilios() {
   }
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper mod-domicilios">
       <div className="page-header">
         <h1 className="page-header__title">Gestión de Domicilios</h1>
         <div className="page-header__line" />
@@ -1280,13 +1418,30 @@ export default function GestionDomicilios() {
                   <tbody>
                     {loading ? (
                       <SkeletonRows cols={10} rows={5} />
+                    ) : errorCarga ? (
+                      <tr><td colSpan={10}>
+                        <div className="empty-state">
+                          <div className="empty-state__icon">⚠️</div>
+                          <p className="empty-state__text">{errorCarga}</p>
+                          <button className="btn-ghost" style={{ marginTop: 10 }} onClick={cargarDatos}>
+                            Reintentar
+                          </button>
+                        </div>
+                      </td></tr>
                     ) : paged.length === 0 ? (
                       <tr><td colSpan={10}>
                         <div className="empty-state">
-                          <div className="empty-state__icon">🛵</div>
+                          <div className="empty-state__icon">{hasFilter || search ? "🔍" : "🛵"}</div>
                           <p className="empty-state__text">
                             {hasFilter || search ? "Sin domicilios que coincidan." : "No hay domicilios registrados."}
                           </p>
+                          {(hasFilter || search) && (
+                            <button
+                              className="btn-ghost"
+                              style={{ marginTop: 10 }}
+                              onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}
+                            >Limpiar filtros</button>
+                          )}
                         </div>
                       </td></tr>
                     ) : paged.map((ped, idx) => {
@@ -1389,6 +1544,16 @@ export default function GestionDomicilios() {
                                 data-tooltip="Ver en Google Maps"
                                 onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega, ped.municipio_entrega, ped.departamento_entrega), "_blank", "noopener")}
                               >🌍</button>
+                              {esPagoEfectivo(ped.metodo_pago) &&
+                                !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(ped.estado_pago) &&
+                                esDomicilioActivo(ped.estadoId) && (
+                                <button
+                                  className="act-btn"
+                                  data-tooltip="Registrar cobro en efectivo"
+                                  onClick={() => setModal({ type: "registrarCobro", pedido: ped })}
+                                  style={{ background: "#fff8e1", color: "#f9a825" }}
+                                >💵</button>
+                              )}
                               {transicionesDom(ped.estadoId).length > 0 && (
                                 <button
                                   className="act-btn"
@@ -1488,6 +1653,15 @@ export default function GestionDomicilios() {
           onConfirm={handleConfirmarDesactivar}
         />
       )}
+      {modal?.type === "registrarCobro" && (
+        <ModalRegistrarCobro
+          pedido={modal.pedido}
+          saving={actionSaving}
+          onClose={() => setModal(null)}
+          onConfirm={handleRegistrarCobro}
+        />
+      )}
+
       {modal?.type === "cambiarEstado" && (
         <ModalCambiarEstado
           pedido={modal.pedido}

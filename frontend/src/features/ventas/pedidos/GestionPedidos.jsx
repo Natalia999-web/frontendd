@@ -1745,7 +1745,7 @@ export default function GestionPedidos() {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper mod-pedidos">
       <div className="page-header">
         <h1 className="page-header__title">Gestión de Pedidos</h1>
         <div className="page-header__line" />

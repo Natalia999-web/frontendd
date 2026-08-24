@@ -768,3 +768,34 @@ body { margin: 0; font-family: 'DM Sans', sans-serif; color: #1a1a1a; }
 @media (max-width: 600px) {
   .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* ── Fase 3: pulido y responsive de Gestión de pedidos ──────────────────────
+   Acotado a .mod-pedidos: este archivo es global y `.tbl` / `.empty-state`
+   los comparten otros módulos. */
+
+.mod-pedidos .tbl-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mod-pedidos .tbl tbody tr { transition: background-color .15s ease; }
+
+.mod-pedidos .empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 44px 20px; text-align: center;
+}
+.mod-pedidos .empty-state__icon { font-size: 34px; line-height: 1; }
+.mod-pedidos .empty-state__text { margin: 0; font-size: 13.5px; color: #6b7280; max-width: 42ch; }
+
+/* Son muchas acciones por fila: se envuelven en vez de desbordar la celda */
+.mod-pedidos .actions-cell { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+/* Fecha (4) y Entrega (6) se ven en el detalle */
+@media (max-width: 1024px) {
+  .mod-pedidos .tbl th:nth-child(4), .mod-pedidos .tbl td:nth-child(4),
+  .mod-pedidos .tbl th:nth-child(6), .mod-pedidos .tbl td:nth-child(6) { display: none; }
+}
+
+/* En móvil quedan Pedido, Total, Estado y Acciones */
+@media (max-width: 760px) {
+  .mod-pedidos .tbl th:nth-child(1), .mod-pedidos .tbl td:nth-child(1),
+  .mod-pedidos .tbl th:nth-child(3), .mod-pedidos .tbl td:nth-child(3) { display: none; }
+  .mod-pedidos .tbl th, .mod-pedidos .tbl td { padding: 10px 8px; }
+  .mod-pedidos .actions-cell { gap: 4px; }
+}

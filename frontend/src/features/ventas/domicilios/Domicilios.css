@@ -272,3 +272,53 @@
 
 @media (max-width: 768px) { .page-inner { padding: 0 16px; } }
 @media (max-width: 480px) { .page-inner { padding: 0 10px; } }
+
+/* ── Fase 3: pulido y responsive de Gestión de domicilios ───────────────────
+   Todo cuelga de .mod-domicilios: este archivo se importa de forma global y
+   `.tbl` / `.empty-state` los comparten otros módulos que no debo tocar.
+   Nota: las reglas .estado--X de arriba quedaron sin uso porque EstadoBadge
+   ahora toma los colores de estadosDomicilio.js (fuente única). Se dejan
+   porque este CSS es global y otras pantallas podrían apoyarse en ellas. */
+
+.mod-domicilios .tbl-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.mod-domicilios .tbl tbody tr { transition: background-color .15s ease; }
+.mod-domicilios .tbl tbody tr:hover { background: #f6fbf6; }
+
+.mod-domicilios .empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 44px 20px; text-align: center;
+}
+.mod-domicilios .empty-state__icon { font-size: 34px; line-height: 1; }
+.mod-domicilios .empty-state__text { margin: 0; font-size: 13.5px; color: #6b7280; max-width: 42ch; }
+
+.mod-domicilios .actions-cell { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+/* Detalle del domicilio: jerarquía de secciones */
+.mod-domicilios .section-label {
+  margin: 18px 0 8px; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: #9ca3af;
+}
+.mod-domicilios .info-box {
+  display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px;
+  border-radius: 10px; background: #f9fafb; border: 1px solid #eef0f2;
+}
+.mod-domicilios .info-box__icon { flex-shrink: 0; line-height: 1.3; }
+.mod-domicilios .info-box__text { font-size: 13px; color: #374151; line-height: 1.45; }
+.mod-domicilios .info-box--warn { background: #fff8e1; border-color: #ffe9a8; }
+.mod-domicilios .info-box--warn .info-box__text { color: #7a5d00; }
+
+/* Columnas: Fechas (6) y Estado venta (8) se consultan en el detalle */
+@media (max-width: 1100px) {
+  .mod-domicilios .tbl th:nth-child(6), .mod-domicilios .tbl td:nth-child(6),
+  .mod-domicilios .tbl th:nth-child(8), .mod-domicilios .tbl td:nth-child(8) { display: none; }
+}
+
+/* En móvil quedan Pedido, Cliente, Pago, Estado entrega y Acciones */
+@media (max-width: 820px) {
+  .mod-domicilios .tbl th:nth-child(1), .mod-domicilios .tbl td:nth-child(1),
+  .mod-domicilios .tbl th:nth-child(4), .mod-domicilios .tbl td:nth-child(4),
+  .mod-domicilios .tbl th:nth-child(5), .mod-domicilios .tbl td:nth-child(5) { display: none; }
+  .mod-domicilios .tbl th, .mod-domicilios .tbl td { padding: 10px 8px; }
+  .mod-domicilios .actions-cell { gap: 4px; }
+}
