@@ -312,7 +312,7 @@ const LandingPage = ({ hideNavbar = false }) => {
 
       setProductos(
         lista
-          .filter(p => p.Estado !== 0 && !p.lote_vencido && !p.Lote_Vencido)
+          .filter(p => p.Estado !== 0 && p.Publicado !== 0 && !p.lote_vencido && !p.Lote_Vencido)
           .map(p => ({
             id:                 p.ID_Producto,
             nombre:             p.nombre,
