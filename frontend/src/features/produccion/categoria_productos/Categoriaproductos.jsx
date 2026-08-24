@@ -114,7 +114,7 @@ function VerCategoria({ category, onClose }) {
           <label className="form-label">Descripción</label>
           <div
             className="field-input field-input--disabled"
-            style={{ minHeight: 60, lineHeight: 1.4, fontSize: 13 }}
+            style={{ minHeight: 60, lineHeight: 1.4, fontSize: 13, overflowWrap: "break-word", wordBreak: "break-word" }}
           >
             {category.descripcion || "Sin descripción registrada."}
           </div>
