@@ -59,7 +59,7 @@ body {
 .tbl td { padding: 14px 18px; }
 
 /* ─── Category cell ──────────────────────────────────────── */
-.cat-cell { display: flex; align-items: center; gap: 10px; }
+.cat-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cat-icon-box {
   width: 36px; height: 36px;
   border-radius: 9px;
@@ -70,8 +70,8 @@ body {
   font-size: 18px;
   flex-shrink: 0;
 }
-.cat-name  { font-weight: 700; color: #1a1a1a; font-size: 14px; }
-.cat-desc  { font-size: 13px; color: #616161; line-height: 1.5; max-width: 220px; }
+.cat-name  { font-weight: 700; color: #1a1a1a; font-size: 14px; min-width: 0; overflow-wrap: break-word; word-break: break-word; }
+.cat-desc  { font-size: 13px; color: #616161; line-height: 1.5; max-width: 220px; overflow-wrap: break-word; word-break: break-word; }
 .cat-num   { font-size: 12px; font-weight: 600; color: #9e9e9e; }
 .cat-date  { font-size: 13px; color: #757575; }
 

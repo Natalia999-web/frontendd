@@ -96,6 +96,7 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
     if (k === "precio") {
       if (v === "" || v === null) err = "El precio es obligatorio";
       else if (isNaN(v) || Number(v) <= 0) err = "Precio válido requerido";
+      else if (Number(v) < 100) err = "El precio mínimo es $100";
     }
     if (k === "stockMinimo") {
       if (v === "" || v === null) err = "El stock mínimo es obligatorio";
@@ -152,6 +153,8 @@ export default function CrearProducto({ categorias = [], onClose, onSave, existi
     if (s === 2) {
       if (!form.precio || isNaN(form.precio) || Number(form.precio) <= 0)
         e.precio = "Precio válido requerido";
+      else if (Number(form.precio) < 100)
+        e.precio = "El precio mínimo es $100";
       if (form.stockMinimo === "" || isNaN(form.stockMinimo) || Number(form.stockMinimo) < 0)
         e.stockMinimo = "Valor válido requerido";
       else if (Number(form.stockMinimo) > 99999)
