@@ -398,7 +398,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
 
           {/* Método de pago */}
           <div className="bg-white rounded-2xl border border-gray-100 px-3 py-3 space-y-2.5">
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Método de pago</p>
+            {/* Cuando hay anticipo, más abajo aparece otro selector de método:
+                cada uno indica a qué corresponde para no confundirlos. */}
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+              Método de pago del pedido
+            </p>
+            {requiereAnticipo && (
+              <p className="text-[10px] font-bold text-gray-400 -mt-1">
+                El del anticipo se elige más abajo.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'digital',  icon: <CreditCard size={14} />, label: 'Transferencia' },
@@ -621,7 +630,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
             )}
             {requiereAnticipo && (
               <>
-                <div className="flex justify-between text-xs font-bold text-yellow-700 border-t border-gray-100 pt-1">
+                {/* Sin esta línea se pasaba del subtotal al anticipo y no se
+                    entendía sobre qué monto se calcula el 50%. */}
+                <div className="flex justify-between text-xs font-black text-gray-700 border-t border-gray-100 pt-1">
+                  <span>Total del pedido</span><span>{COP(totalFinal)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-yellow-700">
                   <span>💰 {pagarTodo ? 'Total pagado ahora' : 'Anticipo ahora (50%)'}</span><span>{COP(montoAnticipo)}</span>
                 </div>
                 {!pagarTodo && (
