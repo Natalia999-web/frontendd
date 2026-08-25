@@ -9,6 +9,7 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, ESTADO_PAGO_LABEL, FILTRO_ESTADOS_DOM,
   bloqueoEntrega, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
+  puedeReasignarse,
   transicionesDom,
 } from "./estadosDomicilio";
 import "./Domicilios.css";
@@ -835,14 +836,14 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
             💬 Chat
           </button>
           {activo && (
-            <>
-              <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }}>
-                📝 Observaciones
-              </button>
-              <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }}>
-                🛵 Reasignar
-              </button>
-            </>
+            <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }}>
+              📝 Observaciones
+            </button>
+          )}
+          {puedeReasignarse(pedido.estadoId) && (
+            <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }}>
+              🛵 Reasignar
+            </button>
           )}
         </div>
       </div>
@@ -1251,8 +1252,14 @@ export default function GestionDomicilios() {
   };
 
   const abrirReasignar = (ped) => {
-    if (["Entregado", "Cancelado"].includes(ped.estado)) {
-      showToast("No se puede reasignar un domicilio ya finalizado", "warn"); return;
+    if (!puedeReasignarse(ped.estadoId)) {
+      showToast(
+        ped.estadoId === ESTADO_DOMICILIO.EN_CAMINO
+          ? "El pedido ya va en camino: no se puede cambiar de domiciliario"
+          : "No se puede reasignar un domicilio ya finalizado",
+        "warn",
+      );
+      return;
     }
     setModal({ type: "reasignar", pedido: ped });
   };
@@ -1593,7 +1600,10 @@ export default function GestionDomicilios() {
                                 className="act-btn act-btn--reasignar"
                                 data-tooltip="Reasignar domiciliario"
                                 onClick={() => abrirReasignar(ped)}
-                                style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
+                                style={{
+                                  opacity: puedeReasignarse(ped.estadoId) ? 1 : 0.35,
+                                  cursor:  puedeReasignarse(ped.estadoId) ? "pointer" : "default",
+                                }}
                               >🛵</button>
                               <button
                                 className="act-btn act-btn--obs"

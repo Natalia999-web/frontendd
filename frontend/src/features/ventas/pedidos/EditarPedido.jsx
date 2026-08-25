@@ -6,6 +6,7 @@ import { getProductos } from "../../../services/productosService.js";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import { registrarPagoFinal, editarPedido } from "../../../services/pedidosService.js";
+import { PERMISOS_POR_ESTADO, puedeEditarsePedido } from "./permisosEdicion.js";
 import "./Pedidos.css";
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -13,47 +14,6 @@ const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
 const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
-
-/* ─── Qué campos permite editar cada estado ─────────────── */
-const PERMISOS_POR_ESTADO = {
-  "Pendiente": {
-    cliente:           true,
-    productos:         true,
-    metodo_pago:       true,
-    domicilio:         true,
-    direccion_entrega: true,
-    notas:             true,
-    descuento:         true,
-  },
-  "En producción": {
-    cliente:           false,
-    productos:         false,
-    metodo_pago:       true,
-    domicilio:         false,
-    direccion_entrega: true,
-    notas:             true,
-    descuento:         true,
-  },
-  "Listo": {
-    cliente:           false,
-    productos:         false,
-    metodo_pago:       true,
-    domicilio:         true,
-    direccion_entrega: true,
-    notas:             true,
-    descuento:         false,
-  },
-  "En camino": {
-    cliente:           false,
-    productos:         false,
-    metodo_pago:       false,
-    domicilio:         false,
-    direccion_entrega: true,
-    notas:             true,
-    descuento:         false,
-  },
-};
-
 
 /* ─── Campo solo lectura ─────────────────────────────────── */
 function FieldReadOnly({ label, value }) {
@@ -223,7 +183,8 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   };
 
   const permisos   = PERMISOS_POR_ESTADO[pedido.estado] || {};
-  const esEditable = Object.values(permisos).some(Boolean);
+  // La misma regla que decide si Gestión de pedidos muestra el botón de editar.
+  const esEditable = puedeEditarsePedido(pedido.estado);
 
   const [form, setForm] = useState({
     idCliente:         pedido.idCliente,

@@ -12,7 +12,8 @@ from src.shared.services.models import (
 from src.shared.services.notificaciones_utils import notificar, notificar_stock_producto
 from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
 from .estados import (
-    EstadoDomicilio, ESTADO_DOM_A_VENTA, normalizar_estado, validar_cambio,
+    EstadoDomicilio, ESTADO_DOM_A_VENTA, normalizar_estado, puede_reasignarse,
+    validar_cambio,
 )
 from .schemas import DomicilioCreate, DomicilioUpdate
 
@@ -434,6 +435,19 @@ def asignar_repartidor(db: Session, id_domicilio: int, id_empleado: int) -> dict
     # Un domicilio pendiente pasa a Asignado al recibir repartidor. Si ya venía
     # en camino o entregado, la reasignación no lo hace retroceder.
     estado_previo = normalizar_estado(dom.Estado, tiene_repartidor=bool(dom.ID_Empleado))
+
+    # Con el pedido ya en la calle, cambiarle el domiciliario deja al que salió
+    # cargando algo que dejó de ser suyo. La regla vive acá y no solo en la
+    # pantalla: la app móvil llama al mismo endpoint.
+    if cambia_repartidor and not puede_reasignarse(estado_previo):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "El domicilio ya va en camino: no se puede cambiar de domiciliario"
+                if estado_previo == EstadoDomicilio.EN_CAMINO
+                else "El domicilio ya está cerrado: no se puede cambiar de domiciliario"
+            ),
+        )
 
     try:
         dom.ID_Empleado = id_empleado

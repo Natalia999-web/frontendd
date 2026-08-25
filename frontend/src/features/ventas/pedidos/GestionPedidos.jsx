@@ -11,6 +11,7 @@ import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import CrearPedido from "./CrearPedido.jsx";
 import EditarPedido from "./EditarPedido.jsx";
+import { puedeEditarsePedido } from "./permisosEdicion.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   Trash2, Truck, Package,
@@ -597,7 +598,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           >
             📄 Ver / Imprimir factura
           </button>
-          {!["Entregado", "Cancelado"].includes(pedido.estado) && (
+          {puedeEditarsePedido(pedido.estado) && (
             <button className="btn-save" onClick={() => { onClose(); onEdit(pedido); }}>✎ Editar Pedido</button>
           )}
         </div>
@@ -1251,7 +1252,7 @@ function ModalRechazarComprobante({ pedido, saving, onClose, onConfirm }) {
    ═══════════════════════════════════════════════════════════ */
 function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha, onAprobarComprobante, onRechazarComprobante, onSubirComprobante, onRegistrarCobro }) {
   const necesitaProduccion  = ped.requiereFechaPropuesta;
-  const canEdit             = !["Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
+  const canEdit             = puedeEditarsePedido(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
   // Usar orden_produccion (¿hay OPs pendientes para ESTE pedido?) no requiereProduccion
