@@ -431,7 +431,7 @@ const ProfilePage = () => {
                 {[
                   { label: 'Miembro desde',        value: perfilMostrar.fechaCreacion ? new Date(perfilMostrar.fechaCreacion).getFullYear() : '—' },
                   { label: 'Pedidos realizados',   value: pedidos.length || '—' },
-                  { label: '🎁 Crédito disponible', value: credito > 0 ? COP(credito) : 'Sin crédito', highlight: credito > 0 },
+                  { label: '🎁 Saldo a favor', value: credito > 0 ? COP(credito) : 'Sin saldo a favor', highlight: credito > 0 },
                 ].map(item => (
                   <div key={item.label} style={{
                     display: 'flex', justifyContent: 'space-between',

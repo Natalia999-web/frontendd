@@ -101,11 +101,11 @@ const OrdersPage = () => {
   // El envío vive en crearPedidoCliente para que la landing use exactamente el
   // mismo camino: allá se había quedado una copia vieja que no mandaba el
   // comprobante ni el anticipo.
-  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo, anticipoData) => {
+  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, saldoAFavor, deliveryInfo, anticipoData) => {
     const entrega = resolverEntrega(deliveryInfo, orderDetails);
     try {
       await crearPedidoCliente({
-        paymentMethod, onBehalfOf, comprobante, usarCredito,
+        paymentMethod, onBehalfOf, comprobante, saldoAFavor,
         deliveryInfo, anticipoData, orderDetails,
       });
       clearCart();

@@ -279,6 +279,8 @@ export default function CrearPedido({ onClose, onSave }) {
   const [pagarTodo,      setPagarTodo]      = useState(false);
   const [creditoCliente, setCreditoCliente] = useState(0);
   const [usarCredito,    setUsarCredito]    = useState(false);
+  // Que parte del saldo a favor se aplica. Arranca entero, que es lo normal.
+  const [creditoPct,     setCreditoPct]     = useState(100);
 
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
@@ -320,7 +322,10 @@ export default function CrearPedido({ onClose, onSave }) {
   const descuento     = Number(form.descuento) || 0;
   const costoEnvio    = form.domicilio ? COSTO_DOMICILIO : 0;
   const total         = Math.max(0, subtotal - descuento + costoEnvio);
-  const creditoAplicar = usarCredito ? Math.min(creditoCliente, total) : 0;
+  // Tope: ni mas saldo del que tiene el cliente ni mas de lo que cuesta el
+  // pedido. La barra corre sobre ese tope, asi el 100% cae siempre justo.
+  const creditoMaximo  = Math.min(creditoCliente, total);
+  const creditoAplicar = usarCredito ? Math.round((creditoMaximo * creditoPct) / 100) : 0;
   const totalFinal    = Math.max(0, total - creditoAplicar);
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa. No depende del monto — antes se pedía por pasar de
@@ -451,6 +456,7 @@ export default function CrearPedido({ onClose, onSave }) {
       subtotal,
       total:             totalFinal,
       usar_credito:      usarCredito,
+      credito_monto:     usarCredito ? creditoAplicar : null,
       estado:            "Pendiente",
       fecha_pedido:      new Date().toLocaleDateString("es-CO"),
       orden_produccion:  hayProductosSinStock,
@@ -540,6 +546,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     if (!cli) {
                       setForm(f => ({ ...f, idCliente: "", departamento: "", municipio: "", direccion_entrega: "" }));
                       setCreditoCliente(0);
+                      setCreditoPct(100);
                       setUsarCredito(false);
                       return;
                     }
@@ -551,6 +558,7 @@ export default function CrearPedido({ onClose, onSave }) {
                       direccion_entrega: cli.direccion || "",
                     }));
                     setUsarCredito(false);
+                    setCreditoPct(100);
                     getCreditoCliente(cli.id).then(saldo => setCreditoCliente(saldo)).catch(() => setCreditoCliente(0));
                     setErrors(err => ({ ...err, idCliente: "" }));
                   }}
@@ -572,7 +580,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     </div>
                     {creditoCliente > 0 && (
                       <div style={{ background: "#fff", borderRadius: 10, padding: "8px 14px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-                        <div style={{ fontSize: 11, color: "#757575", fontWeight: 600 }}>CRÉDITO</div>
+                        <div style={{ fontSize: 11, color: "#757575", fontWeight: 600 }}>SALDO A FAVOR</div>
                         <div style={{ fontSize: 15, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoCliente)}</div>
                       </div>
                     )}
@@ -943,9 +951,9 @@ export default function CrearPedido({ onClose, onSave }) {
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
                     <span style={{ fontSize: 24 }}>🎁</span>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Crédito disponible del cliente</p>
+                      <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Saldo a favor del cliente</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#388e3c" }}>
-                        El cliente tiene <strong>{fmt(creditoCliente)}</strong> de crédito acumulado por devoluciones.
+                        El cliente tiene <strong>{fmt(creditoCliente)}</strong> abonado por devoluciones.
                       </p>
                     </div>
                   </div>
@@ -957,13 +965,37 @@ export default function CrearPedido({ onClose, onSave }) {
                       style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
                     />
                     <span style={{ fontSize: 13, color: usarCredito ? "#1b5e20" : "#555", fontWeight: usarCredito ? 700 : 400 }}>
-                      Aplicar {fmt(Math.min(creditoCliente, total))} de crédito a este pedido
+                      Aplicar saldo a favor a este pedido
                     </span>
                   </label>
+
+                  {/* No es todo o nada: el cliente puede gastar una parte y
+                      dejar el resto para el proximo pedido. */}
                   {usarCredito && (
-                    <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del crédito</span>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
+                    <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>Cuánto se aplica a este pedido</span>
+                        <span style={{ fontSize: 18, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoAplicar)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={creditoPct}
+                        onChange={e => setCreditoPct(Number(e.target.value))}
+                        aria-label="Parte del saldo a favor que se aplica al pedido"
+                        style={{ width: "100%", accentColor: "#2e7d32", cursor: "pointer" }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9e9e9e", fontWeight: 600, marginTop: 2 }}>
+                        <span>$0</span>
+                        <span style={{ color: "#616161" }}>Le quedan {fmt(creditoCliente - creditoAplicar)}</span>
+                        <span>{fmt(creditoMaximo)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", marginTop: 12, paddingTop: 12 }}>
+                        <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del saldo</span>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1047,7 +1079,7 @@ export default function CrearPedido({ onClose, onSave }) {
                   )}
                   {usarCredito && creditoAplicar > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-                      <span>🎁 Crédito del cliente</span>
+                      <span>🎁 Saldo a favor</span>
                       <span>-{fmt(creditoAplicar)}</span>
                     </div>
                   )}

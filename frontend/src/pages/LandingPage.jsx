@@ -422,11 +422,11 @@ const LandingPage = ({ hideNavbar = false }) => {
   // Mismo envío que usa "Hacer pedidos": esta pantalla tenía su propia copia
   // que no subía el comprobante ni mandaba los datos del anticipo, así que los
   // pedidos del cliente llegaban sin respaldo de pago y el backend los rechazaba.
-  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo, anticipoData) => {
+  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, saldoAFavor, deliveryInfo, anticipoData) => {
     let res;
     try {
       res = await crearPedidoCliente({
-        paymentMethod, onBehalfOf, comprobante, usarCredito,
+        paymentMethod, onBehalfOf, comprobante, saldoAFavor,
         deliveryInfo, anticipoData, orderDetails,
       });
     } catch (err) {

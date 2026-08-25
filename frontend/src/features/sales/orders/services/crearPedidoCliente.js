@@ -59,7 +59,7 @@ export async function crearPedidoCliente({
   paymentMethod,
   onBehalfOf,
   comprobante,
-  usarCredito,
+  saldoAFavor,
   deliveryInfo,
   anticipoData,
   orderDetails,
@@ -96,7 +96,10 @@ export async function crearPedidoCliente({
     })),
     Metodo_Pago:            metodoPagoApi(paymentMethod),
     A_Nombre_De:            onBehalfOf || null,
-    usar_credito:           usarCredito || false,
+    usar_credito:           !!saldoAFavor?.usar,
+    // Cuanto de ese saldo se aplica. El backend lo toma como tope: si el
+    // cliente pide mas de lo que tiene, alla se recorta.
+    credito_monto:          saldoAFavor?.usar ? (saldoAFavor.monto ?? null) : null,
     codigo_descuento:       null,
     // Con anticipo, el archivo que sube el cliente es el del anticipo y el
     // comprobante del pedido queda vacío: entonces todas las vistas dicen "sin

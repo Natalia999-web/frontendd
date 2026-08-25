@@ -28,6 +28,9 @@ class VentaCreate(BaseModel):
     productos:              list[ProductoVentaInput]
     codigo_descuento:       Optional[str]       = None
     usar_credito:           bool                = False
+    # Cuanto saldo a favor aplicar. None = todo lo que alcance, que es como se
+    # comportaba antes: el checkout solo sabia decir si o no.
+    credito_monto:          Optional[Decimal]   = None
     domicilio:              Optional[DomicilioVentaInput] = None
     comprobante_pago:         Optional[str]       = None
     Fecha_entrega_esperada:   Optional[datetime]  = None

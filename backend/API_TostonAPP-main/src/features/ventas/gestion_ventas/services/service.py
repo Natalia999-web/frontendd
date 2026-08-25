@@ -240,7 +240,13 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
     }
 
 
-def _aplicar_credito(db: Session, id_usuario: int, monto_restante: Decimal, id_venta: int) -> Decimal:
+def _aplicar_credito(
+    db: Session,
+    id_usuario: int,
+    monto_restante: Decimal,
+    id_venta: int,
+    tope: Decimal | None = None,
+) -> Decimal:
     # with_for_update() bloquea la fila de crédito hasta el commit de crear_venta:
     # evita que dos compras simultáneas gasten el mismo saldo (condición de carrera).
     credito = db.query(CreditoCliente).filter(
@@ -252,7 +258,17 @@ def _aplicar_credito(db: Session, id_usuario: int, monto_restante: Decimal, id_v
 
     # El monto usado se recalcula 100% en backend: min(saldo real, total real del
     # pedido). El cliente no puede manipular cuánto crédito se descuenta.
-    credito_usado        = min(credito.Saldo, monto_restante)
+    credito_usado = min(credito.Saldo, monto_restante)
+
+    # El cliente puede gastar solo una parte y guardar el resto para después.
+    # Lo que llega del checkout es un tope, nunca un permiso: si pide más de lo
+    # que tiene o más de lo que cuesta el pedido, manda el mínimo de arriba.
+    if tope is not None:
+        credito_usado = min(credito_usado, max(Decimal(str(tope)), Decimal("0")))
+
+    if credito_usado <= 0:
+        return Decimal("0")
+
     credito.Saldo       -= credito_usado
     credito.Fecha_Update = _now()
 
@@ -701,7 +717,9 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     credito_aplicado = Decimal("0")
 
     if datos.usar_credito:
-        credito_aplicado = _aplicar_credito(db, datos.ID_Usuario, monto_restante, nueva_venta.ID_Venta)
+        credito_aplicado = _aplicar_credito(
+            db, datos.ID_Usuario, monto_restante, nueva_venta.ID_Venta, datos.credito_monto
+        )
         monto_restante  -= credito_aplicado
 
     descuento_aplicado = Decimal("0")
