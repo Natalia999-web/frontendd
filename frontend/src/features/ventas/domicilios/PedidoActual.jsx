@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { getUser } from "../../../services/authService";
 import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService";
 import { subirImagenCloudinary } from "../../../utils/cloudinary";
+import { cobroEfectivoPendiente } from "./estadosDomicilio";
 import "./Domicilios.css";
 import {
   Package, CheckCircle2, Truck, Home, XCircle, MapPin, CreditCard,
-  Camera, KeyRound, Clock, X, Check, Navigation, Map,
+  Camera, KeyRound, Clock, X, Check, Navigation, Map, Banknote,
 } from "lucide-react";
 
 const fmt = (n) =>
@@ -57,7 +58,7 @@ function EstadoPagoBadge({ estadoPago }) {
   );
 }
 
-function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
+function CobrarEfectivoModal({ pedido, entregarDespues, onClose, onConfirm }) {
   const [recibido, setRecibido] = useState(true);
   const [monto,    setMonto]    = useState(String(pedido.total || ""));
   const [motivo,   setMotivo]   = useState("");
@@ -167,7 +168,7 @@ function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
             color: "#fff", fontSize: 13, fontWeight: 700,
             cursor: saving ? "not-allowed" : "pointer",
           }}>
-            {saving ? "Registrando…" : "Confirmar cobro"}
+            {saving ? "Registrando…" : entregarDespues ? "Confirmar y entregar" : "Confirmar cobro"}
           </button>
         </div>
       </div>
@@ -431,7 +432,7 @@ export default function PedidoActual() {
     if (accion.secondary) { setConfirmando(accion); return; }
     if (accion.evidencia) {
       const esEfectivo = !(pedido.metodo_pago || "").toLowerCase().includes("transfer");
-      if (esEfectivo) { setCobrandoOpen(true); return; }
+      if (esEfectivo) { setCobrandoOpen("entregar"); return; }
       setEvidenciaOpen(true);
       return;
     }
@@ -443,10 +444,24 @@ export default function PedidoActual() {
     await ejecutarCambio(8, "Entregado", observacion);
   };
 
+  /* Viniendo del botón de Entregado, el cobro cierra la entrega en el mismo
+     paso. Abierto desde el botón suelto, solo registra la plata: el pedido
+     sigue en curso hasta que el repartidor lo cierre. */
   const handleCobrarEfectivo = async ({ recibido, monto, motivo }) => {
-    await registrarPagoEfectivo(pedido.id, { recibido, monto, motivo });
+    const cerrarEntrega = cobrandoOpen === "entregar";
+    try {
+      await registrarPagoEfectivo(pedido.id, { recibido, monto, motivo });
+    } catch (e) {
+      showToast(e.message || "No se pudo registrar el cobro", "error");
+      return;
+    }
     setCobrandoOpen(false);
-    await ejecutarCambio(8, "Entregado");
+    if (cerrarEntrega) {
+      await ejecutarCambio(8, "Entregado");
+      return;
+    }
+    showToast(recibido ? "Cobro registrado" : "Se registró que no se pudo cobrar");
+    await cargar();
   };
 
   const ejecutarCambio = async (valor, label, observacion = null) => {
@@ -600,6 +615,34 @@ export default function PedidoActual() {
               </div>
             )}
 
+            {/* ── Cobro en efectivo ──
+                El repartidor puede registrar la plata apenas la recibe, sin
+                tener que cerrar la entrega en el mismo momento. */}
+            {cobroEfectivoPendiente(pedido) && (
+              <div style={{ background: "#fff", borderRadius: 16, padding: "20px 22px", border: "1.5px solid #ffe082" }}>
+                <div style={{ fontSize: 11, color: "#9e9e9e", fontWeight: 700, marginBottom: 6, letterSpacing: "0.05em" }}>
+                  COBRO EN EFECTIVO
+                </div>
+                <p style={{ margin: "0 0 14px", fontSize: 13, color: "#757575" }}>
+                  Este pedido se paga en mano. Registra <strong>{fmt(pedido.total)}</strong> apenas
+                  lo recibas, aunque todavía no cierres la entrega.
+                </p>
+                <button
+                  onClick={() => setCobrandoOpen("solo-cobro")}
+                  disabled={saving}
+                  style={{
+                    width: "100%", padding: "14px", borderRadius: 12,
+                    border: "2px solid #ffe082", background: "#fff8e1",
+                    color: "#f57f17", fontWeight: 800, fontSize: 15,
+                    cursor: saving ? "not-allowed" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  <Banknote size={17} /> Registrar cobro
+                </button>
+              </div>
+            )}
+
             {/* ── Acciones de estado ── */}
             {acciones.length > 0 && (
               <div style={{ background: "#fff", borderRadius: 16, padding: "20px 22px", border: "1.5px solid #f0f0f0" }}>
@@ -648,6 +691,7 @@ export default function PedidoActual() {
       {cobrandoOpen && pedido && (
         <CobrarEfectivoModal
           pedido={pedido}
+          entregarDespues={cobrandoOpen === "entregar"}
           onClose={() => setCobrandoOpen(false)}
           onConfirm={handleCobrarEfectivo}
         />

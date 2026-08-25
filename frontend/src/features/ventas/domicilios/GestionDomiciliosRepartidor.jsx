@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { getDomicilios, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFechaHora as fmtFecha } from "../../../utils/dateUtils.js";
-import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, esDomicilioActivo, esPagoEfectivo, transicionesDom } from "./estadosDomicilio";
+import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, cobroEfectivoPendiente, esDomicilioActivo, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
 import {
   Search, RefreshCw, Truck, Package, CheckCircle2, XCircle, Clock,
-  MapPin, MessageSquare, X, Phone,
+  MapPin, MessageSquare, X, Phone, Banknote,
 } from "lucide-react";
 
 const fmt = (n) =>
@@ -82,10 +82,14 @@ function EstadoBadge({ estadoId }) {
   );
 }
 
-/* Cobro en efectivo al entregar. El repartidor es quien recibe el dinero, así
-   que registra aquí si lo cobró. El backend exige el monto exacto del pedido
-   cuando se cobró, o un motivo de 10+ caracteres cuando no. */
-function CobroEfectivoModal({ domicilio, saving, onClose, onConfirm }) {
+/* Cobro en efectivo. El repartidor es quien recibe el dinero, así que registra
+   aquí si lo cobró. El backend exige el monto exacto del pedido cuando se
+   cobró, o un motivo de 10+ caracteres cuando no.
+
+   Se abre en dos momentos: al marcar Entregado un pedido en efectivo (y ahí
+   cierra la entrega en el mismo paso) o suelto desde la tarjeta, para cuando
+   el repartidor cobra antes de dar por terminada la entrega. */
+function CobroEfectivoModal({ domicilio, saving, entregarDespues, onClose, onConfirm }) {
   const [recibido, setRecibido] = useState(null);
   const [motivo,   setMotivo]   = useState("");
   const [error,    setError]    = useState(null);
@@ -180,7 +184,7 @@ function CobroEfectivoModal({ domicilio, saving, onClose, onConfirm }) {
           </button>
           <button onClick={confirmar} disabled={saving}
             style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: "#2e7d32", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            {saving ? "Registrando…" : "Registrar y entregar"}
+            {saving ? "Registrando…" : entregarDespues ? "Registrar y entregar" : "Registrar cobro"}
           </button>
         </div>
       </div>
@@ -286,7 +290,7 @@ function CambiarEstadoModal({ domicilio, onClose, onSave }) {
   );
 }
 
-function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
+function DetallesModal({ domicilio, onClose, onCambiarEstado, onCobrar }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div style={{
@@ -341,6 +345,19 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {cobroEfectivoPendiente(domicilio) && esDomicilioActivo(domicilio.estadoId) && (
+            <button
+              onClick={() => { onClose(); onCobrar(domicilio); }}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 10,
+                background: "#fff8e1", color: "#f57f17", border: "1.5px solid #ffe082",
+                fontWeight: 700, fontSize: 14, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+            >
+              <Banknote size={16} /> Registrar cobro en efectivo
+            </button>
+          )}
           {proximosEstados(domicilio.estadoId).length > 0 && (
             <button
               onClick={() => { onClose(); onCambiarEstado(domicilio); }}
@@ -413,10 +430,8 @@ export default function GestionDomiciliosRepartidor() {
     // sin ese registro. Se pide aquí en vez de dejar que falle la llamada.
     if (nuevoEstado === ESTADO_DOMICILIO.ENTREGADO) {
       const dom = domicilios.find(d => d.id === id);
-      const cobroPendiente = dom && esPagoEfectivo(dom.metodo_pago) &&
-        !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(dom.estado_pago);
-      if (cobroPendiente) {
-        setCobrando({ dom, observaciones });
+      if (cobroEfectivoPendiente(dom)) {
+        setCobrando({ dom, observaciones, entregarDespues: true });
         return;
       }
     }
@@ -429,20 +444,26 @@ export default function GestionDomiciliosRepartidor() {
     }
   };
 
-  // Registrar el cobro y, si salió bien, cerrar la entrega.
+  /* Registrar el cobro. Viniendo de marcar Entregado, cierra la entrega en el
+     mismo paso; abierto desde el botón de la tarjeta, solo registra la plata y
+     el domicilio sigue su curso. */
   const handleCobrar = async ({ recibido, motivo }) => {
-    const { dom, observaciones } = cobrando;
+    const { dom, observaciones, entregarDespues } = cobrando;
     try {
       await registrarPagoEfectivo(dom.id, {
         recibido,
         monto: recibido ? dom.total : null,
         motivo: recibido ? null : motivo,
       });
-      await cambiarEstadoDomicilio(dom.id, ESTADO_DOMICILIO.ENTREGADO, observaciones);
+      if (entregarDespues) {
+        await cambiarEstadoDomicilio(dom.id, ESTADO_DOMICILIO.ENTREGADO, observaciones);
+      }
       setCobrando(null);
-      showToast(recibido
-        ? `Cobro de ${fmt(dom.total)} registrado y entrega cerrada`
-        : "Se registró que no se pudo cobrar");
+      showToast(
+        !recibido               ? "Se registró que no se pudo cobrar"
+        : entregarDespues       ? `Cobro de ${fmt(dom.total)} registrado y entrega cerrada`
+        :                         `Cobro de ${fmt(dom.total)} registrado`
+      );
       await cargar();
     } catch (e) {
       showToast(e.message || "No se pudo registrar el cobro", "error");
@@ -577,18 +598,36 @@ export default function GestionDomiciliosRepartidor() {
                         </div>
                       )}
                     </div>
-                    {puedeCambiar && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setModal({ type: "cambiarEstado", dom }); }}
-                        style={{
-                          padding: "7px 14px", borderRadius: 8,
-                          background: "#4caf50", color: "#fff",
-                          border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                        }}
-                      >
-                        Actualizar →
-                      </button>
-                    )}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {/* Cobrar sin cerrar la entrega: a veces el cliente paga
+                          y el repartidor todavía tiene algo que resolver. */}
+                      {cobroEfectivoPendiente(dom) && esDomicilioActivo(dom.estadoId) && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setCobrando({ dom, entregarDespues: false }); }}
+                          title="Registrar el cobro en efectivo"
+                          style={{
+                            padding: "7px 12px", borderRadius: 8,
+                            background: "#fff8e1", color: "#f57f17",
+                            border: "1.5px solid #ffe082", fontWeight: 700, fontSize: 12,
+                            cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+                          }}
+                        >
+                          <Banknote size={13} /> Cobrar
+                        </button>
+                      )}
+                      {puedeCambiar && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setModal({ type: "cambiarEstado", dom }); }}
+                          style={{
+                            padding: "7px 14px", borderRadius: 8,
+                            background: "#4caf50", color: "#fff",
+                            border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                          }}
+                        >
+                          Actualizar →
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {dom.obs_domicilio && (
@@ -608,6 +647,7 @@ export default function GestionDomiciliosRepartidor() {
           domicilio={modal.dom}
           onClose={() => setModal(null)}
           onCambiarEstado={(dom) => setModal({ type: "cambiarEstado", dom })}
+          onCobrar={(dom) => setCobrando({ dom, entregarDespues: false })}
         />
       )}
 
@@ -623,6 +663,7 @@ export default function GestionDomiciliosRepartidor() {
         <CobroEfectivoModal
           domicilio={cobrando.dom}
           saving={false}
+          entregarDespues={cobrando.entregarDespues}
           onClose={() => setCobrando(null)}
           onConfirm={handleCobrar}
         />

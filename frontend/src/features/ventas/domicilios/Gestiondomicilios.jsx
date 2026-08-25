@@ -15,7 +15,7 @@ import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, ESTADO_PAGO_LABEL, FILTRO_ESTADOS_DOM,
-  bloqueoEntrega, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
+  bloqueoEntrega, cobroEfectivoPendiente, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
   puedeReasignarse,
   transicionesDom,
 } from "./estadosDomicilio";
@@ -1443,13 +1443,7 @@ export default function GestionDomicilios() {
                           </td>
                           <td data-label="Domiciliario">
                             {emp ? (
-                              <div>
-                                <div className="emp-name" style={{ display: "flex", alignItems: "center", gap: 5 }}><Bike size={12} />{emp.nombre} {emp.apellidos}</div>
-                                <div style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>
-                                  {pedidosPorEmpleado[emp.id] || 0} pedido
-                                  {pedidosPorEmpleado[emp.id] === 1 ? "" : "s"}
-                                </div>
-                              </div>
+                              <div className="emp-name" style={{ display: "flex", alignItems: "center", gap: 5 }}><Bike size={12} />{emp.nombre} {emp.apellidos}</div>
                             ) : (
                               <div className="emp-none">Sin asignar</div>
                             )}
@@ -1484,9 +1478,7 @@ export default function GestionDomicilios() {
                                 data-tooltip="Ver en Google Maps"
                                 onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega, ped.municipio_entrega, ped.departamento_entrega), "_blank", "noopener")}
                               ><Globe size={14} /></button>
-                              {esPagoEfectivo(ped.metodo_pago) &&
-                                !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(ped.estado_pago) &&
-                                esDomicilioActivo(ped.estadoId) && (
+                              {cobroEfectivoPendiente(ped) && esDomicilioActivo(ped.estadoId) && (
                                 <button
                                   className="act-btn"
                                   data-tooltip="Registrar cobro en efectivo"

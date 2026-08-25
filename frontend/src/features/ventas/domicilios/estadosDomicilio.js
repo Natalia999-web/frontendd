@@ -133,6 +133,18 @@ export const esPagoEfectivo = (metodo) =>
   /efectiv|contra|cash/i.test(metodo || "");
 
 /**
+ * ¿Este domicilio todavía tiene plata por cobrar en mano?
+ *
+ * Solo aplica a los pedidos en efectivo, y deja de aplicar en cuanto el
+ * repartidor registra el resultado — lo haya cobrado o no. La misma lista
+ * estaba escrita a mano en tres pantallas.
+ */
+export const cobroEfectivoPendiente = (dom) =>
+  !!dom &&
+  esPagoEfectivo(dom.metodo_pago) &&
+  !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(dom.estado_pago);
+
+/**
  * Motivo por el que no se puede marcar entregado, o null si sí se puede.
  * Refleja la regla del backend: hace falta el cobro registrado, y el
  * comprobante solo se exige cuando el pago fue por transferencia (los pedidos
