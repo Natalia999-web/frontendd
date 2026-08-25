@@ -9,6 +9,7 @@ import {
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
+import { esRolRepartidor } from "../../../utils/roles.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
@@ -1224,7 +1225,7 @@ export default function GestionDomicilios() {
   const sinAsignar = gestionables.filter(p => !p.idEmpleado && !["Entregado", "Cancelado"].includes(p.estado)).length;
 
   // Domiciliarios solo pueden ver su propio panel
-  if (getUser()?.rol === "Domiciliario") {
+  if (esRolRepartidor(getUser()?.rol)) {
     return <Navigate to="/admin/mi-dashboard" replace />;
   }
 
