@@ -98,7 +98,11 @@ export async function crearPedidoCliente({
     A_Nombre_De:            onBehalfOf || null,
     usar_credito:           usarCredito || false,
     codigo_descuento:       null,
-    comprobante_pago:       comprobanteUrl,
+    // Con anticipo, el archivo que sube el cliente es el del anticipo y el
+    // comprobante del pedido queda vacío: entonces todas las vistas dicen "sin
+    // comprobante adjunto" y el pedido ni siquiera se puede marcar como
+    // entregado. Es el mismo soporte de pago, así que sirve para los dos campos.
+    comprobante_pago:       comprobanteUrl || anticipoComprobanteUrl,
     Fecha_entrega_esperada: fechaEntregaApi(entrega.date, entrega.time),
 
     requiere_anticipo:        !!anticipoData?.requiere,

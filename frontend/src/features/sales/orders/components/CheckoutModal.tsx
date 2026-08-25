@@ -431,7 +431,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               ))}
             </div>
 
-            {paymentMethod === 'digital' && (
+            {/* Con anticipo, los datos bancarios y el comprobante se piden en el
+                bloque del anticipo: dos zonas de carga a la vez confundían al
+                cliente, que subía el archivo en una sola. */}
+            {paymentMethod === 'digital' && !requiereAnticipo && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">

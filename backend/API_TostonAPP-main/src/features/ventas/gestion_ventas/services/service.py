@@ -973,8 +973,12 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
 
     # Comprobante obligatorio para marcar como entregado SOLO si el pago fue por
     # transferencia. Los pedidos en efectivo se cobran en mano y no tienen soporte.
+    # Cuando el pedido lleva anticipo, el soporte del cliente puede estar guardado
+    # como comprobante del anticipo: también cuenta, si no el pedido se queda sin
+    # poder entregarse.
     _metodo = (venta.Metodo_Pago or "").strip().lower()
-    if nuevo_estado == EstadoPedido.ENTREGADO and "transfer" in _metodo and not venta.Comprobante_Pago:
+    _soporte_pago = venta.Comprobante_Pago or getattr(venta, "Anticipo_Comprobante_Url", None)
+    if nuevo_estado == EstadoPedido.ENTREGADO and "transfer" in _metodo and not _soporte_pago:
         raise HTTPException(
             status_code=400,
             detail="Se requiere comprobante de pago para marcar el pedido como entregado",

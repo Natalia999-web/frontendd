@@ -146,6 +146,30 @@ function ModalConfirmarEstado({ pedido, nuevoEstado, onClose, onConfirm }) {
   );
 }
 
+/* Comprobante adjunto: aviso + imagen ampliable. Se usa para el del pedido y
+   para el del anticipo, que el cliente sube por separado desde su checkout. */
+function ComprobanteAdjunto({ url, titulo }) {
+  return (
+    <div>
+      <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
+        <span className="info-box__icon">✅</span>
+        <span className="info-box__text">{titulo}</span>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
+          Abrir →
+        </a>
+      </div>
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        <img
+          src={url}
+          alt={titulo}
+          style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
+        />
+      </a>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    MODAL — VER DETALLE
    ═══════════════════════════════════════════════════════════ */
@@ -528,25 +552,15 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           <span className="info-box__icon">ℹ️</span>
                           <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
                         </div>
-                        {pedido.comprobante ? (
-                          <div>
-                            <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
-                              <span className="info-box__icon">✅</span>
-                              <span className="info-box__text">Comprobante de pago adjuntado.</span>
-                              <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer"
-                                style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
-                                Abrir →
-                              </a>
-                            </div>
-                            <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={pedido.comprobante}
-                                alt="Comprobante de pago"
-                                style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
-                              />
-                            </a>
-                          </div>
-                        ) : (
+                        {pedido.comprobante && (
+                          <ComprobanteAdjunto url={pedido.comprobante} titulo="Comprobante de pago adjuntado." />
+                        )}
+                        {/* Con anticipo el cliente sube su soporte en ese paso: sin
+                            mostrarlo, el pedido parecía no tener comprobante. */}
+                        {pedido.anticipo_comprobante_url && pedido.anticipo_comprobante_url !== pedido.comprobante && (
+                          <ComprobanteAdjunto url={pedido.anticipo_comprobante_url} titulo="Comprobante del anticipo adjuntado." />
+                        )}
+                        {!pedido.comprobante && !pedido.anticipo_comprobante_url && (
                           <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
                             <span className="info-box__icon">⚠️</span>
                             <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
@@ -554,12 +568,19 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         )}
                       </>
                     ) : (
-                      <div className="info-box info-box--success">
-                        <span className="info-box__icon">💵</span>
-                        <span className="info-box__text">
-                          Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
-                        </span>
-                      </div>
+                      <>
+                        <div className="info-box info-box--success">
+                          <span className="info-box__icon">💵</span>
+                          <span className="info-box__text">
+                            Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
+                          </span>
+                        </div>
+                        {/* El saldo se paga en efectivo, pero el anticipo pudo
+                            haberse transferido: ahí sí hay comprobante. */}
+                        {pedido.anticipo_comprobante_url && (
+                          <ComprobanteAdjunto url={pedido.anticipo_comprobante_url} titulo="Comprobante del anticipo adjuntado." />
+                        )}
+                      </>
                     )}
                   </>
                 );
@@ -739,8 +760,8 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
   const handleSubmit = async () => {
     const e = {};
     if (!metodo) e.metodo = "Selecciona el método de pago del saldo";
-    if (metodo === "Efectivo 💵" && !efectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
-    if (metodo === "Transferencia 🏦" && !preview) e.archivo = "Adjunta el comprobante del saldo";
+    if (metodo === "Efectivo" && !efectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
+    if (metodo === "Transferencia" && !preview) e.archivo = "Adjunta el comprobante del saldo";
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setUploading(true);
@@ -789,17 +810,19 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
           <div>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método de pago del saldo <span style={{ color: "#e53935" }}>*</span></p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {["Efectivo 💵", "Transferencia 🏦"].map(m => (
-                <button key={m} onClick={() => { setMetodo(m); setEfectivo(false); setArchivo(null); setPreview(null); setErrors(x => ({ ...x, metodo: "", efectivo: "", archivo: "" })); }}
-                  style={{ padding: "11px 8px", borderRadius: 10, border: `2px solid ${metodo === m ? "#2e7d32" : "#e0e0e0"}`, background: metodo === m ? "#f1f8f1" : "#fff", color: metodo === m ? "#1b5e20" : "#888", fontWeight: metodo === m ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
-                  {m}
+              {/* El valor viaja a la API (que compara contra "transferencia"): el
+                  emoji se queda en la etiqueta y no en lo que se guarda. */}
+              {[{ id: "Efectivo", label: "Efectivo 💵" }, { id: "Transferencia", label: "Transferencia 🏦" }].map(m => (
+                <button key={m.id} onClick={() => { setMetodo(m.id); setEfectivo(false); setArchivo(null); setPreview(null); setErrors(x => ({ ...x, metodo: "", efectivo: "", archivo: "" })); }}
+                  style={{ padding: "11px 8px", borderRadius: 10, border: `2px solid ${metodo === m.id ? "#2e7d32" : "#e0e0e0"}`, background: metodo === m.id ? "#f1f8f1" : "#fff", color: metodo === m.id ? "#1b5e20" : "#888", fontWeight: metodo === m.id ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
+                  {m.label}
                 </button>
               ))}
             </div>
             {errors.metodo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginTop: 4 }}>{errors.metodo}</span>}
           </div>
 
-          {metodo === "Efectivo 💵" && (
+          {metodo === "Efectivo" && (
             <div className="fade-in">
               <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: efectivo ? "#f1f8f1" : "#fafafa", padding: "12px 14px", borderRadius: 10, border: `2px solid ${efectivo ? "#2e7d32" : "#e0e0e0"}` }}>
                 <input type="checkbox" checked={efectivo} onChange={e => { setEfectivo(e.target.checked); setErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 18, height: 18, accentColor: "#2e7d32" }} />
@@ -811,7 +834,7 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
             </div>
           )}
 
-          {metodo === "Transferencia 🏦" && (
+          {metodo === "Transferencia" && (
             <div className="fade-in">
               {preview ? (
                 <div style={{ position: "relative", height: 120, borderRadius: 10, overflow: "hidden", background: "#000" }}>
