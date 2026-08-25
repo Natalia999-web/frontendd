@@ -21,8 +21,6 @@ const fmt = (n) =>
 
 const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
 
-const UMBRAL_ANTICIPO = 50000;
-
 const EMPTY_FORM = {
   idCliente:            "",
   productosItems:       [],
@@ -144,6 +142,7 @@ function BuscadorProducto({ productosSeleccionados, onAgregar, productos = [] })
       cantidad:    1,
       stockActual: prod.stock,
       stockOk:     prod.stock > 0,
+      requiereProduccion: !!prod.requiereProduccion,
     });
     setQuery("");
     setAbierto(false);
@@ -323,7 +322,13 @@ export default function CrearPedido({ onClose, onSave }) {
   const total         = Math.max(0, subtotal - descuento + costoEnvio);
   const creditoAplicar = usarCredito ? Math.min(creditoCliente, total) : 0;
   const totalFinal    = Math.max(0, total - creditoAplicar);
-  const requiereAnticipo = totalFinal > UMBRAL_ANTICIPO;
+  // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
+  // stock: es una preventa. No depende del monto — antes se pedía por pasar de
+  // $50.000 y caía en pedidos normales. Los productos por encargo no cuentan:
+  // su déficit lo cubre la orden de producción.
+  const requiereAnticipo = form.productosItems.some(
+    p => !p.requiereProduccion && p.cantidad > p.stockActual
+  );
   const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   // Con anticipo el método se elige una sola vez, en el bloque del anticipo, y de
   // ahí sale el del pedido: es el mismo dinero.
@@ -836,7 +841,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     <div>
                       <p style={{ margin: 0, fontWeight: 800, color: "#f57f17", fontSize: 15 }}>Anticipo requerido</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#795548" }}>
-                        El total supera {fmt(UMBRAL_ANTICIPO)}. Registra el anticipo antes de confirmar.
+                        El pedido lleva más unidades de las que hay en stock. Registra el anticipo antes de confirmar.
                       </p>
                     </div>
                   </div>

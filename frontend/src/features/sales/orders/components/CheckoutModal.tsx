@@ -15,7 +15,6 @@ const CUENTA = {
   titular: 'TostonApp S.A.S',
 };
 
-const UMBRAL_ANTICIPO = 50000;
 
 const COP = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
@@ -141,7 +140,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   const costoDomicilio   = tieneDomicilio ? COSTO_DOMICILIO : 0;
   const creditoAplicar   = usarCredito ? Math.min(credito, orderDetails.total + costoDomicilio) : 0;
   const totalFinal       = Math.max(0, orderDetails.total + costoDomicilio - creditoAplicar);
-  const requiereAnticipo     = totalFinal > UMBRAL_ANTICIPO;
+  // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
+  // stock: es una preventa y hay que separar la plata. No depende del monto —
+  // antes se pedía por pasar de $50.000 y caía en pedidos normales y grandes.
+  // Los productos por encargo no cuentan: su déficit lo cubre la orden de
+  // producción, no un anticipo.
+  const requiereAnticipo = (orderDetails.items || []).some(
+    (it: CartItem) => !it.requiereProduccion && it.cantidad > (it.stock ?? 0)
+  );
   const montoAnticipo        = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   const creditoCubreAnticipo = requiereAnticipo && usarCredito && credito >= montoAnticipo;
 
@@ -478,7 +484,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 <span className="text-xl">💰</span>
                 <div>
                   <p className="text-xs font-black text-yellow-800">Anticipo requerido</p>
-                  <p className="text-[10px] font-bold text-yellow-700">El total supera {COP(UMBRAL_ANTICIPO)}. Registra un anticipo para confirmar.</p>
+                  <p className="text-[10px] font-bold text-yellow-700">El pedido lleva más unidades de las que hay en stock. Registra un anticipo para apartarlas.</p>
                 </div>
               </div>
 
