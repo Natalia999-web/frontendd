@@ -102,15 +102,3 @@ export const registrarPagoEfectivo = async (id, { recibido, monto = null, motivo
     body: JSON.stringify({ recibido, monto, motivo }),
   });
 };
-
-// Chat
-export const getMensajes = async (id) => {
-  return apiFetch(`/domicilios/${id}/mensajes`);
-};
-
-export const enviarMensaje = async (id, contenido) => {
-  return apiFetch(`/domicilios/${id}/mensajes`, {
-    method: "POST",
-    body: JSON.stringify({ Contenido: contenido }),
-  });
-};

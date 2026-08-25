@@ -2,12 +2,16 @@
  * PrivilegiosModal — navegación dos niveles SIN scroll
  *
  * Acciones personalizadas por módulo:
+ * - Landing Page:         Ver, Editar
  * - Compras:              Ver, Crear, Editar, Anular
  * - Insumos:              Ver, Crear, Editar, Eliminar, Generar Salida
  * - Cat. Productos:       Ver, Crear, Editar, Eliminar, Generar Salida
  * - Gestión Prod.:        Ver, Crear, Editar, Eliminar, Generar Salida
- * - Órdenes Producción:   Crear, Editar
+ * - Órdenes Producción:   Ver, Crear, Editar, Cancelar
+ * - Gestión Ventas:       Ver, Crear, Editar, Eliminar
+ * - Devoluciones:         Ver, Crear, Editar, Aprobar, Desaprobar
  * - Domicilios:           Ver, Ver Detalles, Cambiar Estado
+ * - Liquidaciones:        Ver, Crear, Editar, Eliminar, Anular
  * - Gestión Salidas:      Ver, Crear, Editar, Eliminar  (grupo Configuración)
  */
 
@@ -36,7 +40,7 @@ const GRUPOS_MODULOS = [
     grupo: "Sitio web",
     icon: "🌐",
     modulos: [
-      { key: "LandingPage",       label: "landingPage",       icon: "📊", acciones: ["ver"] },
+      { key: "LandingPage",       label: "Landing Page",      icon: "🌐", acciones: ["ver", "editar"] },
     ],
   },
   {
@@ -73,9 +77,11 @@ const GRUPOS_MODULOS = [
     grupo: "Ventas",
     icon: "💰",
     modulos: [
-      { key: "Pedidos",       label: "Pedidos",        icon: "🛒", acciones: STD },
+      { key: "GestionVentas", label: "Gestión Ventas", icon: "💳", acciones: ["ver", "crear", "editar", "eliminar"] },
+      { key: "Pedidos",       label: "Pedidos",        icon: "🛒", acciones: ["ver", "crear", "editar", "eliminar"] },
       { key: "Devoluciones",  label: "Devoluciones",   icon: "↩️", acciones: ["ver", "crear", "editar", "aprobar", "desaprobar"] },
       { key: "Domicilios",    label: "Domicilios",     icon: "🏍️", acciones: ["ver", "ver_detalles", "cambiar_estado"] },
+      { key: "Liquidaciones", label: "Liquidaciones",  icon: "📑", acciones: ["ver", "crear", "editar", "eliminar", "anular"] },
     ],
   },
 ];

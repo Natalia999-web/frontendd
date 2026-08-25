@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { getUser } from "../../../services/authService";
 import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService";
 import { subirImagenCloudinary } from "../../../utils/cloudinary";
 import "./Domicilios.css";
+import {
+  Package, CheckCircle2, Truck, Home, XCircle, MapPin, CreditCard,
+  Camera, KeyRound, Clock, X, Check, Navigation, Map,
+} from "lucide-react";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
@@ -11,22 +14,22 @@ const fmt = (n) =>
 const ESTADO_ORDEN = ["En camino", "En proceso", "Confirmado", "Asignado", "Pendiente"];
 
 const ESTADO_INFO = {
-  "Asignado":   { color: "#2e7d32", bg: "#e8f5e9", icon: "📦" },
-  "Confirmado": { color: "#2e7d32", bg: "#e8f5e9", icon: "✅" },
-  "En proceso": { color: "#1565c0", bg: "#e3f2fd", icon: "🏠" },
-  "En camino":  { color: "#8e24aa", bg: "#f3e5f5", icon: "🛵" },
-  "Entregado":  { color: "#2e7d32", bg: "#e8f5e9", icon: "✅" },
+  "Asignado":   { color: "#2e7d32", bg: "#e8f5e9", icon: <Package size={14} /> },
+  "Confirmado": { color: "#2e7d32", bg: "#e8f5e9", icon: <CheckCircle2 size={14} /> },
+  "En proceso": { color: "#1565c0", bg: "#e3f2fd", icon: <Home size={14} /> },
+  "En camino":  { color: "#8e24aa", bg: "#f3e5f5", icon: <Truck size={14} /> },
+  "Entregado":  { color: "#2e7d32", bg: "#e8f5e9", icon: <CheckCircle2 size={14} /> },
 };
 
 // "Entregado" (8) abre el modal de evidencia; el resto cambia de estado directamente
 const ACCIONES = {
-  "Asignado":   [{ valor: 13, label: "Llegué al local",  icon: "🏠", color: "#e65100", bg: "#fff3e0" }],
-  "Confirmado": [{ valor: 13, label: "Llegué al local",  icon: "🏠", color: "#1565c0", bg: "#e3f2fd" }],
-  "Pendiente":  [{ valor: 13, label: "Llegué al local",  icon: "🏠", color: "#1565c0", bg: "#e3f2fd" }],
-  "En proceso": [{ valor: 9,  label: "Iniciar entrega",  icon: "🛵", color: "#8e24aa", bg: "#f3e5f5" }],
+  "Asignado":   [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#e65100", bg: "#fff3e0" }],
+  "Confirmado": [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#1565c0", bg: "#e3f2fd" }],
+  "Pendiente":  [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#1565c0", bg: "#e3f2fd" }],
+  "En proceso": [{ valor: 9,  label: "Iniciar entrega",  icon: <Truck size={18} />,        color: "#8e24aa", bg: "#f3e5f5" }],
   "En camino":  [
-    { valor: 8,  label: "Entregado",   icon: "✅", color: "#2e7d32", bg: "#e8f5e9", evidencia: true },
-    { valor: 5,  label: "Cancelar",    icon: "❌", color: "#c62828", bg: "#ffebee", secondary: true },
+    { valor: 8,  label: "Entregado",   icon: <CheckCircle2 size={18} />, color: "#2e7d32", bg: "#e8f5e9", evidencia: true },
+    { valor: 5,  label: "Cancelar",    icon: <XCircle size={18} />,      color: "#c62828", bg: "#ffebee", secondary: true },
   ],
 };
 
@@ -86,7 +89,7 @@ function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Registrar cobro en efectivo</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9e9e9e" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", display: "flex", alignItems: "center" }}><X size={18} /></button>
         </div>
 
         <div style={{ marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: "#f8f8f8", fontSize: 13 }}>
@@ -97,14 +100,15 @@ function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#616161", marginBottom: 8 }}>¿Recibiste el pago?</div>
           <div style={{ display: "flex", gap: 10 }}>
-            {[{ val: true, label: "✅ Sí, recibí el dinero" }, { val: false, label: "❌ No recibí" }].map(op => (
+            {[{ val: true, label: "Sí, recibí el dinero", Icon: CheckCircle2 }, { val: false, label: "No recibí", Icon: XCircle }].map(op => (
               <button key={String(op.val)} onClick={() => { setRecibido(op.val); setError(null); }} style={{
                 flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer",
                 border: recibido === op.val ? "2px solid #2e7d32" : "1.5px solid #e0e0e0",
                 background: recibido === op.val ? "#e8f5e9" : "#fafafa",
                 color: recibido === op.val ? "#2e7d32" : "#616161",
                 fontWeight: recibido === op.val ? 700 : 400, fontSize: 13,
-              }}>{op.label}</button>
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}><op.Icon size={15} />{op.label}</button>
             ))}
           </div>
         </div>
@@ -163,7 +167,7 @@ function CobrarEfectivoModal({ pedido, onClose, onConfirm }) {
             color: "#fff", fontSize: 13, fontWeight: 700,
             cursor: saving ? "not-allowed" : "pointer",
           }}>
-            {saving ? "Registrando…" : "Confirmar cobro ✅"}
+            {saving ? "Registrando…" : "Confirmar cobro"}
           </button>
         </div>
       </div>
@@ -175,9 +179,9 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
   const esTransferencia = (pedido.metodo_pago || "").toLowerCase().includes("transfer");
 
   const tabsDisponibles = [
-    ["otp",         "🔢 Código OTP"],
-    ["foto",        "📷 Foto entrega"],
-    ...(esTransferencia ? [["comprobante", "💳 Comprobante"]] : []),
+    { id: "otp",         label: "Código OTP",   Icon: KeyRound },
+    { id: "foto",        label: "Foto entrega", Icon: Camera },
+    ...(esTransferencia ? [{ id: "comprobante", label: "Comprobante", Icon: CreditCard }] : []),
   ];
 
   const [tab,              setTab]              = useState("otp");
@@ -248,7 +252,7 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Evidencia de entrega</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9e9e9e" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", display: "flex", alignItems: "center" }}><X size={18} /></button>
         </div>
 
         {/* Aviso transferencia */}
@@ -259,20 +263,21 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
             fontSize: 12, color: "#f57f17", fontWeight: 600,
             display: "flex", alignItems: "center", gap: 8,
           }}>
-            💳 Pago por transferencia — debes subir el comprobante en la pestaña <strong>Comprobante</strong>.
+            <CreditCard size={14} style={{ flexShrink: 0 }} /> Pago por transferencia — debes subir el comprobante en la pestaña <strong>Comprobante</strong>.
           </div>
         )}
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {tabsDisponibles.map(([id, label]) => (
+          {tabsDisponibles.map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setTab(id)} style={{
               flex: 1, padding: "9px 6px", borderRadius: 10, cursor: "pointer",
               border: tab === id ? "2px solid #2e7d32" : "1.5px solid #e0e0e0",
               background: tab === id ? "#e8f5e9" : "#fafafa",
               color: tab === id ? "#2e7d32" : "#616161",
               fontWeight: tab === id ? 700 : 400, fontSize: 12,
-            }}>{label}</button>
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+            }}><Icon size={13} />{label}</button>
           ))}
         </div>
 
@@ -317,7 +322,7 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
             }}>
               {fotoPreview
                 ? <img src={fotoPreview} alt="Evidencia" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8 }} />
-                : <><span style={{ fontSize: 32 }}>📷</span><span style={{ fontSize: 13, color: "#9e9e9e" }}>Tomar o seleccionar foto de entrega</span></>
+                : <><Camera size={32} strokeWidth={1.5} style={{ color: "#bdbdbd" }} /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Tomar o seleccionar foto de entrega</span></>
               }
               <input type="file" accept="image/*" capture="environment"
                 onChange={handleFileChange(setFotoFile, setFotoPreview)} style={{ display: "none" }} />
@@ -339,13 +344,13 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
             }}>
               {comprobantePreview
                 ? <img src={comprobantePreview} alt="Comprobante" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8 }} />
-                : <><span style={{ fontSize: 32 }}>💳</span><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar comprobante de pago</span></>
+                : <><CreditCard size={32} strokeWidth={1.5} style={{ color: "#bdbdbd" }} /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar comprobante de pago</span></>
               }
               <input type="file" accept="image/*,application/pdf"
                 onChange={handleFileChange(setComprobanteFile, setComprobantePreview)} style={{ display: "none" }} />
             </label>
             {comprobanteFile && (
-              <p style={{ fontSize: 11, color: "#2e7d32", marginTop: 6, fontWeight: 700 }}>✓ Comprobante listo para subir</p>
+              <p style={{ fontSize: 11, color: "#2e7d32", marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><Check size={12} /> Comprobante listo para subir</p>
             )}
           </div>
         )}
@@ -363,7 +368,7 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
               color: "#fff", fontSize: 13, fontWeight: 700,
               cursor: confirmDisabled ? "not-allowed" : "pointer",
             }}>
-            {uploading ? "Registrando…" : "Confirmar entrega ✅"}
+            {uploading ? "Registrando…" : "Confirmar entrega"}
           </button>
         </div>
       </div>
@@ -482,12 +487,12 @@ export default function PedidoActual() {
       <div className="page-inner">
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>⌛</div>
+            <div style={{ marginBottom: 12, color: "#d4d4d4", display: "flex", justifyContent: "center" }}><Clock size={40} strokeWidth={1} /></div>
             <p style={{ fontWeight: 600 }}>Cargando...</p>
           </div>
         ) : !pedido ? (
           <div style={{ textAlign: "center", padding: "80px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🛵</div>
+            <div style={{ marginBottom: 16, color: "#d4d4d4", display: "flex", justifyContent: "center" }}><Truck size={56} strokeWidth={1} /></div>
             <p style={{ fontSize: 16, fontWeight: 700, color: "#424242", marginBottom: 8 }}>
               Sin pedido activo
             </p>
@@ -528,7 +533,7 @@ export default function PedidoActual() {
                 {pedido.cliente?.nombre || "—"}
               </div>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, color: "#616161", fontSize: 14 }}>
-                <span style={{ marginTop: 1 }}>📍</span>
+                <MapPin size={16} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{[pedido.direccion_entrega, pedido.municipio_entrega].filter(Boolean).join(", ") || "Sin dirección"}</span>
               </div>
 
@@ -543,7 +548,7 @@ export default function PedidoActual() {
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   }}
                 >
-                  🗺️ Google Maps
+                  <Map size={15} /> Google Maps
                 </button>
                 <button
                   onClick={() => abrirMaps("waze")}
@@ -554,7 +559,7 @@ export default function PedidoActual() {
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   }}
                 >
-                  🚗 Waze
+                  <Navigation size={15} /> Waze
                 </button>
               </div>
             </div>
@@ -588,7 +593,7 @@ export default function PedidoActual() {
                 </div>
                 {pedido.metodo_pago && (
                   <div style={{ marginTop: 8, fontSize: 12, color: "#757575", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span>💳 Pago: {pedido.metodo_pago}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><CreditCard size={12} /> Pago: {pedido.metodo_pago}</span>
                     <EstadoPagoBadge estadoPago={pedido.estado_pago} />
                   </div>
                 )}
@@ -616,7 +621,7 @@ export default function PedidoActual() {
                         opacity: saving ? 0.6 : 1,
                       }}
                     >
-                      <span style={{ fontSize: 18 }}>{ac.icon}</span>
+                      {ac.icon}
                       {saving ? "Actualizando…" : ac.label}
                     </button>
                   ))}
@@ -635,15 +640,6 @@ export default function PedidoActual() {
               </div>
             )}
 
-            {/* ── Botón Chat ── */}
-            <Link to={`/admin/chat/${pedido.id}`} style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              padding: "12px", borderRadius: 12, textDecoration: "none",
-              border: "1.5px solid #e0e0e0", background: "#fff",
-              color: "#424242", fontWeight: 600, fontSize: 14,
-            }}>
-              💬 Chat con cliente / admin
-            </Link>
           </div>
         )}
       </div>

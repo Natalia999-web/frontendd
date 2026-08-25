@@ -103,6 +103,17 @@ PERMISOS = [
     ("ver_domicilios",              "Ver listado de domicilios"),
     ("ver_detalle_domicilios",      "Ver el detalle completo de un domicilio"),
     ("cambiar_estado_domicilios",   "Cambiar el estado de un domicilio"),
+
+    # ── Landing Page ──
+    ("ver_landing_page",            "Ver la landing page pública"),
+    ("editar_landing_page",         "Editar el contenido de la landing page"),
+
+    # ── Liquidaciones ──
+    ("ver_liquidaciones",           "Ver listado y detalle de liquidaciones"),
+    ("crear_liquidaciones",         "Registrar nuevas liquidaciones"),
+    ("editar_liquidaciones",        "Editar liquidaciones"),
+    ("eliminar_liquidaciones",      "Eliminar liquidaciones"),
+    ("anular_liquidaciones",        "Anular liquidaciones"),
 ]
 
 

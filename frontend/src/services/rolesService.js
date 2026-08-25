@@ -3,6 +3,7 @@ import { apiFetch } from "../utils/api";
 // frontend clave → backend integer ID
 const PERMISOS_MAP = {
   "LandingPage_ver":                60,
+  "LandingPage_editar":             61,
   "Dashboard_ver":                   1,
   "Roles_ver":                       2,
   "Roles_crear":                     3,
@@ -62,11 +63,17 @@ const PERMISOS_MAP = {
   "Domicilios_ver":                 57,
   "Domicilios_ver_detalles":        58,
   "Domicilios_cambiar_estado":      59,
+  "Liquidaciones_ver":              62,
+  "Liquidaciones_crear":            63,
+  "Liquidaciones_editar":           64,
+  "Liquidaciones_eliminar":         65,
+  "Liquidaciones_anular":           66,
 };
 
 // backend Permiso string → frontend clave(s)
 const PERMISOS_REVERSE = {
   "ver_landing_page":          "LandingPage_ver",
+  "editar_landing_page":       "LandingPage_editar",
   "ver_dashboard":             "Dashboard_ver",
   "ver_roles":                 "Roles_ver",
   "crear_roles":               "Roles_crear",
@@ -126,6 +133,11 @@ const PERMISOS_REVERSE = {
   "ver_domicilios":            "Domicilios_ver",
   "ver_detalle_domicilios":    "Domicilios_ver_detalles",
   "cambiar_estado_domicilios": "Domicilios_cambiar_estado",
+  "ver_liquidaciones":         "Liquidaciones_ver",
+  "crear_liquidaciones":       "Liquidaciones_crear",
+  "editar_liquidaciones":      "Liquidaciones_editar",
+  "eliminar_liquidaciones":    "Liquidaciones_eliminar",
+  "anular_liquidaciones":      "Liquidaciones_anular",
 };
 
 const DEFAULT_EMOJI_MAP = [

@@ -1,21 +1,24 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { getDomicilios, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFechaHora as fmtFecha } from "../../../utils/dateUtils.js";
 import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, esDomicilioActivo, esPagoEfectivo, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
+import {
+  Search, RefreshCw, Truck, Package, CheckCircle2, XCircle, Clock,
+  MapPin, MessageSquare, X, Phone,
+} from "lucide-react";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
 // Los colores salen de la fuente única de estados; aquí solo el icono.
 const ICONO_ESTADO = {
-  3:  "⏳",  // Pendiente
-  10: "📦",  // Asignado
-  9:  "🛵",  // En camino
-  8:  "✅",  // Entregado
-  5:  "❌",  // Cancelado
+  3:  <Clock size={12} />,
+  10: <Package size={12} />,
+  9:  <Truck size={12} />,
+  8:  <CheckCircle2 size={12} />,
+  5:  <XCircle size={12} />,
 };
 
 const ESTADO_PAGO_INFO = {
@@ -44,7 +47,7 @@ function EstadoPagoBadge({ estadoPago }) {
 // Flujo real del domicilio: Asignado → En camino → Entregado (o Cancelado).
 // Antes había un paso "Llegué al local" que enviaba el estado 13, que es "En
 // producción" del PEDIDO, no un estado de domicilio: el backend lo rechaza.
-const ICONO_TRANSICION = { 9: "🛵", 8: "✅", 5: "❌" };
+const ICONO_TRANSICION = { 9: <Truck size={14} />, 8: <CheckCircle2 size={14} />, 5: <XCircle size={14} /> };
 const LABEL_TRANSICION = { 9: "Iniciar entrega", 8: "Entregado", 5: "Cancelado" };
 
 const proximosEstados = (estadoId) =>
@@ -136,8 +139,8 @@ function CobroEfectivoModal({ domicilio, saving, onClose, onConfirm }) {
           ¿Recibiste el pago completo del cliente?
         </p>
         <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-          {opcion(true,  "✅", "Sí, recibido", "#2e7d32")}
-          {opcion(false, "❌", "No lo recibí", "#c62828")}
+          {opcion(true,  <CheckCircle2 size={20} />, "Sí, recibido", "#2e7d32")}
+          {opcion(false, <XCircle size={20} />, "No lo recibí", "#c62828")}
         </div>
 
         {recibido === false && (
@@ -210,7 +213,7 @@ function CambiarEstadoModal({ domicilio, onClose, onSave }) {
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#212121" }}>Actualizar entrega</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9e9e9e" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", display: "flex", alignItems: "center" }}><X size={18} /></button>
         </div>
 
         <div style={{ background: "#f8f8f8", borderRadius: 10, padding: "12px 14px", marginBottom: 18, fontSize: 13 }}>
@@ -296,7 +299,7 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
             <p style={{ margin: 0, fontSize: 10, color: "#9e9e9e", textTransform: "uppercase", letterSpacing: "0.08em" }}>Domicilio</p>
             <h2 style={{ margin: "2px 0 0", fontSize: 17, fontWeight: 700 }}>{domicilio.numero}</h2>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9e9e9e" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", display: "flex", alignItems: "center" }}><X size={18} /></button>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -316,7 +319,7 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
                 target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: 13, color: "#25d366", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4 }}
               >
-                📞 {domicilio.cliente.telefono}
+                <Phone size={13} /> {domicilio.cliente.telefono}
               </a>
             )}
           </div>
@@ -345,23 +348,12 @@ function DetallesModal({ domicilio, onClose, onCambiarEstado }) {
                 width: "100%", padding: "12px", borderRadius: 10,
                 background: "#4caf50", color: "#fff", border: "none",
                 fontWeight: 700, fontSize: 14, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}
             >
-              🛵 Actualizar estado de entrega
+              <Truck size={16} /> Actualizar estado de entrega
             </button>
           )}
-          <Link
-            to={`/admin/chat/${domicilio.id}`}
-            onClick={onClose}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              padding: "12px", borderRadius: 10, textDecoration: "none",
-              border: "1.5px solid #e0e0e0", background: "#fff",
-              color: "#424242", fontWeight: 600, fontSize: 14,
-            }}
-          >
-            💬 Chat con cliente / admin
-          </Link>
         </div>
       </div>
     </div>
@@ -473,7 +465,7 @@ export default function GestionDomiciliosRepartidor() {
       <div className="page-inner">
         {/* Buscador */}
         <div style={{ position: "relative", marginBottom: 12 }}>
-          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#9e9e9e", pointerEvents: "none" }}>🔍</span>
+          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9e9e9e", pointerEvents: "none", display: "flex" }}><Search size={14} /></span>
           <input
             type="text"
             placeholder="Buscar por número, cliente o dirección…"
@@ -519,9 +511,10 @@ export default function GestionDomiciliosRepartidor() {
               marginLeft: "auto", padding: "8px 14px", borderRadius: 20,
               border: "1.5px solid #e0e0e0", background: "#fff",
               color: "#616161", fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6,
             }}
           >
-            🔄 Actualizar
+            <RefreshCw size={13} /> Actualizar
           </button>
         </div>
 
@@ -538,7 +531,7 @@ export default function GestionDomiciliosRepartidor() {
           </div>
         ) : filtrados.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛵</div>
+            <div style={{ marginBottom: 12, color: "#d4d4d4", display: "flex", justifyContent: "center" }}><Truck size={48} strokeWidth={1} /></div>
             <p style={{ fontSize: 15, fontWeight: 600 }}>
               {q ? "Sin resultados para esa búsqueda" : filtro === "activos" ? "No tienes entregas pendientes" : "Sin resultados"}
             </p>
@@ -571,7 +564,7 @@ export default function GestionDomiciliosRepartidor() {
                   </div>
 
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 10, color: "#616161", fontSize: 13 }}>
-                    <span style={{ marginTop: 1 }}>📍</span>
+                    <MapPin size={14} style={{ flexShrink: 0, marginTop: 2 }} />
                     <span style={{ lineHeight: 1.4 }}>{dom.direccion_entrega || "Sin dirección"}</span>
                   </div>
 
@@ -599,8 +592,8 @@ export default function GestionDomiciliosRepartidor() {
                   </div>
 
                   {dom.obs_domicilio && (
-                    <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff8e1", borderRadius: 7, fontSize: 12, color: "#616161", borderLeft: "3px solid #f9a825" }}>
-                      💬 {dom.obs_domicilio}
+                    <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff8e1", borderRadius: 7, fontSize: 12, color: "#616161", borderLeft: "3px solid #f9a825", display: "flex", alignItems: "flex-start", gap: 6 }}>
+                      <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 1 }} />{dom.obs_domicilio}
                     </div>
                   )}
                 </div>

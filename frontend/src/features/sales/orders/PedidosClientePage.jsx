@@ -7,24 +7,26 @@ import { getCurrentUser } from '../../client/profile/services/profileService.js'
 import { descargarFacturaPedido } from '../../../utils/facturaGenerator.js';
 import {
   Package, Calendar, MapPin, DollarSign, Leaf, Search,
-  ChevronRight, Clock, CheckCircle2, Truck, AlertCircle,
-  XCircle, ShoppingBag, RefreshCw,
+  ChevronRight, Clock, CheckCircle2, Truck, AlertTriangle,
+  XCircle, ShoppingBag, RefreshCw, ChefHat, Inbox, Store,
+  Gift, Check, X, FileText, Ban, CreditCard, Building2,
+  Banknote, ClipboardList, CornerUpLeft, AlertCircle, PenLine,
 } from 'lucide-react';
 import '../../../styles/Client.css';
 
 /* ── Stepper de seguimiento ───────────────────────────── */
 const PASOS_DOMICILIO = [
-  { key: 'Pendiente',     label: 'Recibido',      emoji: '📥' },
-  { key: 'En producción', label: 'Preparación',   emoji: '👨‍🍳' },
-  { key: 'Confirmado',    label: 'Listo',         emoji: '✅' },
-  { key: 'En camino',     label: 'En camino',     emoji: '🛵' },
-  { key: 'Entregado',     label: 'Entregado',     emoji: '🎉' },
+  { key: 'Pendiente',     label: 'Recibido',         Icon: Inbox },
+  { key: 'En producción', label: 'Preparación',      Icon: ChefHat },
+  { key: 'Confirmado',    label: 'Listo',            Icon: CheckCircle2 },
+  { key: 'En camino',     label: 'En camino',        Icon: Truck },
+  { key: 'Entregado',     label: 'Entregado',        Icon: Gift },
 ];
 const PASOS_TIENDA = [
-  { key: 'Pendiente',     label: 'Recibido',      emoji: '📥' },
-  { key: 'En producción', label: 'Preparando',    emoji: '👨‍🍳' },
-  { key: 'Confirmado',    label: 'Listo en\ntienda', emoji: '🏪' },
-  { key: 'Entregado',     label: 'Recogido',      emoji: '✅' },
+  { key: 'Pendiente',     label: 'Recibido',         Icon: Inbox },
+  { key: 'En producción', label: 'Preparando',       Icon: ChefHat },
+  { key: 'Confirmado',    label: 'Listo en\ntienda', Icon: Store },
+  { key: 'Entregado',     label: 'Recogido',         Icon: CheckCircle2 },
 ];
 
 function PedidoStepper({ estado, domicilio }) {
@@ -52,7 +54,7 @@ function PedidoStepper({ estado, domicilio }) {
               border: `2px solid ${done ? '#2e7d32' : active ? '#2e7d32' : '#e0e0e0'}`,
               transition: 'all 0.3s',
             }}>
-              {done ? <span style={{ color: '#fff', fontSize: 12 }}>✓</span> : <span style={{ fontSize: 13 }}>{paso.emoji}</span>}
+              {done ? <Check size={12} color="#fff" strokeWidth={3} /> : <paso.Icon size={13} />}
             </div>
             <p style={{
               fontSize: 8, fontWeight: active ? 800 : 600, marginTop: 4, textAlign: 'center',
@@ -246,14 +248,14 @@ function SolicitarDevolucionModal({ pedido, onClose, onSuccess }) {
             <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>Devolución · Pedido #{pedido.numero}</p>
             <h2 style={{ margin: '2px 0 0', fontSize: 17, fontWeight: 800, color: '#fff' }}>Solicitar devolución</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
         </div>
 
         {/* Body */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '18px 22px' }}>
           {/* Plazo info */}
-          <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
-            ⏱ Tienes hasta <strong>1 hora</strong> desde la entrega para solicitar una devolución.
+          <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#f57f17', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={14} style={{ flexShrink: 0 }} /> Tienes hasta <strong>1 hora</strong> desde la entrega para solicitar una devolución.
           </div>
 
           {/* Productos */}
@@ -304,8 +306,8 @@ function SolicitarDevolucionModal({ pedido, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <div style={{ background: '#ffebee', border: '1px solid #ffcdd2', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#c62828', fontWeight: 600, marginTop: 8 }}>
-              ⚠ {error}
+            <div style={{ background: '#ffebee', border: '1px solid #ffcdd2', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#c62828', fontWeight: 600, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={13} /> {error}
             </div>
           )}
         </div>
@@ -316,8 +318,8 @@ function SolicitarDevolucionModal({ pedido, onClose, onSuccess }) {
             Cancelar
           </button>
           <button onClick={handleSubmit} disabled={saving || total === 0}
-            style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: saving || total === 0 ? '#ef9a9a' : '#c62828', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving || total === 0 ? 'not-allowed' : 'pointer' }}>
-            {saving ? 'Enviando…' : '↩ Solicitar devolución'}
+            style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: saving || total === 0 ? '#ef9a9a' : '#c62828', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving || total === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving ? 'Enviando…' : <><CornerUpLeft size={14} /> Solicitar devolución</>}
           </button>
         </div>
       </div>
@@ -583,8 +585,8 @@ const PedidosClientePage = () => {
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 leading-none">Productos</p>
                         <div className="flex -space-x-2">
                            {(pedido.productosItems || []).slice(0, 3).map((_, i) => (
-                             <div key={i} className="w-6 h-6 rounded-full bg-green-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-green-600">
-                               📦
+                             <div key={i} className="w-6 h-6 rounded-full bg-green-50 border-2 border-white flex items-center justify-center text-green-600">
+                               <Package size={10} />
                              </div>
                            ))}
                            {(pedido.productosItems || []).length > 3 && (
@@ -599,7 +601,7 @@ const PedidosClientePage = () => {
                     <div className="pt-4 border-t border-gray-50">
                       {pedido.estado === 'Fecha propuesta' && pedido.fecha_propuesta && (
                         <div style={{ background: '#e8eaf6', border: '1px solid #9fa8da', borderRadius: 10, padding: '7px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: 14 }}>📅</span>
+                          <Calendar size={14} />
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#283593', textTransform: 'capitalize' }}>
                             {new Date(pedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
                           </span>
@@ -609,8 +611,8 @@ const PedidosClientePage = () => {
                         <MapPin size={14} style={{ color: 'var(--green-600)' }} />
                         <span className="text-[10px] font-bold truncate max-w-[200px]">
                           {pedido.domicilio
-                            ? (pedido.direccion_entrega || '🛵 Domicilio')
-                            : '🏪 Recogida en local'}
+                            ? (pedido.direccion_entrega || 'Domicilio')
+                            : 'Recogida en local'}
                         </span>
                       </div>
 
@@ -656,8 +658,9 @@ const PedidosClientePage = () => {
           zIndex: 9999, background: '#2e7d32', color: '#fff', borderRadius: 14,
           padding: '14px 24px', fontSize: 14, fontWeight: 700,
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)', whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          ✅ {devToast}
+          <Check size={16} style={{ flexShrink: 0 }} /> {devToast}
         </div>
       )}
 
@@ -675,7 +678,7 @@ const PedidosClientePage = () => {
                 <p className="modal-header__eyebrow">Pedido #{selectedPedido.numero}</p>
                 <h2 className="modal-header__title">Detalle de Compra</h2>
               </div>
-              <button onClick={closeModal} className="modal-close-btn">✕</button>
+              <button onClick={closeModal} className="modal-close-btn"><X size={16} /></button>
             </div>
 
             {/* Stepper de seguimiento */}
@@ -690,7 +693,7 @@ const PedidosClientePage = () => {
               {/* Aviso de producción */}
               {selectedPedido.orden_produccion && selectedPedido.estado === 'Pendiente' && (
                 <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 12, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 800, color: '#1565c0', marginBottom: 2 }}>🏭 Pedido en espera de producción</p>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: '#1565c0', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 5 }}><Package size={13} /> Pedido en espera de producción</p>
                   <p style={{ fontSize: 11, color: '#1976d2', lineHeight: 1.5, margin: 0 }}>
                     Uno o más productos requieren producción. El equipo te propondrá una fecha de entrega pronto.
                   </p>
@@ -701,7 +704,7 @@ const PedidosClientePage = () => {
               {selectedPedido.estado === 'Fecha propuesta' && (
                 <div style={{ background: 'linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)', border: '2px solid #9fa8da', borderRadius: 16, padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 20 }}>📅</span>
+                    <Calendar size={20} />
                     <p style={{ fontSize: 13, fontWeight: 800, color: '#283593', margin: 0 }}>El equipo propuso una fecha de entrega</p>
                   </div>
                   {selectedPedido.fecha_propuesta && (
@@ -715,15 +718,15 @@ const PedidosClientePage = () => {
                   <p style={{ fontSize: 11, color: '#3949ab', marginBottom: 12, lineHeight: 1.5 }}>
                     ¿Puedes recibir tu pedido en esta fecha? Si rechazas, el pedido quedará cancelado.
                   </p>
-                  {accionFechaErr && <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8 }}>⚠ {accionFechaErr}</p>}
+                  {accionFechaErr && <p style={{ fontSize: 11, color: '#c62828', fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><AlertTriangle size={12} /> {accionFechaErr}</p>}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button disabled={!!accionFecha} onClick={() => handleAceptarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1 }}>
-                      {accionFecha === 'aceptar' ? 'Aceptando…' : '✓ Sí, acepto esta fecha'}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#2e7d32', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'rechazar' ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                      {accionFecha === 'aceptar' ? 'Aceptando…' : <><Check size={14} /> Sí, acepto esta fecha</>}
                     </button>
                     <button disabled={!!accionFecha} onClick={() => handleRechazarFecha(selectedPedido)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c62828', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1 }}>
-                      {accionFecha === 'rechazar' ? 'Rechazando…' : '✕ Rechazar fecha'}
+                      style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c62828', color: '#fff', fontWeight: 800, fontSize: 13, cursor: accionFecha ? 'not-allowed' : 'pointer', opacity: accionFecha === 'aceptar' ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                      {accionFecha === 'rechazar' ? 'Rechazando…' : <><X size={14} /> Rechazar fecha</>}
                     </button>
                   </div>
                 </div>
@@ -731,7 +734,7 @@ const PedidosClientePage = () => {
 
               {/* ── Sección: Información del pedido ── */}
               <div style={{ background: '#f9fdf9', border: '1px solid #e8f5e9', borderRadius: 14, padding: '14px 16px' }}>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#2e7d32', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>📋 Información del pedido</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#2e7d32', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}><ClipboardList size={12} /> Información del pedido</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Número</p>
@@ -747,13 +750,13 @@ const PedidosClientePage = () => {
                   </div>
                   <div>
                     <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Tipo de entrega</p>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>{selectedPedido.domicilio ? '🛵 Domicilio' : '🏪 Retiro en tienda'}</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}>{selectedPedido.domicilio ? <><Truck size={14} /> Domicilio</> : <><Store size={14} /> Retiro en tienda</>}</p>
                   </div>
                   {selectedPedido.fecha_propuesta && selectedPedido.estado !== 'Fecha propuesta' && (
                     <div style={{ gridColumn: '1 / -1' }}>
                       <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Fecha de entrega estimada</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#283593', margin: 0, textTransform: 'capitalize' }}>
-                        📅 {new Date(selectedPedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#283593', margin: 0, textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Calendar size={13} /> {new Date(selectedPedido.fecha_propuesta.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </div>
                   )}
@@ -762,8 +765,8 @@ const PedidosClientePage = () => {
 
               {/* ── Sección: Entrega ── */}
               <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 16px' }}>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
-                  {selectedPedido.domicilio ? '🛵 Entrega a domicilio' : '🏪 Retiro en tienda'}
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {selectedPedido.domicilio ? <><Truck size={12} /> Entrega a domicilio</> : <><Store size={12} /> Retiro en tienda</>}
                 </p>
                 {selectedPedido.domicilio ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -781,7 +784,7 @@ const PedidosClientePage = () => {
                     </div>
                     {selectedPedido.nombre_domiciliario ? (
                       <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 18 }}>🛵</span>
+                        <Truck size={18} />
                         <div>
                           <p style={{ fontSize: 9, fontWeight: 700, color: '#6a1b9a', letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>Tu domiciliario</p>
                           <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>{selectedPedido.nombre_domiciliario}</p>
@@ -789,13 +792,13 @@ const PedidosClientePage = () => {
                         </div>
                       </div>
                     ) : ['Confirmado', 'Listo'].includes(selectedPedido.estado) ? (
-                      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
-                        🕐 Asignando domiciliario...
+                      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={13} /> Asignando domiciliario...
                       </div>
                     ) : null}
                     {selectedPedido.observaciones_domicilio && (
                       <div style={{ background: '#fffde7', border: '1px solid #fff176', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8 }}>
-                        <span style={{ fontSize: 14, flexShrink: 0 }}>📝</span>
+                        <PenLine size={14} style={{ flexShrink: 0 }} />
                         <div>
                           <p style={{ fontSize: 9, fontWeight: 700, color: '#f9a825', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 3px' }}>Observaciones</p>
                           <p style={{ fontSize: 12, color: '#5d4037', lineHeight: 1.5, margin: 0 }}>{selectedPedido.observaciones_domicilio}</p>
@@ -805,7 +808,7 @@ const PedidosClientePage = () => {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>🏪</span>
+                    <Store size={22} />
                     <div>
                       <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>Retiro en el local</p>
                       <p style={{ fontSize: 11, color: '#9e9e9e', margin: 0 }}>Te avisaremos cuando tu pedido esté listo para recoger.</p>
@@ -816,15 +819,15 @@ const PedidosClientePage = () => {
 
               {/* ── Sección: Pago ── */}
               <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 16px' }}>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>💳 Información del pago</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#424242', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}><CreditCard size={12} /> Información del pago</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
                   {/* Método + cuándo pagar */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
                       <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>Método</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
-                        {(selectedPedido.metodo_pago || '').toLowerCase().includes('transfer') ? '🏦' : '💵'} {selectedPedido.metodo_pago || '—'}
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {(selectedPedido.metodo_pago || '').toLowerCase().includes('transfer') ? <Building2 size={13} /> : <Banknote size={13} />} {selectedPedido.metodo_pago || '—'}
                       </p>
                     </div>
                     <div>
@@ -848,8 +851,8 @@ const PedidosClientePage = () => {
                     const esPagoCompleto = selectedPedido.pago_final_registrado;
                     return (
                       <div style={{ background: esPagoCompleto ? '#e8f5e9' : '#fff8e1', border: `1.5px solid ${esPagoCompleto ? '#a5d6a7' : '#ffe082'}`, borderRadius: 10, padding: '10px 12px' }}>
-                        <p style={{ fontSize: 10, fontWeight: 800, color: esPagoCompleto ? '#2e7d32' : '#e65100', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 8px' }}>
-                          {esPagoCompleto ? '✅ Pago completo' : selectedPedido.anticipo_registrado ? '⚠️ Anticipo pagado' : '⚠️ Anticipo pendiente'}
+                        <p style={{ fontSize: 10, fontWeight: 800, color: esPagoCompleto ? '#2e7d32' : '#e65100', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          {esPagoCompleto ? <><Check size={11} /> Pago completo</> : selectedPedido.anticipo_registrado ? <><AlertTriangle size={11} /> Anticipo pagado</> : <><AlertTriangle size={11} /> Anticipo pendiente</>}
                         </p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: '#5d4037' }}>Abonado:</span>
@@ -862,7 +865,7 @@ const PedidosClientePage = () => {
                         {selectedPedido.pago_final_fecha && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
                             <span style={{ fontSize: 12, fontWeight: 600, color: '#5d4037' }}>Fecha del pago:</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>📅 {fmtFecha(selectedPedido.pago_final_fecha)}</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar size={11} /> {fmtFecha(selectedPedido.pago_final_fecha)}</span>
                           </div>
                         )}
                       </div>
@@ -871,8 +874,8 @@ const PedidosClientePage = () => {
 
                   {/* Info adicional sobre_stock */}
                   {selectedPedido.sobre_stock && (
-                    <div style={{ background: '#fff3e0', border: '1px solid #ffcc02', borderRadius: 10, padding: '10px 12px', fontSize: 11, color: '#e65100', lineHeight: 1.5 }}>
-                      ⚠️ Este pedido tiene productos por encima del stock disponible. Se requirió un anticipo del 50% para procesarlo.
+                    <div style={{ background: '#fff3e0', border: '1px solid #ffcc02', borderRadius: 10, padding: '10px 12px', fontSize: 11, color: '#e65100', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                      <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} /> Este pedido tiene productos por encima del stock disponible. Se requirió un anticipo del 50% para procesarlo.
                     </div>
                   )}
 
@@ -882,7 +885,7 @@ const PedidosClientePage = () => {
                       <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Comprobante de pago</p>
                       {selectedPedido.comprobante ? (
                         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
-                          <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>✅ Comprobante adjuntado</p>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><Check size={13} /> Comprobante adjuntado</p>
                           <img src={normalizeComprobanteSrc(selectedPedido.comprobante)} alt="Comprobante de pago"
                             style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, marginBottom: 6, background: '#fff' }}
                             onError={e => { e.target.style.display = 'none'; }} />
@@ -892,8 +895,8 @@ const PedidosClientePage = () => {
                           </a>
                         </div>
                       ) : (
-                        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600 }}>
-                          ⚠️ Aún no se ha adjuntado comprobante de pago
+                        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#f57f17', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <AlertTriangle size={13} /> Aún no se ha adjuntado comprobante de pago
                         </div>
                       )}
                     </div>
@@ -930,13 +933,13 @@ const PedidosClientePage = () => {
                   <tfoot>
                     {selectedPedido.domicilio && (
                       <tr style={{ borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
-                        <td colSpan={2} style={{ padding: '8px 14px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#9e9e9e' }}>🛵 Costo de domicilio</td>
+                        <td colSpan={2} style={{ padding: '8px 14px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#9e9e9e' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Truck size={11} /> Costo de domicilio</span></td>
                         <td style={{ padding: '8px 14px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#7b1fa2' }}>{COP(5000)}</td>
                       </tr>
                     )}
                     {(selectedPedido.descuento || 0) > 0 && (
                       <tr style={{ borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
-                        <td colSpan={2} style={{ padding: '8px 14px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#1976d2' }}>💳 Crédito aplicado</td>
+                        <td colSpan={2} style={{ padding: '8px 14px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: '#1976d2' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CreditCard size={11} /> Crédito aplicado</span></td>
                         <td style={{ padding: '8px 14px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#1565c0' }}>− {COP(selectedPedido.descuento)}</td>
                       </tr>
                     )}
@@ -961,8 +964,8 @@ const PedidosClientePage = () => {
             <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
               {confirmCancel ? (
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#b91c1c', margin: 0 }}>
-                    ⚠️ ¿Confirmar la cancelación del pedido #{selectedPedido.numero}? Esta acción no se puede deshacer.
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#b91c1c', margin: 0, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} /> ¿Confirmar la cancelación del pedido #{selectedPedido.numero}? Esta acción no se puede deshacer.
                   </p>
                   {cancelError && (
                     <p style={{ fontSize: 11, color: '#b91c1c', background: '#fee2e2', borderRadius: 8, padding: '6px 10px', margin: 0 }}>
@@ -990,27 +993,18 @@ const PedidosClientePage = () => {
                   <button className="btn-ghost" onClick={closeModal}>Cerrar</button>
                   <button
                     className="btn-cancel"
-                    style={{ background: '#f1f8f1', color: '#2e7d32', border: '1.5px solid #c8e6c9' }}
+                    style={{ background: '#f1f8f1', color: '#2e7d32', border: '1.5px solid #c8e6c9', display: 'flex', alignItems: 'center', gap: 6 }}
                     onClick={() => descargarFacturaPedido(selectedPedido, user)}
                   >
-                    📄 Descargar factura
+                    <FileText size={14} /> Descargar factura
                   </button>
-                  {selectedPedido.domicilio && selectedPedido.id_domicilio &&
-                   !['Entregado', 'Cancelado'].includes(selectedPedido.estado) && (
-                    <button
-                      className="btn-cancel"
-                      onClick={() => { closeModal(); navigate(`/cliente/chat/${selectedPedido.id_domicilio}`); }}
-                    >
-                      💬 Chat con domiciliario
-                    </button>
-                  )}
                   {selectedPedido.estado === 'Pendiente' && (
                     <button
                       className="btn-cancel"
-                      style={{ background: '#fff5f5', color: '#dc2626', border: '1.5px solid #fca5a5' }}
+                      style={{ background: '#fff5f5', color: '#dc2626', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'center', gap: 6 }}
                       onClick={() => setConfirmCancel(true)}
                     >
-                      🚫 Cancelar pedido
+                      <Ban size={14} /> Cancelar pedido
                     </button>
                   )}
                   {puedeDevolver(selectedPedido) && (

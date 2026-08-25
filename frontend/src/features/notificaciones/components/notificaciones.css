@@ -441,25 +441,26 @@
 .alerta-banner {
   position: fixed;
   bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
+  left: auto;
+  transform: none;
   z-index: 20200;
-  width: min(520px, calc(100vw - 32px));
-  animation: slideUpBanner 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+  width: min(360px, calc(100vw - 32px));
+  animation: slideInRight 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
 .alerta-banner--out {
-  animation: slideDownBanner 0.3s ease forwards;
+  animation: slideOutRight 0.3s ease forwards;
 }
 
-@keyframes slideUpBanner {
-  from { transform: translateX(-50%) translateY(40px); opacity: 0; }
-  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+@keyframes slideInRight {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
-@keyframes slideDownBanner {
-  from { transform: translateX(-50%) translateY(0);    opacity: 1; }
-  to   { transform: translateX(-50%) translateY(40px); opacity: 0; }
+@keyframes slideOutRight {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(120%); opacity: 0; }
 }
 
 .alerta-banner__inner {
@@ -669,5 +670,5 @@
 /* ─── Responsive ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   .notif-panel { width: 100vw; }
-  .alerta-banner { bottom: 12px; }
+  .alerta-banner { bottom: 12px; right: 12px; width: calc(100vw - 24px); }
 }

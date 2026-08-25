@@ -9,9 +9,8 @@ import {
   Home, Pencil, Monitor, Shield, Users, Upload, FolderOpen, Package, Receipt,
   Building2, Tag, Box, ClipboardList, Utensils, ShoppingBag, Truck,
   Navigation, History, Banknote, Bell, UserCircle, RotateCcw, BarChart2,
-  Search, ChevronLeft, ChevronRight, ChevronDown, LogOut, MessageSquare,
+  Search, ChevronLeft, ChevronRight, ChevronDown, LogOut,
 } from "lucide-react";
-import { useChat } from "../../features/chat/context/ChatContext";
 
 /* =========================
    MENÚS
@@ -76,7 +75,6 @@ const adminMenuItems = [
       { label: "Mis Ganancias",  Icon: Banknote,       link: "/admin/mis-ganancias",        clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
       { label: "Notificaciones", Icon: Bell,           link: "/admin/mis-notificaciones",   clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
       { label: "Mi Perfil",      Icon: UserCircle,     link: "/admin/mi-perfil-repartidor", clave: "Domicilios_cambiar_estado", hideFromAdmin: true },
-      { label: "Centro de Chats",Icon: MessageSquare,  link: "/admin/chats",                privilegioKey: "Domicilios", soloAdmin: true },
       { label: "Liquidaciones",  Icon: Banknote,       link: "/admin/liquidaciones",        privilegioKey: "Domicilios" },
       { label: "Devoluciones",   Icon: RotateCcw,      link: "/admin/devoluciones",         privilegioKey: "Devoluciones" },
     ],
@@ -114,7 +112,6 @@ export default function Sidebar({ isOpen, onToggle }) {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { hasPrivilegio, isAdmin, loading } = usePrivilegios();
-  const { totalNoLeidos: chatNoLeidos } = useChat();
 
   useEffect(() => {
     const sync = () => setUser(getUser());
@@ -207,9 +204,7 @@ export default function Sidebar({ isOpen, onToggle }) {
 
                   <div className={`submenu ${isSectionOpen ? "open" : ""}`}>
                     <div className="submenu-inner">
-                      {visible.map(({ label, Icon: SubIcon, link }) => {
-                        const isChatCenter = link === "/admin/chats";
-                        return (
+                      {visible.map(({ label, Icon: SubIcon, link }) => (
                           <Link
                             key={label}
                             to={link}
@@ -218,22 +213,8 @@ export default function Sidebar({ isOpen, onToggle }) {
                           >
                             <span className="sub-icon"><SubIcon size={14} /></span>
                             <span className="sub-label">{label}</span>
-                            {isChatCenter && chatNoLeidos > 0 && (
-                              <span style={{
-                                marginLeft: "auto",
-                                minWidth: 18, height: 18,
-                                background: "#e53935", color: "#fff",
-                                fontSize: 10, fontWeight: 800,
-                                borderRadius: 9,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                padding: "0 4px",
-                              }}>
-                                {chatNoLeidos > 99 ? "99+" : chatNoLeidos}
-                              </span>
-                            )}
                           </Link>
-                        );
-                      })}
+                        ))}
                     </div>
                   </div>
                 </div>

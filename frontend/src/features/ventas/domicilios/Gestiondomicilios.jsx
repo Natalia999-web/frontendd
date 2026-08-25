@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
+import {
+  Search, Bike, Package, CheckCircle2, XCircle, Clock,
+  MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
+  Banknote, Building2, Eye, Globe, Zap, PenLine, FileText,
+  Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
+} from "lucide-react";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
@@ -58,17 +64,17 @@ function MetodoPagoChip({ metodo }) {
   const efectivo = esPagoEfectivo(texto);
   const transfer = esPagoTransferencia(texto);
   const cfg = efectivo
-    ? { label: "Efectivo",      icon: "💵", dot: "#2e7d32", bg: "#e8f5e9" }
+    ? { label: "Efectivo",      icon: <Banknote size={11} />, dot: "#2e7d32", bg: "#e8f5e9" }
     : transfer
-      ? { label: "Transferencia", icon: "🏦", dot: "#1565c0", bg: "#e3f2fd" }
-      : { label: texto,          icon: "💳", dot: "#616161", bg: "#f5f5f5" };
+      ? { label: "Transferencia", icon: <Building2 size={11} />, dot: "#1565c0", bg: "#e3f2fd" }
+      : { label: texto,          icon: <CreditCard size={11} />, dot: "#616161", bg: "#f5f5f5" };
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
       padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700,
       background: cfg.bg, color: cfg.dot, border: `1px solid ${cfg.dot}44`,
     }}>
-      <span>{cfg.icon}</span>{cfg.label}
+      {cfg.icon}{cfg.label}
     </span>
   );
 }
@@ -131,7 +137,7 @@ function AlertaEstado({ pedido, empleados }) {
         fontWeight: 600, padding: "3px 6px", borderRadius: 4,
         whiteSpace: "nowrap"
       }}>
-        <span>⚠️</span> Sin asignar
+        <AlertTriangle size={13} /> Sin asignar
       </div>
     );
   }
@@ -144,7 +150,7 @@ function AlertaEstado({ pedido, empleados }) {
         fontWeight: 600, padding: "3px 6px", borderRadius: 4,
         whiteSpace: "nowrap"
       }}>
-        <span>✅</span> Completado
+        <CheckCircle2 size={13} /> Completado
       </div>
     );
   }
@@ -157,7 +163,7 @@ function AlertaEstado({ pedido, empleados }) {
         fontWeight: 600, padding: "3px 6px", borderRadius: 4,
         whiteSpace: "nowrap"
       }}>
-        <span>🚴</span> En tránsito
+        <Bike size={13} /> En tránsito
       </div>
     );
   }
@@ -173,8 +179,8 @@ function Toast({ toast }) {
     "#2e7d32";
   return (
     <div className="toast" style={{ background: bg }}>
-      <span style={{ fontSize: 15 }}>
-        {toast.type === "error" ? "✕" : toast.type === "warn" ? "⚠" : "✓"}
+      <span style={{ display: "flex", alignItems: "center" }}>
+        {toast.type === "error" ? <X size={14} /> : toast.type === "warn" ? <AlertTriangle size={14} /> : <Check size={14} />}
       </span>
       {toast.message}
     </div>
@@ -238,7 +244,7 @@ function ModalConfirmarDesactivar({ usuario, pedidosActivos, onConfirm, onClose 
 
         <div className="modal-body" style={{ overflow: "visible" }}>
           <div className="info-box info-box--warn">
-            <span className="info-box__icon">⚠️</span>
+            <span className="info-box__icon"><AlertTriangle size={14} /></span>
             <div className="info-box__text">
               <span className="info-box__label">
                 {usuario.nombre} {usuario.apellidos} tiene {pedidosActivos.length}{" "}
@@ -342,9 +348,9 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
-            {opcion(true,  "✅", "Sí, se recibió completo",
+            {opcion(true,  <CheckCircle2 size={22} />, "Sí, se recibió completo",
                     `Se registra el monto exacto: ${fmt(pedido.total)}`, "#2e7d32")}
-            {opcion(false, "❌", "No se recibió",
+            {opcion(false, <XCircle size={22} />, "No se recibió",
                     "Requiere explicar el motivo", "#c62828")}
           </div>
 
@@ -367,7 +373,7 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
 
           {error && (
             <div className="info-box info-box--warn" style={{ marginTop: 12 }}>
-              <span className="info-box__icon">⚠️</span>
+              <span className="info-box__icon"><AlertTriangle size={14} /></span>
               <span className="info-box__text">{error}</span>
             </div>
           )}
@@ -462,12 +468,12 @@ function ModalCambiarEstado({ pedido, esRepartidor = false, onClose, onSave }) {
    MODAL VER DETALLE — Side panel
    ═══════════════════════════════════════════════════════════ */
 const NAV_VER = [
-  { id: "cliente",      label: "Cliente",      icon: "👤" },
-  { id: "direccion",    label: "Dirección",    icon: "📍" },
-  { id: "productos",    label: "Productos",    icon: "🛍️" },
-  { id: "pago",         label: "Pago",         icon: "💳" },
-  { id: "domiciliario", label: "Domiciliario", icon: "🛵" },
-  { id: "fechas",       label: "Fechas",       icon: "📅" },
+  { id: "cliente",      label: "Cliente",      Icon: User },
+  { id: "direccion",    label: "Dirección",    Icon: MapPin },
+  { id: "productos",    label: "Productos",    Icon: ShoppingBag },
+  { id: "pago",         label: "Pago",         Icon: CreditCard },
+  { id: "domiciliario", label: "Domiciliario", Icon: Bike },
+  { id: "fechas",       label: "Fechas",       Icon: Calendar },
 ];
 
 function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onObservaciones }) {
@@ -526,8 +532,8 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
               <div style={{
                 width: 48, height: 48, borderRadius: "50%", background: "#e8f5e9",
                 border: "1.5px solid #a5d6a7", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 22,
-              }}>🛵</div>
+                justifyContent: "center", color: "#2e7d32",
+              }}><Bike size={22} strokeWidth={1.5} /></div>
             </div>
 
             {NAV_VER.map(item => (
@@ -545,7 +551,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   transition: "all 0.15s", textAlign: "left", width: "100%",
                 }}
               >
-                <span style={{ fontSize: 14 }}>{item.icon}</span>
+                <item.Icon size={14} />
                 {item.label}
               </button>
             ))}
@@ -601,7 +607,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
               <>
                 <p className="section-label" style={{ marginTop: 0 }}>Dirección de entrega</p>
                 <div className="info-box info-box--info">
-                  <span className="info-box__icon">📍</span>
+                  <span className="info-box__icon"><MapPin size={14} /></span>
                   <span className="info-box__text">{pedido.direccion_entrega || "—"}</span>
                 </div>
                 {pedido.direccion_entrega && (
@@ -620,7 +626,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   <>
                     <p className="section-label">Indicaciones del cliente</p>
                     <div className="info-box">
-                      <span className="info-box__icon">🧭</span>
+                      <span className="info-box__icon"><Navigation size={14} /></span>
                       <span className="info-box__text">{pedido.indicaciones_cliente}</span>
                     </div>
                   </>
@@ -629,7 +635,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   <>
                     <p className="section-label">Observaciones de la entrega</p>
                     <div className="info-box info-box--warn">
-                      <span className="info-box__icon">📝</span>
+                      <span className="info-box__icon"><PenLine size={14} /></span>
                       <span className="info-box__text">{pedido.obs_domicilio}</span>
                     </div>
                   </>
@@ -711,19 +717,19 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
 
                 <p className="section-label">Total a cobrar</p>
                 <div className="info-box">
-                  <span className="info-box__icon">💰</span>
+                  <span className="info-box__icon"><Banknote size={14} /></span>
                   <span className="info-box__text" style={{ fontWeight: 800 }}>{fmt(pedido.total)}</span>
                 </div>
 
                 {/* Mismo criterio que aplica el backend al marcar entregado */}
                 {bloqueoEntrega(pedido) ? (
                   <div className="info-box info-box--warn" style={{ marginTop: 12 }}>
-                    <span className="info-box__icon">⚠️</span>
+                    <span className="info-box__icon"><AlertTriangle size={14} /></span>
                     <span className="info-box__text">{bloqueoEntrega(pedido)}</span>
                   </div>
                 ) : (
                   <div className="info-box" style={{ marginTop: 12 }}>
-                    <span className="info-box__icon">✅</span>
+                    <span className="info-box__icon"><CheckCircle2 size={14} /></span>
                     <span className="info-box__text">
                       El cobro está registrado: se puede marcar como entregado.
                     </span>
@@ -796,7 +802,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   </>
                 ) : (
                   <div className="info-box info-box--warn">
-                    <span className="info-box__icon">⚠️</span>
+                    <span className="info-box__icon"><AlertTriangle size={14} /></span>
                     <span className="info-box__text">Sin domiciliario asignado.</span>
                   </div>
                 )}
@@ -827,20 +833,13 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
         {/* Footer */}
         <div className="modal-footer">
           <button className="btn-ghost" onClick={onClose}>Cerrar</button>
-          <button
-            className="btn-cancel"
-            style={{ background: "#e3f2fd", color: "#1565c0", border: "1px solid #90caf9" }}
-            onClick={() => { onClose(); navigate(`/admin/chat/${pedido.id}`); }}
-          >
-            💬 Chat
-          </button>
           {activo && (
             <>
-              <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }}>
-                📝 Observaciones
+              <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <PenLine size={14} /> Observaciones
               </button>
-              <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }}>
-                🛵 Reasignar
+              <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Bike size={14} /> Reasignar
               </button>
             </>
           )}
@@ -904,7 +903,7 @@ function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
               getValue={e => e.id}
               getLabel={e => `${e.nombre} ${e.apellidos}${e.id === pedido.idEmpleado ? " (actual)" : ""}`}
               placeholder="Seleccione…"
-              searchPlaceholder="🔍 Buscar domiciliario…"
+              searchPlaceholder="Buscar domiciliario…"
             />
             {error && <p className="field-error">{error}</p>}
           </div>
@@ -994,7 +993,7 @@ function HistorialDomiciliario({ domicilios, empleados, onDesactivar }) {
   if (grupos.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-state__icon">🛵</div>
+        <div className="empty-state__icon" style={{ color: "#d4d4d4", display: "flex", justifyContent: "center" }}><Bike size={40} /></div>
         <p className="empty-state__text">No hay domicilios asignados a empleados.</p>
       </div>
     );
@@ -1020,8 +1019,8 @@ function HistorialDomiciliario({ domicilios, empleados, onDesactivar }) {
               <div className="hist-emp-stats">
                 <span className="hist-stat hist-stat--total">Total: {total}</span>
                 <span className="hist-stat hist-stat--active">Pendientes: {activos}</span>
-                {enCamino   > 0 && <span className="hist-stat hist-stat--camino">🛵 {enCamino}</span>}
-                {entregados > 0 && <span className="hist-stat hist-stat--entregado">✓ {entregados}</span>}
+                {enCamino   > 0 && <span className="hist-stat hist-stat--camino" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Bike size={11} />{enCamino}</span>}
+                {entregados > 0 && <span className="hist-stat hist-stat--entregado" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Check size={11} />{entregados}</span>}
               </div>
               {/* ── Botón desactivar con advertencia si tiene activos ── */}
               {onDesactivar && (
@@ -1036,14 +1035,15 @@ function HistorialDomiciliario({ domicilios, empleados, onDesactivar }) {
                   }}
                   onClick={e => { e.stopPropagation(); onDesactivar(emp, pedidos.filter(p => !["Entregado", "Cancelado"].includes(p.estado))); }}
                 >
-                  {activos > 0 ? "⚠️" : "🚫"}
+                  {activos > 0 ? <AlertTriangle size={14} /> : <Ban size={14} />}
                 </button>
               )}
               <span style={{
                 color: "#9e9e9e", fontSize: 16,
                 transform: abiertos[emp.id] ? "rotate(90deg)" : "none",
                 transition: "transform 0.2s",
-              }}>›</span>
+                display: "flex",
+              }}><ChevronRight size={16} /></span>
             </div>
           </div>
 
@@ -1310,24 +1310,24 @@ export default function GestionDomicilios() {
         {/* ── Stats ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
           {[
-            { label: "Total domicilios", val: totalDom,   color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "🛵" },
-            { label: "Asignados",        val: conAsignar, color: "#1565c0", bg: "#e3f2fd", border: "#90caf9", icon: "📌" },
-            { label: "En camino",        val: enCamino,   color: "#6a1b9a", bg: "#f3e5f5", border: "#ce93d8", icon: "🚴" },
-            { label: "Entregados",       val: entregados, color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "✅" },
+            { label: "Total domicilios", val: totalDom,   color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", Icon: Truck },
+            { label: "Asignados",        val: conAsignar, color: "#1565c0", bg: "#e3f2fd", border: "#90caf9", Icon: MapPin },
+            { label: "En camino",        val: enCamino,   color: "#6a1b9a", bg: "#f3e5f5", border: "#ce93d8", Icon: Bike },
+            { label: "Entregados",       val: entregados, color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", Icon: CheckCircle2 },
             {
               label: "Sin asignar",
               val: sinAsignar,
               color:  sinAsignar > 0 ? "#c62828" : "#9e9e9e",
               bg:     sinAsignar > 0 ? "#ffebee" : "#fafafa",
               border: sinAsignar > 0 ? "#ef9a9a" : "#e0e0e0",
-              icon:   sinAsignar > 0 ? "⚠️" : "—",
+              Icon:   AlertTriangle,
             },
           ].map(s => (
             <div key={s.label} style={{
               background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 12,
               padding: "14px 16px", display: "flex", alignItems: "center", gap: 12,
             }}>
-              <span style={{ fontSize: 24 }}>{s.icon}</span>
+              <s.Icon size={24} strokeWidth={1.5} style={{ color: s.color, flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: s.color, fontFamily: "var(--font-head)", lineHeight: 1 }}>{s.val}</div>
                 <div style={{ fontSize: 11, color: s.color, marginTop: 3, fontWeight: 600 }}>{s.label}</div>
@@ -1339,8 +1339,8 @@ export default function GestionDomicilios() {
         {/* ── Tabs ── */}
         <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
           {[
-            { key: "tabla",     label: "📋 Lista de domicilios" },
-            { key: "historial", label: "📊 Historial por domiciliario" },
+            { key: "tabla",     label: "Lista de domicilios",       Icon: ClipboardList },
+            { key: "historial", label: "Historial por domiciliario", Icon: BarChart2 },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding: "9px 18px", borderRadius: "10px 10px 0 0", border: "none",
@@ -1349,7 +1349,8 @@ export default function GestionDomicilios() {
               color: tab === t.key ? "#2e7d32" : "#9e9e9e", cursor: "pointer",
               borderBottom: tab === t.key ? "3px solid #2e7d32" : "3px solid transparent",
               transition: "all 0.15s",
-            }}>{t.label}</button>
+              display: "flex", alignItems: "center", gap: 6,
+            }}><t.Icon size={14} />{t.label}</button>
           ))}
         </div>
 
@@ -1358,7 +1359,7 @@ export default function GestionDomicilios() {
           <>
             <div className="toolbar">
               <div className="search-wrap">
-                <span className="search-icon">🔍</span>
+                <span className="search-icon"><Search size={14} /></span>
                 <input
                   type="text"
                   className="search-input"
@@ -1368,8 +1369,8 @@ export default function GestionDomicilios() {
                 />
               </div>
 
-              <button className="btn-action" onClick={() => exportToCsv(filtered)}>
-                📄 Exportar CSV
+              <button className="btn-action" onClick={() => exportToCsv(filtered)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <FileText size={14} /> Exportar CSV
               </button>
 
               <div ref={filterRef} style={{ position: "relative" }}>
@@ -1415,7 +1416,7 @@ export default function GestionDomicilios() {
                 className="info-box"
                 style={{ marginBottom: 12, background: "#fff8e1", borderColor: "#ffe9a8" }}
               >
-                <span className="info-box__icon">⏳</span>
+                <span className="info-box__icon"><Clock size={14} /></span>
                 <span className="info-box__text">
                   {ocultosNoListos === 1
                     ? "Hay 1 domicilio en espera: su pedido todavía no está listo."
@@ -1448,7 +1449,7 @@ export default function GestionDomicilios() {
                     ) : errorCarga ? (
                       <tr><td colSpan={10}>
                         <div className="empty-state">
-                          <div className="empty-state__icon">⚠️</div>
+                          <div className="empty-state__icon" style={{ color: "#ef9a9a", display: "flex", justifyContent: "center" }}><AlertTriangle size={40} /></div>
                           <p className="empty-state__text">{errorCarga}</p>
                           <button className="btn-ghost" style={{ marginTop: 10 }} onClick={cargarDatos}>
                             Reintentar
@@ -1458,7 +1459,9 @@ export default function GestionDomicilios() {
                     ) : paged.length === 0 ? (
                       <tr><td colSpan={10}>
                         <div className="empty-state">
-                          <div className="empty-state__icon">{hasFilter || search ? "🔍" : "🛵"}</div>
+                          <div className="empty-state__icon" style={{ color: "#d4d4d4", display: "flex", justifyContent: "center" }}>
+                            {hasFilter || search ? <Search size={40} /> : <Bike size={40} />}
+                          </div>
                           <p className="empty-state__text">
                             {hasFilter || search ? "Sin domicilios que coincidan." : "No hay domicilios registrados."}
                           </p>
@@ -1502,8 +1505,8 @@ export default function GestionDomicilios() {
                               {ped.direccion_entrega || "—"}
                             </div>
                             {ped.obs_domicilio && (
-                              <div className="dir-sub" title={ped.obs_domicilio}>
-                                📝 {ped.obs_domicilio.length > 30
+                              <div className="dir-sub" title={ped.obs_domicilio} style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                                <PenLine size={11} style={{ flexShrink: 0, marginTop: 1 }} />{ped.obs_domicilio.length > 30
                                   ? ped.obs_domicilio.slice(0, 30) + "…"
                                   : ped.obs_domicilio}
                               </div>
@@ -1512,7 +1515,7 @@ export default function GestionDomicilios() {
                           <td data-label="Domiciliario">
                             {emp ? (
                               <div>
-                                <div className="emp-name">🛵 {emp.nombre} {emp.apellidos}</div>
+                                <div className="emp-name" style={{ display: "flex", alignItems: "center", gap: 5 }}><Bike size={12} />{emp.nombre} {emp.apellidos}</div>
                                 <div style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>
                                   {pedidosPorEmpleado[emp.id] || 0} pedido
                                   {pedidosPorEmpleado[emp.id] === 1 ? "" : "s"}
@@ -1524,10 +1527,10 @@ export default function GestionDomicilios() {
                           </td>
                           <td data-label="Fechas">
                             <div className="date-col">
-                              <span className="date-row date-row--pedido">📅 {fmtFecha(ped.fecha_pedido)}</span>
+                              <span className="date-row date-row--pedido" style={{ display: "flex", alignItems: "center", gap: 3 }}><Calendar size={11} />{fmtFecha(ped.fecha_pedido)}</span>
                               {ped.fecha_entrega_real
-                                ? <span className="date-row date-row--entrega">✅ {fmtFecha(ped.fecha_entrega_real)}</span>
-                                : <span className="date-row date-row--pendiente">⏳ Pendiente</span>
+                                ? <span className="date-row date-row--entrega" style={{ display: "flex", alignItems: "center", gap: 3 }}><CheckCircle2 size={11} />{fmtFecha(ped.fecha_entrega_real)}</span>
+                                : <span className="date-row date-row--pendiente" style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={11} />Pendiente</span>
                               }
                             </div>
                           </td>
@@ -1565,12 +1568,12 @@ export default function GestionDomicilios() {
                                 className="act-btn act-btn--view"
                                 data-tooltip="Ver detalle del pedido"
                                 onClick={() => setModal({ type: "ver", pedido: ped })}
-                              >👁</button>
+                              ><Eye size={14} /></button>
                               <button
                                 className="act-btn act-btn--map"
                                 data-tooltip="Ver en Google Maps"
                                 onClick={() => window.open(mapToGoogleMaps(ped.direccion_entrega, ped.municipio_entrega, ped.departamento_entrega), "_blank", "noopener")}
-                              >🌍</button>
+                              ><Globe size={14} /></button>
                               {esPagoEfectivo(ped.metodo_pago) &&
                                 !["efectivo_recibido", "no_recibido", "pagado_completo"].includes(ped.estado_pago) &&
                                 esDomicilioActivo(ped.estadoId) && (
@@ -1579,7 +1582,7 @@ export default function GestionDomicilios() {
                                   data-tooltip="Registrar cobro en efectivo"
                                   onClick={() => setModal({ type: "registrarCobro", pedido: ped })}
                                   style={{ background: "#fff8e1", color: "#f9a825" }}
-                                >💵</button>
+                                ><Banknote size={14} /></button>
                               )}
                               {transicionesDom(ped.estadoId).length > 0 && (
                                 <button
@@ -1587,20 +1590,20 @@ export default function GestionDomicilios() {
                                   data-tooltip="Cambiar estado del pedido"
                                   onClick={() => setModal({ type: "cambiarEstado", pedido: ped })}
                                   style={{ background: "#e8f5e9", color: "#2e7d32" }}
-                                >⚡</button>
+                                ><Zap size={14} /></button>
                               )}
                               <button
                                 className="act-btn act-btn--reasignar"
                                 data-tooltip="Reasignar domiciliario"
                                 onClick={() => abrirReasignar(ped)}
                                 style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
-                              >🛵</button>
+                              ><Bike size={14} /></button>
                               <button
                                 className="act-btn act-btn--obs"
                                 data-tooltip="Agregar observación"
                                 onClick={() => abrirObservaciones(ped)}
                                 style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
-                              >📝</button>
+                              ><PenLine size={14} /></button>
                             </div>
                           </td>
                         </tr>
