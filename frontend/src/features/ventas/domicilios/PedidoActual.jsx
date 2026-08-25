@@ -1,38 +1,47 @@
 import { useState, useEffect, useCallback } from "react";
 import { getUser } from "../../../services/authService";
 import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService";
-import { subirImagenCloudinary } from "../../../utils/cloudinary";
-import { cobroEfectivoPendiente } from "./estadosDomicilio";
+import { ESTADO_DOMICILIO, cobroEfectivoPendiente, esDomicilioActivo, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
 import {
-  Package, CheckCircle2, Truck, Home, XCircle, MapPin, CreditCard,
-  Camera, KeyRound, Clock, X, Check, Navigation, Map, Banknote,
+  Package, CheckCircle2, Truck, XCircle, MapPin, CreditCard,
+  Clock, X, Navigation, Map, Banknote,
 } from "lucide-react";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const ESTADO_ORDEN = ["En camino", "En proceso", "Confirmado", "Asignado", "Pendiente"];
+// Cual es "el pedido actual" cuando hay varios: primero el que ya va en ruta.
+const ESTADO_ORDEN = [
+  ESTADO_DOMICILIO.EN_CAMINO,
+  ESTADO_DOMICILIO.ASIGNADO,
+  ESTADO_DOMICILIO.PENDIENTE,
+];
 
 const ESTADO_INFO = {
+  "Pendiente":  { color: "#f9a825", bg: "#fff8e1", icon: <Clock size={14} /> },
   "Asignado":   { color: "#2e7d32", bg: "#e8f5e9", icon: <Package size={14} /> },
-  "Confirmado": { color: "#2e7d32", bg: "#e8f5e9", icon: <CheckCircle2 size={14} /> },
-  "En proceso": { color: "#1565c0", bg: "#e3f2fd", icon: <Home size={14} /> },
   "En camino":  { color: "#8e24aa", bg: "#f3e5f5", icon: <Truck size={14} /> },
   "Entregado":  { color: "#2e7d32", bg: "#e8f5e9", icon: <CheckCircle2 size={14} /> },
+  "Cancelado":  { color: "#c62828", bg: "#ffebee", icon: <XCircle size={14} /> },
 };
 
-// "Entregado" (8) abre el modal de evidencia; el resto cambia de estado directamente
-const ACCIONES = {
-  "Asignado":   [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#e65100", bg: "#fff3e0" }],
-  "Confirmado": [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#1565c0", bg: "#e3f2fd" }],
-  "Pendiente":  [{ valor: 13, label: "Llegué al local",  icon: <Home size={18} />,         color: "#1565c0", bg: "#e3f2fd" }],
-  "En proceso": [{ valor: 9,  label: "Iniciar entrega",  icon: <Truck size={18} />,        color: "#8e24aa", bg: "#f3e5f5" }],
-  "En camino":  [
-    { valor: 8,  label: "Entregado",   icon: <CheckCircle2 size={18} />, color: "#2e7d32", bg: "#e8f5e9", evidencia: true },
-    { valor: 5,  label: "Cancelar",    icon: <XCircle size={18} />,      color: "#c62828", bg: "#ffebee", secondary: true },
-  ],
+/* Los pasos que puede dar el repartidor salen de la fuente única de estados.
+   Aquí había una tabla propia con un paso "Llegué al local" que mandaba el
+   estado 13: ese número es "En producción" de una venta, no un estado de
+   domicilio, así que era un paso de más que además no correspondía. El
+   recorrido real es Asignado → En camino → Entregado (o Cancelado). */
+const ESTILO_ACCION = {
+  [ESTADO_DOMICILIO.EN_CAMINO]: { label: "Iniciar entrega", icon: <Truck size={18} />,        color: "#8e24aa", bg: "#f3e5f5" },
+  [ESTADO_DOMICILIO.ENTREGADO]: { label: "Entregado",       icon: <CheckCircle2 size={18} />, color: "#2e7d32", bg: "#e8f5e9" },
+  [ESTADO_DOMICILIO.CANCELADO]: { label: "Cancelar",        icon: <XCircle size={18} />,      color: "#c62828", bg: "#ffebee", secondary: true },
 };
+
+const accionesDe = (estadoId) =>
+  transicionesDom(estadoId, true).map(tr => ({
+    valor: tr.id,
+    ...(ESTILO_ACCION[tr.id] || { label: tr.label, icon: <Truck size={18} />, color: "#616161", bg: "#f5f5f5" }),
+  }));
 
 const ESTADO_PAGO_INFO = {
   pendiente:             { label: "Pago pendiente",         color: "#757575", bg: "#f5f5f5" },
@@ -176,207 +185,6 @@ function CobrarEfectivoModal({ pedido, entregarDespues, onClose, onConfirm }) {
   );
 }
 
-function EvidenciaModal({ pedido, onClose, onConfirm }) {
-  const esTransferencia = (pedido.metodo_pago || "").toLowerCase().includes("transfer");
-
-  const tabsDisponibles = [
-    { id: "otp",         label: "Código OTP",   Icon: KeyRound },
-    { id: "foto",        label: "Foto entrega", Icon: Camera },
-    ...(esTransferencia ? [{ id: "comprobante", label: "Comprobante", Icon: CreditCard }] : []),
-  ];
-
-  const [tab,              setTab]              = useState("otp");
-  const [fotoFile,         setFotoFile]         = useState(null);
-  const [fotoPreview,      setFotoPreview]      = useState(null);
-  const [comprobanteFile,  setComprobanteFile]  = useState(null);
-  const [comprobantePreview, setComprobantePreview] = useState(null);
-  const [uploading,        setUploading]        = useState(false);
-  const [error,            setError]            = useState(null);
-
-  // Código real generado por el backend (aleatorio). Antes se calculaba con
-  // una fórmula local que ya no coincide con el servidor.
-  const otp = pedido.otp;
-
-  const handleFileChange = (setter, previewSetter) => (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setter(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => previewSetter(ev.target.result);
-    reader.readAsDataURL(file);
-  };
-
-  const confirmDisabled = uploading
-    || (tab === "foto"        && !fotoFile)
-    || (tab === "comprobante" && !comprobanteFile);
-
-  const handleConfirm = async () => {
-    // Si es transferencia y no subió comprobante, bloquear
-    if (esTransferencia && !comprobanteFile && tab !== "comprobante") {
-      setError("⚠️ Este pedido fue pagado por transferencia. Debes subir el comprobante de pago antes de marcar como entregado.");
-      return;
-    }
-    setError(null);
-    setUploading(true);
-    try {
-      let partes = [];
-
-      if (tab === "otp") {
-        partes.push(`Entrega confirmada con OTP ${otp}.`);
-      } else if (tab === "foto" && fotoFile) {
-        const url = await subirImagenCloudinary(fotoFile);
-        partes.push(`Evidencia fotográfica: ${url}`);
-      } else if (tab === "comprobante" && comprobanteFile) {
-        const url = await subirImagenCloudinary(comprobanteFile);
-        partes.push(`Comprobante de pago (transferencia): ${url}`);
-      }
-
-      // Si además hay comprobante pendiente de otro tab
-      if (esTransferencia && comprobanteFile && tab !== "comprobante") {
-        const url = await subirImagenCloudinary(comprobanteFile);
-        partes.push(`Comprobante de pago (transferencia): ${url}`);
-      }
-
-      await onConfirm(partes.join(" | "));
-    } catch (e) {
-      setError(e.message || "Error al registrar evidencia");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div style={{
-        background: "#fff", borderRadius: 16, padding: "24px 28px",
-        width: "min(460px, 95vw)", boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
-      }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Evidencia de entrega</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", display: "flex", alignItems: "center" }}><X size={18} /></button>
-        </div>
-
-        {/* Aviso transferencia */}
-        {esTransferencia && (
-          <div style={{
-            marginBottom: 16, padding: "10px 14px", borderRadius: 10,
-            background: "#fff8e1", border: "1.5px solid #ffe082",
-            fontSize: 12, color: "#f57f17", fontWeight: 600,
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <CreditCard size={14} style={{ flexShrink: 0 }} /> Pago por transferencia — debes subir el comprobante en la pestaña <strong>Comprobante</strong>.
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {tabsDisponibles.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => setTab(id)} style={{
-              flex: 1, padding: "9px 6px", borderRadius: 10, cursor: "pointer",
-              border: tab === id ? "2px solid #2e7d32" : "1.5px solid #e0e0e0",
-              background: tab === id ? "#e8f5e9" : "#fafafa",
-              color: tab === id ? "#2e7d32" : "#616161",
-              fontWeight: tab === id ? 700 : 400, fontSize: 12,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-            }}><Icon size={13} />{label}</button>
-          ))}
-        </div>
-
-        {/* Tab OTP */}
-        {tab === "otp" && (
-          <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
-            <div style={{ fontSize: 12, color: "#9e9e9e", marginBottom: 12 }}>
-              Muestra este código al cliente para confirmar la entrega
-            </div>
-            {otp ? (
-              <>
-                <div style={{
-                  fontSize: 52, fontWeight: 900, letterSpacing: 8,
-                  color: "#1565c0", background: "#e3f2fd",
-                  borderRadius: 16, padding: "20px 24px", display: "inline-block",
-                  fontFamily: "monospace",
-                }}>
-                  {otp}
-                </div>
-                <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 12 }}>
-                  El cliente debe confirmar este código verbalmente.
-                </div>
-              </>
-            ) : (
-              <div style={{
-                fontSize: 13, color: "#c62828", background: "#ffebee",
-                border: "1px solid #ef9a9a", borderRadius: 12, padding: "14px 16px",
-              }}>
-                Este domicilio todavía no tiene código de entrega asignado.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab Foto entrega */}
-        {tab === "foto" && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 10, padding: 20, borderRadius: 12, cursor: "pointer",
-              border: "2px dashed #e0e0e0", background: "#fafafa",
-            }}>
-              {fotoPreview
-                ? <img src={fotoPreview} alt="Evidencia" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8 }} />
-                : <><Camera size={32} strokeWidth={1.5} style={{ color: "#bdbdbd" }} /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Tomar o seleccionar foto de entrega</span></>
-              }
-              <input type="file" accept="image/*" capture="environment"
-                onChange={handleFileChange(setFotoFile, setFotoPreview)} style={{ display: "none" }} />
-            </label>
-          </div>
-        )}
-
-        {/* Tab Comprobante */}
-        {tab === "comprobante" && (
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ fontSize: 12, color: "#616161", marginBottom: 10 }}>
-              Sube la foto o captura del comprobante de transferencia que te mostró el cliente.
-            </p>
-            <label style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 10, padding: 20, borderRadius: 12, cursor: "pointer",
-              border: `2px dashed ${comprobanteFile ? "#2e7d32" : "#e0e0e0"}`,
-              background: comprobanteFile ? "#f1f8f1" : "#fafafa",
-            }}>
-              {comprobantePreview
-                ? <img src={comprobantePreview} alt="Comprobante" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8 }} />
-                : <><CreditCard size={32} strokeWidth={1.5} style={{ color: "#bdbdbd" }} /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar comprobante de pago</span></>
-              }
-              <input type="file" accept="image/*,application/pdf"
-                onChange={handleFileChange(setComprobanteFile, setComprobantePreview)} style={{ display: "none" }} />
-            </label>
-            {comprobanteFile && (
-              <p style={{ fontSize: 11, color: "#2e7d32", marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><Check size={12} /> Comprobante listo para subir</p>
-            )}
-          </div>
-        )}
-
-        {error && <div style={{ color: "#c62828", fontSize: 13, marginBottom: 12, padding: "8px 12px", background: "#ffebee", borderRadius: 8 }}>{error}</div>}
-
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-          <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", color: "#555", fontSize: 13, cursor: "pointer" }}>
-            Cancelar
-          </button>
-          <button onClick={handleConfirm} disabled={confirmDisabled}
-            style={{
-              padding: "9px 20px", borderRadius: 8, border: "none",
-              background: confirmDisabled ? "#a5d6a7" : "#2e7d32",
-              color: "#fff", fontSize: 13, fontWeight: 700,
-              cursor: confirmDisabled ? "not-allowed" : "pointer",
-            }}>
-            {uploading ? "Registrando…" : "Confirmar entrega"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Toast({ toast }) {
   if (!toast) return null;
   return (
@@ -394,7 +202,6 @@ export default function PedidoActual() {
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
   const [confirmando,    setConfirmando]    = useState(null);
-  const [evidenciaOpen,  setEvidenciaOpen]  = useState(false);
   const [cobrandoOpen,   setCobrandoOpen]   = useState(false);
 
   const showToast = (msg, type = "success") => {
@@ -407,10 +214,8 @@ export default function PedidoActual() {
     setLoading(true);
     try {
       const doms = await getDomicilios({ porPagina: 100, idEmpleado: user.id });
-      const activos = (doms.domicilios || []).filter(d =>
-        ["En camino", "En proceso", "Confirmado", "Asignado", "Pendiente"].includes(d.estado)
-      );
-      activos.sort((a, b) => ESTADO_ORDEN.indexOf(a.estado) - ESTADO_ORDEN.indexOf(b.estado));
+      const activos = (doms.domicilios || []).filter(d => esDomicilioActivo(d.estadoId));
+      activos.sort((a, b) => ESTADO_ORDEN.indexOf(a.estadoId) - ESTADO_ORDEN.indexOf(b.estadoId));
 
       if (activos.length === 0) {
         setPedido(null);
@@ -430,18 +235,14 @@ export default function PedidoActual() {
 
   const handleAccion = async (accion) => {
     if (accion.secondary) { setConfirmando(accion); return; }
-    if (accion.evidencia) {
-      const esEfectivo = !(pedido.metodo_pago || "").toLowerCase().includes("transfer");
-      if (esEfectivo) { setCobrandoOpen("entregar"); return; }
-      setEvidenciaOpen(true);
+    // Lo único que hay que resolver antes de entregar es la plata en mano: el
+    // backend no acepta la entrega sin el cobro registrado. La evidencia (OTP,
+    // foto, comprobante) ya no se pide.
+    if (accion.valor === ESTADO_DOMICILIO.ENTREGADO && cobroEfectivoPendiente(pedido)) {
+      setCobrandoOpen("entregar");
       return;
     }
     await ejecutarCambio(accion.valor, accion.label);
-  };
-
-  const handleEvidenciaConfirm = async (observacion) => {
-    setEvidenciaOpen(false);
-    await ejecutarCambio(8, "Entregado", observacion);
   };
 
   /* Viniendo del botón de Entregado, el cobro cierra la entrega en el mismo
@@ -457,7 +258,7 @@ export default function PedidoActual() {
     }
     setCobrandoOpen(false);
     if (cerrarEntrega) {
-      await ejecutarCambio(8, "Entregado");
+      await ejecutarCambio(ESTADO_DOMICILIO.ENTREGADO, "Entregado");
       return;
     }
     showToast(recibido ? "Cobro registrado" : "Se registró que no se pudo cobrar");
@@ -490,7 +291,7 @@ export default function PedidoActual() {
   };
 
   const estadoInfo = pedido ? (ESTADO_INFO[pedido.estado] || ESTADO_INFO["Asignado"]) : null;
-  const acciones   = pedido ? (ACCIONES[pedido.estado] || []) : [];
+  const acciones   = pedido ? accionesDe(pedido.estadoId) : [];
 
   return (
     <div className="page-wrapper">
@@ -694,15 +495,6 @@ export default function PedidoActual() {
           entregarDespues={cobrandoOpen === "entregar"}
           onClose={() => setCobrandoOpen(false)}
           onConfirm={handleCobrarEfectivo}
-        />
-      )}
-
-      {/* ── Modal evidencia (Transferencia) ── */}
-      {evidenciaOpen && pedido && (
-        <EvidenciaModal
-          pedido={pedido}
-          onClose={() => setEvidenciaOpen(false)}
-          onConfirm={handleEvidenciaConfirm}
         />
       )}
 

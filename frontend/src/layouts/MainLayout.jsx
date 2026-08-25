@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import Navbar from "../shared/components/Navbar";
 import Sidebar from "../shared/components/Sidebar";
 import { getUser } from "../services/authService";
-import { esRolRepartidor, esRutaDeRepartidor } from "../utils/roles";
+import { esRolRepartidor, esRutaDeRepartidor, INICIO_REPARTIDOR } from "../utils/roles";
 import "../App.css";
 
 const MainLayout = () => {
@@ -19,7 +19,7 @@ const MainLayout = () => {
   // dependía de que a su rol no le hubieran dado los privilegios de gestión;
   // con escribir la URL a mano se colaba en pedidos o domicilios ajenos.
   if (esRolRepartidor(getUser()?.rol) && !esRutaDeRepartidor(location.pathname)) {
-    return <Navigate to="/admin/mi-dashboard" replace />;
+    return <Navigate to={INICIO_REPARTIDOR} replace />;
   }
 
   return (

@@ -27,8 +27,6 @@ const adaptDomicilio = (d) => {
     comprobante_pago:   d.comprobante_pago    || null,
     productos:          d.productos           || [],
     estado_pago:        d.estado_pago        || null,
-    // Código de entrega generado por el backend (aleatorio, no calculable).
-    otp:                d.otp                 || null,
     domicilio:          true,
     venta_estado_id:    d.venta_estado ?? null,
     cliente: {
@@ -86,13 +84,6 @@ export const actualizarDomicilio = async (id, data) => {
   return apiFetch(`/domicilios/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
-  });
-};
-
-export const verificarOTP = async (id, codigo) => {
-  return apiFetch(`/domicilios/${id}/verificar-otp`, {
-    method: "POST",
-    body: JSON.stringify({ codigo }),
   });
 };
 

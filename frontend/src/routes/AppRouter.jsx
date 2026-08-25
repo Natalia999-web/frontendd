@@ -59,7 +59,7 @@ import SinAcceso from "../pages/SinAcceso";
 import ProtectedRoute from "../components/ProtectedRoute";
 import PrivilegioRoute from "../components/PrivilegioRoute";
 import RepartidorRoute from "../components/RepartidorRoute";
-import { esRolRepartidor } from "../utils/roles";
+import { esRolRepartidor, INICIO_REPARTIDOR } from "../utils/roles";
 import { initUsers } from "../services/userService";
 import { getUser } from "../services/authService";
 
@@ -82,7 +82,7 @@ function CocinaRoute() {
 function DashboardIndex() {
   const user = getUser();
   if (esRolRepartidor(user?.rol)) {
-    return <Navigate to="/admin/mi-dashboard" replace />;
+    return <Navigate to={INICIO_REPARTIDOR} replace />;
   }
   if (user?.rol?.toLowerCase() === "cocinero") {
     return <Navigate to="/admin/cocina" replace />;

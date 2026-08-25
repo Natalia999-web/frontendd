@@ -23,10 +23,14 @@ export const esRolRepartidor = (rol) => {
  * Fuera de aquí no tiene nada que ver — ni pedidos ajenos, ni los domicilios
  * de sus compañeros.
  */
+/** Adonde cae el repartidor al entrar: sus entregas activas, que es con lo
+ *  que arranca el turno. La lista abre filtrada en "Activos". */
+export const INICIO_REPARTIDOR = "/admin/mis-entregas";
+
 export const RUTAS_REPARTIDOR = [
+  INICIO_REPARTIDOR,
   "/admin/mi-dashboard",
   "/admin/pedido-actual",
-  "/admin/mis-entregas",
   "/admin/historial-entregas",
   "/admin/mis-ganancias",
   "/admin/mis-notificaciones",

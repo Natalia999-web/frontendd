@@ -9,7 +9,7 @@ import {
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
-import { esRolRepartidor } from "../../../utils/roles.js";
+import { esRolRepartidor, INICIO_REPARTIDOR } from "../../../utils/roles.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
@@ -1226,7 +1226,7 @@ export default function GestionDomicilios() {
 
   // Domiciliarios solo pueden ver su propio panel
   if (esRolRepartidor(getUser()?.rol)) {
-    return <Navigate to="/admin/mi-dashboard" replace />;
+    return <Navigate to={INICIO_REPARTIDOR} replace />;
   }
 
   return (

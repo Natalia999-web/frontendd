@@ -90,9 +90,9 @@ const repartidorMenuItems = [
     section: "Mi Trabajo",
     Icon: Truck,
     items: [
-      { label: "Mi Dashboard",   Icon: LayoutDashboard, link: "/admin/mi-dashboard" },
-      { label: "Pedido Actual",  Icon: Package,         link: "/admin/pedido-actual" },
       { label: "Mis Entregas",   Icon: Navigation,      link: "/admin/mis-entregas" },
+      { label: "Pedido Actual",  Icon: Package,         link: "/admin/pedido-actual" },
+      { label: "Mi Dashboard",   Icon: LayoutDashboard, link: "/admin/mi-dashboard" },
       { label: "Historial",      Icon: History,         link: "/admin/historial-entregas" },
       { label: "Mis Ganancias",  Icon: Banknote,        link: "/admin/mis-ganancias" },
       { label: "Notificaciones", Icon: Bell,            link: "/admin/mis-notificaciones" },
