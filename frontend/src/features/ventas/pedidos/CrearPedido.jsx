@@ -4,6 +4,7 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
+import SaldoSlider from "../../../shared/components/SaldoSlider";
 import { getCreditoCliente } from "../../../services/devolucionesService.js";
 import "./Pedidos.css";
 
@@ -973,26 +974,16 @@ export default function CrearPedido({ onClose, onSave }) {
                       dejar el resto para el proximo pedido. */}
                   {usarCredito && (
                     <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "14px 16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>Cuánto se aplica a este pedido</span>
-                        <span style={{ fontSize: 18, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoAplicar)}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={creditoPct}
-                        onChange={e => setCreditoPct(Number(e.target.value))}
-                        aria-label="Parte del saldo a favor que se aplica al pedido"
-                        style={{ width: "100%", accentColor: "#2e7d32", cursor: "pointer" }}
+                      <p style={{ margin: "0 0 2px", fontSize: 12, color: "#666", fontWeight: 600 }}>
+                        Cuánto se aplica a este pedido
+                      </p>
+                      <SaldoSlider
+                        saldo={creditoCliente}
+                        maximo={creditoMaximo}
+                        porcentaje={creditoPct}
+                        onPorcentaje={setCreditoPct}
                       />
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9e9e9e", fontWeight: 600, marginTop: 2 }}>
-                        <span>$0</span>
-                        <span style={{ color: "#616161" }}>Le quedan {fmt(creditoCliente - creditoAplicar)}</span>
-                        <span>{fmt(creditoMaximo)}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", marginTop: 12, paddingTop: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", marginTop: 14, paddingTop: 12 }}>
                         <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del saldo</span>
                         <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
                       </div>
