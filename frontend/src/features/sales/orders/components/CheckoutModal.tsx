@@ -187,7 +187,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
       }).catch(() => {});
     }
 
-    onConfirm(paymentMethod, onBehalfOf, comprobante, usarCredito, {
+    // Con anticipo, el pedido se cobra por donde se pagó el anticipo: es el
+    // mismo dinero. Si lo cubre el crédito, el saldo se cobra al entregar y se
+    // deja en efectivo (una transferencia sin comprobante bloquea la entrega).
+    const metodoPedido = requiereAnticipo
+      ? (creditoCubreAnticipo ? 'efectivo' : anticipoMetodo || 'efectivo')
+      : paymentMethod;
+
+    onConfirm(metodoPedido, onBehalfOf, comprobante, usarCredito, {
       tieneDomicilio, address, municipio, departamento: orderDetails.departamento || 'Antioquia', date, time, observaciones,
     }, requiereAnticipo ? {
       requiere: true,
@@ -406,18 +413,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
             </div>
           </div>
 
-          {/* Método de pago */}
+          {/* Con anticipo el método se elige una sola vez, abajo: preguntarlo
+              aquí también obligaba a decidir dos veces lo mismo. */}
+          {!requiereAnticipo && (
           <div className="bg-white rounded-2xl border border-gray-100 px-3 py-3 space-y-2.5">
-            {/* Cuando hay anticipo, más abajo aparece otro selector de método:
-                cada uno indica a qué corresponde para no confundirlos. */}
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
               Método de pago del pedido
             </p>
-            {requiereAnticipo && (
-              <p className="text-[10px] font-bold text-gray-400 -mt-1">
-                El del anticipo se elige más abajo.
-              </p>
-            )}
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'digital',  icon: <CreditCard size={14} />, label: 'Transferencia' },
@@ -431,10 +433,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               ))}
             </div>
 
-            {/* Con anticipo, los datos bancarios y el comprobante se piden en el
-                bloque del anticipo: dos zonas de carga a la vez confundían al
-                cliente, que subía el archivo en una sola. */}
-            {paymentMethod === 'digital' && !requiereAnticipo && (
+            {paymentMethod === 'digital' && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">
@@ -470,6 +469,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               </div>
             )}
           </div>
+          )}
 
           {/* Anticipo obligatorio */}
           {requiereAnticipo && (

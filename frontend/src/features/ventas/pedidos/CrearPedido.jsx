@@ -325,6 +325,9 @@ export default function CrearPedido({ onClose, onSave }) {
   const totalFinal    = Math.max(0, total - creditoAplicar);
   const requiereAnticipo = totalFinal > UMBRAL_ANTICIPO;
   const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
+  // Con anticipo el método se elige una sola vez, en el bloque del anticipo, y de
+  // ahí sale el del pedido: es el mismo dinero.
+  const metodoPedido = requiereAnticipo ? form.anticipo_metodo : form.metodo_pago;
   const hayProductosSinStock = form.productosItems.some(
     p => !p.stockOk || p.cantidad > p.stockActual
   );
@@ -354,17 +357,21 @@ export default function CrearPedido({ onClose, onSave }) {
       }
     }
     if (s === 4) {
-      if (!form.metodo_pago) e.metodo_pago = "Selecciona un método de pago";
-      if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
-        e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
-      }
-      if (requiereAnticipo && !pagarTodo) {
+      // Con anticipo el método se elige una sola vez, en el bloque del anticipo:
+      // el selector del pedido no se muestra y no hay nada que validar arriba.
+      if (!requiereAnticipo) {
+        if (!form.metodo_pago) e.metodo_pago = "Selecciona un método de pago";
+        if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
+          e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
+        }
+      } else {
+        const queEs = pagarTodo ? "el pago" : "el anticipo";
         if (!form.anticipo_metodo)
-          e.anticipo_metodo = "Selecciona el método de pago del anticipo";
+          e.anticipo_metodo = `Selecciona el método de pago de ${queEs}`;
         if (form.anticipo_metodo === "Efectivo 💵" && !form.anticipo_efectivo)
-          e.anticipo_efectivo = "Debes confirmar que el anticipo fue recibido en efectivo";
+          e.anticipo_efectivo = `Debes confirmar que ${queEs} fue recibido en efectivo`;
         if (form.anticipo_metodo === "Transferencia 🏦" && !form.anticipo_comp_preview)
-          e.anticipo_comprobante = "Debes adjuntar el comprobante del anticipo";
+          e.anticipo_comprobante = `Debes adjuntar el comprobante de ${queEs}`;
       }
     }
     return e;
@@ -420,17 +427,14 @@ export default function CrearPedido({ onClose, onSave }) {
         telefono: cliente.telefono,
       },
       productosItems:    form.productosItems,
-      metodo_pago:       form.metodo_pago,
+      metodo_pago:       metodoPedido,
       comprobante:            comprobanteUrl,
       requiere_anticipo:      requiereAnticipo,
       anticipo_monto:         montoAnticipo,
-      anticipo_metodo_pago:   requiereAnticipo
-        ? (pagarTodo ? form.metodo_pago : form.anticipo_metodo)
-        : null,
-      anticipo_comprobante_url: pagarTodo ? comprobanteUrl : anticipoUrl,
+      anticipo_metodo_pago:   requiereAnticipo ? metodoPedido : null,
+      anticipo_comprobante_url: anticipoUrl,
       anticipo_registrado:    requiereAnticipo && (
-        pagarTodo ? true
-        : form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
+        form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
       ),
       domicilio:         form.domicilio,
       direccion_entrega: form.domicilio ? form.direccion_entrega : null,
@@ -751,19 +755,11 @@ export default function CrearPedido({ onClose, onSave }) {
             <div className="fade-in">
               <p className="section-label" style={{ textTransform: "none", marginTop: 0, fontSize: 16 }}>4. Método de Pago</p>
               
+              {!requiereAnticipo && (
               <div className="field-wrap">
-                {/* Antes decía "Seleccione una opción", igual que el selector del
-                    anticipo de más abajo: dos bloques idénticos y no se sabía
-                    cuál era cuál. Ahora cada uno dice a qué corresponde. */}
                 <label className="field-label">
                   Método de pago del pedido <span className="required">*</span>
                 </label>
-                {requiereAnticipo && (
-                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8d6e63" }}>
-                    Es el método con el que se cobrará el pedido. El del anticipo se
-                    elige más abajo.
-                  </p>
-                )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                   {METODOS_PAGO.map(m => (
                     <button
@@ -785,8 +781,9 @@ export default function CrearPedido({ onClose, onSave }) {
                 </div>
                 {errors.metodo_pago && <span className="field-error" style={{ marginTop: 8 }}>{errors.metodo_pago}</span>}
               </div>
+              )}
 
-              {form.metodo_pago === "Transferencia 🏦" && (
+              {!requiereAnticipo && form.metodo_pago === "Transferencia 🏦" && (
                 <div className="fade-in" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
 
                   {/* Datos de la cuenta */}
@@ -866,13 +863,12 @@ export default function CrearPedido({ onClose, onSave }) {
                     <span style={{ fontSize: 20, fontWeight: 900, color: "#f57f17" }}>{fmt(montoAnticipo)}</span>
                   </div>
 
-                  {pagarTodo ? (
-                    <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#2e7d32", fontWeight: 600 }}>
-                      ✅ El total completo queda registrado como anticipo — usa el mismo método de pago principal.
-                    </div>
-                  ) : (
                   <>
-                  <label className="field-label">Método de pago del anticipo <span className="required">*</span></label>
+                  {/* Aquí se elige el método una sola vez, se pague el 50% o el
+                      total: de aquí sale también el método del pedido. */}
+                  <label className="field-label">
+                    {pagarTodo ? "Método de pago" : "Método de pago del anticipo"} <span className="required">*</span>
+                  </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
                     {["Efectivo 💵", "Transferencia 🏦"].map(m => (
                       <button
@@ -903,7 +899,7 @@ export default function CrearPedido({ onClose, onSave }) {
                           style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
                         />
                         <span style={{ fontSize: 13, color: form.anticipo_efectivo ? "#1b5e20" : "#555", fontWeight: form.anticipo_efectivo ? 700 : 400 }}>
-                          Confirmo que recibí el anticipo de <strong>{fmt(montoAnticipo)}</strong> en efectivo
+                          Confirmo que recibí {pagarTodo ? "el pago" : "el anticipo"} de <strong>{fmt(montoAnticipo)}</strong> en efectivo
                         </span>
                       </label>
                       {errors.anticipo_efectivo && <span className="field-error">{errors.anticipo_efectivo}</span>}
@@ -925,7 +921,7 @@ export default function CrearPedido({ onClose, onSave }) {
                           <input type="file" accept="image/*,application/pdf" onChange={handleAnticipo} hidden />
                           <div style={{ textAlign: "center" }}>
                             <span style={{ fontSize: 26 }}>📎</span>
-                            <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante del anticipo</p>
+                            <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante {pagarTodo ? "del pago" : "del anticipo"}</p>
                             <p style={{ margin: "2px 0 0", fontSize: 10, color: "#7faade" }}>Imagen o PDF</p>
                           </div>
                         </label>
@@ -934,7 +930,6 @@ export default function CrearPedido({ onClose, onSave }) {
                     </div>
                   )}
                   </>
-                  )}
                 </div>
               )}
 
@@ -1078,7 +1073,7 @@ export default function CrearPedido({ onClose, onSave }) {
                   )}
 
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
-                    💳 Pago vía: <strong>{form.metodo_pago}</strong>
+                    💳 Pago vía: <strong>{metodoPedido || "—"}</strong>
                   </div>
                   {requiereAnticipo && (
                     <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "10px 12px" }}>

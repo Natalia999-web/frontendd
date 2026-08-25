@@ -1717,7 +1717,9 @@ export default function GestionPedidos() {
       const payload = {
         ID_Usuario: Number(formData.idCliente),
         Metodo_Pago: metodoPago,
-        comprobante_pago: formData.comprobante || null,
+        // Con anticipo el soporte que se adjunta es el del anticipo: sin esto el
+        // pedido queda "sin comprobante" y no se puede marcar como entregado.
+        comprobante_pago: formData.comprobante || formData.anticipo_comprobante_url || null,
         productos: (formData.productosItems || []).map(p => ({
           ID_Producto: Number(p.idProducto),
           Cantidad:    Number(p.cantidad),
