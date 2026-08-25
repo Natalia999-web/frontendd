@@ -754,13 +754,23 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         # queda marcado como sobre stock, pero no se le exige el anticipo online.
         if not datos.creado_por_admin and anticipo_pagado < anticipo_requerido and not tiene_soporte:
             faltante = anticipo_requerido - anticipo_pagado
+            # Se indica qué faltó exactamente: el rechazo por "no llegó nada" se
+            # confundía con "el monto no alcanza", y no había forma de saber si
+            # el problema estaba en el pago o en lo que envió la aplicación.
+            if not datos.requiere_anticipo:
+                motivo = "el pedido llegó sin registro de anticipo"
+            elif not anticipo_declarado and not comprobante_anticipo:
+                motivo = "no llegó el comprobante ni la confirmación del anticipo"
+            else:
+                motivo = "el anticipo registrado no cubre el mínimo"
             db.rollback()
             raise HTTPException(
                 status_code=400,
                 detail=(
                     f"Este pedido supera el stock disponible, por lo que requiere un anticipo "
                     f"del 50% (${anticipo_requerido:,.0f}). Te faltan ${faltante:,.0f}: págalo "
-                    f"con tus créditos, o registra el anticipo indicando cómo lo pagaste."
+                    f"con tus créditos, o registra el anticipo indicando cómo lo pagaste. "
+                    f"({motivo})"
                 ),
             )
 
