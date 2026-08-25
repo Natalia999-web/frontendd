@@ -727,10 +727,19 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         # Solo cuenta como pagado lo verificable en el servidor: el crédito
         # efectivamente descontado del libro mayor del cliente.
         anticipo_pagado    = credito_aplicado
-        # La transferencia no se puede verificar automáticamente, pero exige un
+        # Una transferencia no se puede verificar automáticamente, pero exige un
         # comprobante adjunto que el administrador valida antes de confirmar.
-        tiene_soporte      = _es_transferencia(datos.Metodo_Pago) and bool(
-            (datos.comprobante_pago or "").strip()
+        # Vale cualquiera de los dos comprobantes:
+        #  - el del pago del pedido (cuando se paga todo por transferencia);
+        #  - el del ANTICIPO, que es el que sube el cliente cuando el pedido
+        #    lleva anticipo.
+        # Esta comprobación se escribió antes de que existiera el flujo de
+        # anticipo y solo miraba el primero: rechazaba pedidos cuyo comprobante
+        # de anticipo sí venía adjunto.
+        comprobante_pedido   = (datos.comprobante_pago or "").strip()
+        comprobante_anticipo = (getattr(datos, "anticipo_comprobante_url", None) or "").strip()
+        tiene_soporte = bool(comprobante_anticipo) or (
+            _es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido)
         )
 
         # El pedido creado por el personal en el mostrador se cobra en el acto:
@@ -743,7 +752,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
                 detail=(
                     f"Este pedido supera el stock disponible, por lo que requiere un anticipo "
                     f"del 50% (${anticipo_requerido:,.0f}). Te faltan ${faltante:,.0f}: págalo "
-                    f"con tus créditos o por transferencia adjuntando el comprobante."
+                    f"con tus créditos o adjunta el comprobante de la transferencia del anticipo."
                 ),
             )
 
