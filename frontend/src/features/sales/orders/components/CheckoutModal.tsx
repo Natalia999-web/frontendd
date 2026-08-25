@@ -44,6 +44,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   const [paymentMethod,      setPaymentMethod]      = useState('digital');
   const [onBehalfOf,         setOnBehalfOf]         = useState('');
   const [comprobante,        setComprobante]        = useState<File | null>(null);
+  const [comprobanteError,   setComprobanteError]   = useState('');
   const [isConfirming,       setIsConfirming]       = useState(false);
   const [credito,            setCredito]            = useState(0);
   const [usarCredito,        setUsarCredito]        = useState(false);
@@ -152,6 +153,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     }
     if (!telefonoValido) return;
     if (tieneDomicilio && (!addressValida || !municipioValido)) return;
+
+    // Pagando por transferencia el comprobante es obligatorio: sin él, el pedido
+    // se creaba igual y quedaba sin soporte de pago, sin avisar a nadie.
+    // (Con anticipo el comprobante que cuenta es el del anticipo, validado abajo.)
+    if (paymentMethod === 'digital' && !requiereAnticipo && !comprobante) {
+      setComprobanteError('Adjunta el comprobante de la transferencia.');
+      return;
+    }
+    setComprobanteError('');
 
     if (requiereAnticipo && !creditoCubreAnticipo) {
       if (!anticipoMetodo) { setAnticipoError('Selecciona el método de pago del anticipo'); return; }
@@ -434,7 +444,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                   </div>
                 </div>
                 <div className="relative group">
-                  <input type="file" accept="image/*,application/pdf" onChange={e => setComprobante(e.target.files?.[0] || null)}
+                  <input type="file" accept="image/*,application/pdf"
+                    onChange={e => { setComprobante(e.target.files?.[0] || null); setComprobanteError(''); }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   <div className="border-2 border-dashed border-green-200 bg-white group-hover:bg-green-50 transition-all rounded-xl p-3 text-center">
                     {comprobante ? (
@@ -450,6 +461,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                     )}
                   </div>
                 </div>
+                {comprobanteError && (
+                  <p className="text-[11px] font-bold text-red-600">{comprobanteError}</p>
+                )}
               </div>
             )}
           </div>

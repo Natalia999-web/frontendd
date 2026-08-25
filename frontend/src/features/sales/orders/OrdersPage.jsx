@@ -114,13 +114,20 @@ const OrdersPage = () => {
       fechaEntregaEsperada = `${deliveryInfo.date}T${t}:00`;
     }
 
-    // Subir comprobante principal a Cloudinary si existe
+    // Subir comprobante principal a Cloudinary si existe.
+    // Si la subida falla, o devuelve una URL vacía, NO se crea el pedido: antes
+    // se creaba igual y quedaba sin comprobante sin que nadie se enterara hasta
+    // abrirlo. El mensaje incluye el motivo real para poder diagnosticarlo.
     let comprobanteUrl = null;
     if (paymentMethod === 'digital' && comprobante) {
       try {
         comprobanteUrl = await subirImagenCloudinary(comprobante);
-      } catch {
-        showToast('Error al subir el comprobante. Intenta de nuevo.', 'error');
+      } catch (e) {
+        showToast(`No se pudo subir el comprobante: ${e?.message || 'intenta de nuevo'}`, 'error');
+        return;
+      }
+      if (!comprobanteUrl) {
+        showToast('No se pudo guardar el comprobante. Intenta de nuevo.', 'error');
         return;
       }
     }
@@ -130,8 +137,12 @@ const OrdersPage = () => {
     if (anticipoData?.requiere && anticipoData.metodo === 'digital' && anticipoData.comprobante) {
       try {
         anticipoComprobanteUrl = await subirImagenCloudinary(anticipoData.comprobante);
-      } catch {
-        showToast('Error al subir el comprobante del anticipo. Intenta de nuevo.', 'error');
+      } catch (e) {
+        showToast(`No se pudo subir el comprobante del anticipo: ${e?.message || 'intenta de nuevo'}`, 'error');
+        return;
+      }
+      if (!anticipoComprobanteUrl) {
+        showToast('No se pudo guardar el comprobante del anticipo. Intenta de nuevo.', 'error');
         return;
       }
     }
