@@ -838,9 +838,15 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
 
     # Crear órdenes de producción cuando el admin confirma directamente
     if datos.creado_por_admin:
-        _crear_ordenes_produccion_para_venta(
+        _ordenes = _crear_ordenes_produccion_para_venta(
             db, nueva_venta.ID_Venta, nueva_venta.Fecha_entrega_esperada
         )
+        # Con producción pendiente el pedido NO está listo para despachar:
+        # queda "En producción" hasta que se completen sus órdenes, momento en
+        # que el módulo de producción lo pasa a Listo. Antes nacía "Confirmado"
+        # aunque no se hubiera fabricado nada.
+        if _ordenes > 0:
+            nueva_venta.Estado = EstadoPedido.PREPARANDO
         db.commit()
 
     # El push a los administradores lo dispara notificar() al crear la
@@ -1160,11 +1166,16 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
     return _formato_venta(venta, db)
 
 
-def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> None:
-    """Crea órdenes de producción para los productos que requieren producción."""
+def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> int:
+    """Crea órdenes de producción para los productos que requieren producción.
+
+    Devuelve cuántas creó, para que quien llama deje el pedido en el estado que
+    corresponde: con producción pendiente el pedido no está listo para
+    despachar, así que va "En producción" y no "Confirmado".
+    """
     items_venta = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
     if not items_venta:
-        return
+        return 0
 
     # Batch: precargar productos, fichas y templates en 3 queries
     prod_ids     = [item.ID_Producto for item in items_venta]
@@ -1185,6 +1196,7 @@ def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entre
                     .order_by(OrdenProduccion.ID_Orden_Produccion.desc()).all()):
             templates_m.setdefault(t.ID_Producto, t)
 
+    creadas = 0
     for item in items_venta:
         prod = productos_m.get(item.ID_Producto)
         if not prod or not getattr(prod, "Requiere_Produccion", 0):
@@ -1207,6 +1219,9 @@ def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entre
             Estado        = 1,
             Costo         = Decimal("0"),
         ))
+        creadas += 1
+
+    return creadas
 
 
 def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
@@ -1225,7 +1240,11 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
 
     venta.Estado = EstadoPedido.CONFIRMADO
 
-    _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada)
+    # Si el pedido lleva producción, aceptar la fecha no lo deja listo para
+    # despachar: arranca la fabricación. Queda "En producción" y pasará a Listo
+    # cuando se completen sus órdenes.
+    if _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada) > 0:
+        venta.Estado = EstadoPedido.PREPARANDO
 
     notificar(
         db, "fecha_aceptada", "Fecha aceptada por el cliente",
@@ -1239,7 +1258,9 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
         notificar_cambio_pedido_push(
             id_usuario_cliente=venta.ID_Usuario,
             id_venta=id_venta,
-            nuevo_estado=EstadoPedido.CONFIRMADO,
+            # El estado real tras aceptar: Confirmado, o En producción si el
+            # pedido arrancó fabricación.
+            nuevo_estado=venta.Estado,
             db=db,
         )
     except Exception:
