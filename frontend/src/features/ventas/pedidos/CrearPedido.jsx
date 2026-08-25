@@ -21,8 +21,6 @@ const fmt = (n) =>
 
 const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
 
-const UMBRAL_ANTICIPO = 50000;
-
 const EMPTY_FORM = {
   idCliente:            "",
   productosItems:       [],
@@ -144,6 +142,7 @@ function BuscadorProducto({ productosSeleccionados, onAgregar, productos = [] })
       cantidad:    1,
       stockActual: prod.stock,
       stockOk:     prod.stock > 0,
+      requiereProduccion: !!prod.requiereProduccion,
     });
     setQuery("");
     setAbierto(false);
@@ -280,6 +279,8 @@ export default function CrearPedido({ onClose, onSave }) {
   const [pagarTodo,      setPagarTodo]      = useState(false);
   const [creditoCliente, setCreditoCliente] = useState(0);
   const [usarCredito,    setUsarCredito]    = useState(false);
+  // Que parte del saldo a favor se aplica. Arranca entero, que es lo normal.
+  const [creditoPct,     setCreditoPct]     = useState(100);
 
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
@@ -321,10 +322,22 @@ export default function CrearPedido({ onClose, onSave }) {
   const descuento     = Number(form.descuento) || 0;
   const costoEnvio    = form.domicilio ? COSTO_DOMICILIO : 0;
   const total         = Math.max(0, subtotal - descuento + costoEnvio);
-  const creditoAplicar = usarCredito ? Math.min(creditoCliente, total) : 0;
+  // Tope: ni mas saldo del que tiene el cliente ni mas de lo que cuesta el
+  // pedido. La barra corre sobre ese tope, asi el 100% cae siempre justo.
+  const creditoMaximo  = Math.min(creditoCliente, total);
+  const creditoAplicar = usarCredito ? Math.round((creditoMaximo * creditoPct) / 100) : 0;
   const totalFinal    = Math.max(0, total - creditoAplicar);
-  const requiereAnticipo = totalFinal > UMBRAL_ANTICIPO;
+  // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
+  // stock: es una preventa. No depende del monto — antes se pedía por pasar de
+  // $50.000 y caía en pedidos normales. Los productos por encargo no cuentan:
+  // su déficit lo cubre la orden de producción.
+  const requiereAnticipo = form.productosItems.some(
+    p => !p.requiereProduccion && p.cantidad > p.stockActual
+  );
   const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
+  // Con anticipo el método se elige una sola vez, en el bloque del anticipo, y de
+  // ahí sale el del pedido: es el mismo dinero.
+  const metodoPedido = requiereAnticipo ? form.anticipo_metodo : form.metodo_pago;
   const hayProductosSinStock = form.productosItems.some(
     p => !p.stockOk || p.cantidad > p.stockActual
   );
@@ -354,17 +367,21 @@ export default function CrearPedido({ onClose, onSave }) {
       }
     }
     if (s === 4) {
-      if (!form.metodo_pago) e.metodo_pago = "Selecciona un método de pago";
-      if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
-        e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
-      }
-      if (requiereAnticipo && !pagarTodo) {
+      // Con anticipo el método se elige una sola vez, en el bloque del anticipo:
+      // el selector del pedido no se muestra y no hay nada que validar arriba.
+      if (!requiereAnticipo) {
+        if (!form.metodo_pago) e.metodo_pago = "Selecciona un método de pago";
+        if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
+          e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
+        }
+      } else {
+        const queEs = pagarTodo ? "el pago" : "el anticipo";
         if (!form.anticipo_metodo)
-          e.anticipo_metodo = "Selecciona el método de pago del anticipo";
+          e.anticipo_metodo = `Selecciona el método de pago de ${queEs}`;
         if (form.anticipo_metodo === "Efectivo 💵" && !form.anticipo_efectivo)
-          e.anticipo_efectivo = "Debes confirmar que el anticipo fue recibido en efectivo";
+          e.anticipo_efectivo = `Debes confirmar que ${queEs} fue recibido en efectivo`;
         if (form.anticipo_metodo === "Transferencia 🏦" && !form.anticipo_comp_preview)
-          e.anticipo_comprobante = "Debes adjuntar el comprobante del anticipo";
+          e.anticipo_comprobante = `Debes adjuntar el comprobante de ${queEs}`;
       }
     }
     return e;
@@ -420,17 +437,14 @@ export default function CrearPedido({ onClose, onSave }) {
         telefono: cliente.telefono,
       },
       productosItems:    form.productosItems,
-      metodo_pago:       form.metodo_pago,
+      metodo_pago:       metodoPedido,
       comprobante:            comprobanteUrl,
       requiere_anticipo:      requiereAnticipo,
       anticipo_monto:         montoAnticipo,
-      anticipo_metodo_pago:   requiereAnticipo
-        ? (pagarTodo ? form.metodo_pago : form.anticipo_metodo)
-        : null,
-      anticipo_comprobante_url: pagarTodo ? comprobanteUrl : anticipoUrl,
+      anticipo_metodo_pago:   requiereAnticipo ? metodoPedido : null,
+      anticipo_comprobante_url: anticipoUrl,
       anticipo_registrado:    requiereAnticipo && (
-        pagarTodo ? true
-        : form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
+        form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
       ),
       domicilio:         form.domicilio,
       direccion_entrega: form.domicilio ? form.direccion_entrega : null,
@@ -442,6 +456,7 @@ export default function CrearPedido({ onClose, onSave }) {
       subtotal,
       total:             totalFinal,
       usar_credito:      usarCredito,
+      credito_monto:     usarCredito ? creditoAplicar : null,
       estado:            "Pendiente",
       fecha_pedido:      new Date().toLocaleDateString("es-CO"),
       orden_produccion:  hayProductosSinStock,
@@ -531,6 +546,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     if (!cli) {
                       setForm(f => ({ ...f, idCliente: "", departamento: "", municipio: "", direccion_entrega: "" }));
                       setCreditoCliente(0);
+                      setCreditoPct(100);
                       setUsarCredito(false);
                       return;
                     }
@@ -542,6 +558,7 @@ export default function CrearPedido({ onClose, onSave }) {
                       direccion_entrega: cli.direccion || "",
                     }));
                     setUsarCredito(false);
+                    setCreditoPct(100);
                     getCreditoCliente(cli.id).then(saldo => setCreditoCliente(saldo)).catch(() => setCreditoCliente(0));
                     setErrors(err => ({ ...err, idCliente: "" }));
                   }}
@@ -563,7 +580,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     </div>
                     {creditoCliente > 0 && (
                       <div style={{ background: "#fff", borderRadius: 10, padding: "8px 14px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-                        <div style={{ fontSize: 11, color: "#757575", fontWeight: 600 }}>CRÉDITO</div>
+                        <div style={{ fontSize: 11, color: "#757575", fontWeight: 600 }}>SALDO A FAVOR</div>
                         <div style={{ fontSize: 15, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoCliente)}</div>
                       </div>
                     )}
@@ -751,8 +768,11 @@ export default function CrearPedido({ onClose, onSave }) {
             <div className="fade-in">
               <p className="section-label" style={{ textTransform: "none", marginTop: 0, fontSize: 16 }}>4. Método de Pago</p>
               
+              {!requiereAnticipo && (
               <div className="field-wrap">
-                <label className="field-label">Seleccione una opción <span className="required">*</span></label>
+                <label className="field-label">
+                  Método de pago del pedido <span className="required">*</span>
+                </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                   {METODOS_PAGO.map(m => (
                     <button
@@ -774,8 +794,9 @@ export default function CrearPedido({ onClose, onSave }) {
                 </div>
                 {errors.metodo_pago && <span className="field-error" style={{ marginTop: 8 }}>{errors.metodo_pago}</span>}
               </div>
+              )}
 
-              {form.metodo_pago === "Transferencia 🏦" && (
+              {!requiereAnticipo && form.metodo_pago === "Transferencia 🏦" && (
                 <div className="fade-in" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
 
                   {/* Datos de la cuenta */}
@@ -828,7 +849,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     <div>
                       <p style={{ margin: 0, fontWeight: 800, color: "#f57f17", fontSize: 15 }}>Anticipo requerido</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#795548" }}>
-                        El total supera {fmt(UMBRAL_ANTICIPO)}. Registra el anticipo antes de confirmar.
+                        El pedido lleva más unidades de las que hay en stock. Registra el anticipo antes de confirmar.
                       </p>
                     </div>
                   </div>
@@ -855,13 +876,12 @@ export default function CrearPedido({ onClose, onSave }) {
                     <span style={{ fontSize: 20, fontWeight: 900, color: "#f57f17" }}>{fmt(montoAnticipo)}</span>
                   </div>
 
-                  {pagarTodo ? (
-                    <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#2e7d32", fontWeight: 600 }}>
-                      ✅ El total completo queda registrado como anticipo — usa el mismo método de pago principal.
-                    </div>
-                  ) : (
                   <>
-                  <label className="field-label">Método de pago del anticipo <span className="required">*</span></label>
+                  {/* Aquí se elige el método una sola vez, se pague el 50% o el
+                      total: de aquí sale también el método del pedido. */}
+                  <label className="field-label">
+                    {pagarTodo ? "Método de pago" : "Método de pago del anticipo"} <span className="required">*</span>
+                  </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
                     {["Efectivo 💵", "Transferencia 🏦"].map(m => (
                       <button
@@ -892,7 +912,7 @@ export default function CrearPedido({ onClose, onSave }) {
                           style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
                         />
                         <span style={{ fontSize: 13, color: form.anticipo_efectivo ? "#1b5e20" : "#555", fontWeight: form.anticipo_efectivo ? 700 : 400 }}>
-                          Confirmo que recibí el anticipo de <strong>{fmt(montoAnticipo)}</strong> en efectivo
+                          Confirmo que recibí {pagarTodo ? "el pago" : "el anticipo"} de <strong>{fmt(montoAnticipo)}</strong> en efectivo
                         </span>
                       </label>
                       {errors.anticipo_efectivo && <span className="field-error">{errors.anticipo_efectivo}</span>}
@@ -914,7 +934,7 @@ export default function CrearPedido({ onClose, onSave }) {
                           <input type="file" accept="image/*,application/pdf" onChange={handleAnticipo} hidden />
                           <div style={{ textAlign: "center" }}>
                             <span style={{ fontSize: 26 }}>📎</span>
-                            <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante del anticipo</p>
+                            <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante {pagarTodo ? "del pago" : "del anticipo"}</p>
                             <p style={{ margin: "2px 0 0", fontSize: 10, color: "#7faade" }}>Imagen o PDF</p>
                           </div>
                         </label>
@@ -923,7 +943,6 @@ export default function CrearPedido({ onClose, onSave }) {
                     </div>
                   )}
                   </>
-                  )}
                 </div>
               )}
 
@@ -932,9 +951,9 @@ export default function CrearPedido({ onClose, onSave }) {
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
                     <span style={{ fontSize: 24 }}>🎁</span>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Crédito disponible del cliente</p>
+                      <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Saldo a favor del cliente</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#388e3c" }}>
-                        El cliente tiene <strong>{fmt(creditoCliente)}</strong> de crédito acumulado por devoluciones.
+                        El cliente tiene <strong>{fmt(creditoCliente)}</strong> abonado por devoluciones.
                       </p>
                     </div>
                   </div>
@@ -946,13 +965,37 @@ export default function CrearPedido({ onClose, onSave }) {
                       style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
                     />
                     <span style={{ fontSize: 13, color: usarCredito ? "#1b5e20" : "#555", fontWeight: usarCredito ? 700 : 400 }}>
-                      Aplicar {fmt(Math.min(creditoCliente, total))} de crédito a este pedido
+                      Aplicar saldo a favor a este pedido
                     </span>
                   </label>
+
+                  {/* No es todo o nada: el cliente puede gastar una parte y
+                      dejar el resto para el proximo pedido. */}
                   {usarCredito && (
-                    <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del crédito</span>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
+                    <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>Cuánto se aplica a este pedido</span>
+                        <span style={{ fontSize: 18, fontWeight: 900, color: "#2e7d32" }}>{fmt(creditoAplicar)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={creditoPct}
+                        onChange={e => setCreditoPct(Number(e.target.value))}
+                        aria-label="Parte del saldo a favor que se aplica al pedido"
+                        style={{ width: "100%", accentColor: "#2e7d32", cursor: "pointer" }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9e9e9e", fontWeight: 600, marginTop: 2 }}>
+                        <span>$0</span>
+                        <span style={{ color: "#616161" }}>Le quedan {fmt(creditoCliente - creditoAplicar)}</span>
+                        <span>{fmt(creditoMaximo)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", marginTop: 12, paddingTop: 12 }}>
+                        <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del saldo</span>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: totalFinal === 0 ? "#2e7d32" : "#1565c0" }}>{fmt(totalFinal)}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1036,16 +1079,38 @@ export default function CrearPedido({ onClose, onSave }) {
                   )}
                   {usarCredito && creditoAplicar > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-                      <span>🎁 Crédito del cliente</span>
+                      <span>🎁 Saldo a favor</span>
                       <span>-{fmt(creditoAplicar)}</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, fontWeight: 900, marginTop: 12, paddingTop: 12, borderTop: "1px dashed rgba(255,255,255,0.3)" }}>
-                    <span>TOTAL FINAL</span>
+                  {/* Total del pedido: con anticipo pasa a ser un dato de apoyo,
+                      porque lo que importa aquí es cuánto se paga AHORA. */}
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    fontSize: requiereAnticipo ? 15 : 22,
+                    fontWeight: requiereAnticipo ? 700 : 900,
+                    opacity: requiereAnticipo ? 0.9 : 1,
+                    marginTop: 12, paddingTop: 12,
+                    borderTop: "1px dashed rgba(255,255,255,0.3)",
+                  }}>
+                    <span>TOTAL DEL PEDIDO</span>
                     <span>{fmt(totalFinal)}</span>
                   </div>
+
+                  {/* Lo que se cobra en este momento, siempre destacado. */}
+                  {requiereAnticipo && (
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                      fontSize: 22, fontWeight: 900, marginTop: 10, paddingTop: 10,
+                      borderTop: "1px solid rgba(255,255,255,0.45)",
+                    }}>
+                      <span>TOTAL A PAGAR AHORA</span>
+                      <span>{fmt(montoAnticipo)}</span>
+                    </div>
+                  )}
+
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
-                    💳 Pago vía: <strong>{form.metodo_pago}</strong>
+                    💳 Pago vía: <strong>{metodoPedido || "—"}</strong>
                   </div>
                   {requiereAnticipo && (
                     <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "10px 12px" }}>

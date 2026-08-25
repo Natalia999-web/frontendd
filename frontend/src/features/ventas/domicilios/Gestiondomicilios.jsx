@@ -15,6 +15,7 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, ESTADO_PAGO_LABEL, FILTRO_ESTADOS_DOM,
   bloqueoEntrega, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
+  puedeReasignarse,
   transicionesDom,
 } from "./estadosDomicilio";
 import "./Domicilios.css";
@@ -40,19 +41,6 @@ const PER_PAGE = 5;
 // esta pantalla ofrecía estados del PEDIDO (Confirmado, En preparación, Listo)
 // que el backend interpretaba como "Entregado" al recibirlos.
 const ESTADO_CONFIG = ESTADO_DOM_CONFIG;
-
-// Estado de la venta asociada (Ventas.Estado, tabla global Estados)
-const VENTA_ESTADO_CONFIG = {
-  1:  { dot: "#f9a825", label: "Pendiente",       bg: "#fff8e1" },
-  4:  { dot: "#43a047", label: "Confirmado",      bg: "#e8f5e9" },
-  5:  { dot: "#c62828", label: "Cancelado",       bg: "#ffebee" },
-  8:  { dot: "#43a047", label: "Entregado",       bg: "#e8f5e9" },
-  9:  { dot: "#6a1b9a", label: "En camino",       bg: "#f3e5f5" },
-  10: { dot: "#43a047", label: "Asignado",        bg: "#e8f5e9" },
-  11: { dot: "#43a047", label: "Listo",           bg: "#e8f5e9" },
-  13: { dot: "#1976d2", label: "En producción",   bg: "#e3f2fd" },
-  16: { dot: "#3949ab", label: "Fecha propuesta", bg: "#e8eaf6" },
-};
 
 const FILTER_OPTIONS = FILTRO_ESTADOS_DOM;
 
@@ -110,65 +98,6 @@ function EstadoBadge({ estado, estadoId }) {
       {cfg.label || estado || estadoId}
     </span>
   );
-}
-
-function VentaEstadoBadge({ estadoId }) {
-  const cfg = VENTA_ESTADO_CONFIG[estadoId] || { dot: "#bdbdbd", label: `Estado ${estadoId}`, bg: "#f5f5f5" };
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 4,
-      padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700,
-      background: cfg.bg, color: cfg.dot, border: `1px solid ${cfg.dot}44`,
-    }}>
-      <span style={{ width: 7, height: 7, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function AlertaEstado({ pedido, empleados }) {
-  const emp = empleados.find(e => e.id === pedido.idEmpleado);
-
-  if (!emp && !["Entregado", "Cancelado"].includes(pedido.estado)) {
-    return (
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        background: "#ffebee", color: "#c62828", fontSize: 12,
-        fontWeight: 600, padding: "3px 6px", borderRadius: 4,
-        whiteSpace: "nowrap"
-      }}>
-        <AlertTriangle size={13} /> Sin asignar
-      </div>
-    );
-  }
-
-  if (pedido.estado === "Entregado") {
-    return (
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        background: "#e8f5e9", color: "#2e7d32", fontSize: 12,
-        fontWeight: 600, padding: "3px 6px", borderRadius: 4,
-        whiteSpace: "nowrap"
-      }}>
-        <CheckCircle2 size={13} /> Completado
-      </div>
-    );
-  }
-
-  if (pedido.estado === "En camino") {
-    return (
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        background: "#f3e5f5", color: "#6a1b9a", fontSize: 12,
-        fontWeight: 600, padding: "3px 6px", borderRadius: 4,
-        whiteSpace: "nowrap"
-      }}>
-        <Bike size={13} /> En tránsito
-      </div>
-    );
-  }
-
-  return null;
 }
 
 function Toast({ toast }) {
@@ -834,14 +763,14 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
         <div className="modal-footer">
           <button className="btn-ghost" onClick={onClose}>Cerrar</button>
           {activo && (
-            <>
-              <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <PenLine size={14} /> Observaciones
-              </button>
-              <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Bike size={14} /> Reasignar
-              </button>
-            </>
+            <button className="btn-cancel" onClick={() => { onClose(); onObservaciones(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <PenLine size={14} /> Observaciones
+            </button>
+          )}
+          {puedeReasignarse(pedido.estadoId) && (
+            <button className="btn-save" onClick={() => { onClose(); onReasignar(pedido); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Bike size={14} /> Reasignar
+            </button>
           )}
         </div>
       </div>
@@ -1138,11 +1067,6 @@ export default function GestionDomicilios() {
   );
   const ocultosNoListos = domicilios.length - gestionables.length;
 
-  const pedidosPorEmpleado = empleados.reduce((acc, emp) => {
-    acc[emp.id] = gestionables.filter(p => p.idEmpleado === emp.id).length;
-    return acc;
-  }, {});
-
   /* ── Filtrado ── */
   const filtered = gestionables.filter(p => {
     const q   = search.toLowerCase();
@@ -1251,8 +1175,14 @@ export default function GestionDomicilios() {
   };
 
   const abrirReasignar = (ped) => {
-    if (["Entregado", "Cancelado"].includes(ped.estado)) {
-      showToast("No se puede reasignar un domicilio ya finalizado", "warn"); return;
+    if (!puedeReasignarse(ped.estadoId)) {
+      showToast(
+        ped.estadoId === ESTADO_DOMICILIO.EN_CAMINO
+          ? "El pedido ya va en camino: no se puede cambiar de domiciliario"
+          : "No se puede reasignar un domicilio ya finalizado",
+        "warn",
+      );
+      return;
     }
     setModal({ type: "reasignar", pedido: ped });
   };
@@ -1436,18 +1366,16 @@ export default function GestionDomicilios() {
                       <th>Cliente</th>
                       <th>Dirección</th>
                       <th>Domiciliario</th>
-                      <th>Fechas</th>
                       <th>Pago</th>
-                      <th>Estado venta</th>
-                      <th>Estado entrega</th>
+                      <th>Estado</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <SkeletonRows cols={10} rows={5} />
+                      <SkeletonRows cols={8} rows={5} />
                     ) : errorCarga ? (
-                      <tr><td colSpan={10}>
+                      <tr><td colSpan={8}>
                         <div className="empty-state">
                           <div className="empty-state__icon" style={{ color: "#ef9a9a", display: "flex", justifyContent: "center" }}><AlertTriangle size={40} /></div>
                           <p className="empty-state__text">{errorCarga}</p>
@@ -1457,7 +1385,7 @@ export default function GestionDomicilios() {
                         </div>
                       </td></tr>
                     ) : paged.length === 0 ? (
-                      <tr><td colSpan={10}>
+                      <tr><td colSpan={8}>
                         <div className="empty-state">
                           <div className="empty-state__icon" style={{ color: "#d4d4d4", display: "flex", justifyContent: "center" }}>
                             {hasFilter || search ? <Search size={40} /> : <Bike size={40} />}
@@ -1525,31 +1453,13 @@ export default function GestionDomicilios() {
                               <div className="emp-none">Sin asignar</div>
                             )}
                           </td>
-                          <td data-label="Fechas">
-                            <div className="date-col">
-                              <span className="date-row date-row--pedido" style={{ display: "flex", alignItems: "center", gap: 3 }}><Calendar size={11} />{fmtFecha(ped.fecha_pedido)}</span>
-                              {ped.fecha_entrega_real
-                                ? <span className="date-row date-row--entrega" style={{ display: "flex", alignItems: "center", gap: 3 }}><CheckCircle2 size={11} />{fmtFecha(ped.fecha_entrega_real)}</span>
-                                : <span className="date-row date-row--pendiente" style={{ display: "flex", alignItems: "center", gap: 3 }}><Clock size={11} />Pendiente</span>
-                              }
-                            </div>
-                          </td>
                           <td data-label="Pago">
-                            {ped.venta_estado_id != null
-                              ? <VentaEstadoBadge estadoId={ped.venta_estado_id} />
-                              : <span style={{ color: "#bdbdbd", fontSize: 11 }}>—</span>
-                            }
-                          </td>
-                          <td data-label="Estado venta">
                             <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                               <MetodoPagoChip metodo={ped.metodo_pago} />
                               <EstadoPagoChip estadoPago={ped.estado_pago} />
-                              <span style={{ fontSize: 11, fontWeight: 800, color: "#2e7d32" }}>
-                                {fmt(ped.total)}
-                              </span>
                             </div>
                           </td>
-                          <td data-label="Estado entrega">
+                          <td data-label="Estado">
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                               <EstadoBadge estado={ped.estado} estadoId={ped.estadoId} />
                               {/* Avisa si venta cancelada pero entrega aún abierta */}
@@ -1559,7 +1469,6 @@ export default function GestionDomicilios() {
                                   background: "#ffebee", borderRadius: 4, padding: "2px 5px",
                                 }}>⚠ Pedido cancelado</span>
                               )}
-                              <AlertaEstado pedido={ped} empleados={empleados} />
                             </div>
                           </td>
                           <td data-label="Acciones">
@@ -1596,7 +1505,10 @@ export default function GestionDomicilios() {
                                 className="act-btn act-btn--reasignar"
                                 data-tooltip="Reasignar domiciliario"
                                 onClick={() => abrirReasignar(ped)}
-                                style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
+                                style={{
+                                  opacity: puedeReasignarse(ped.estadoId) ? 1 : 0.35,
+                                  cursor:  puedeReasignarse(ped.estadoId) ? "pointer" : "default",
+                                }}
                               ><Bike size={14} /></button>
                               <button
                                 className="act-btn act-btn--obs"

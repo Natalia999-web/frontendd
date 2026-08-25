@@ -238,13 +238,6 @@
 /* ─── Historial stats activo ─── */
 .hist-stat--active { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
 
-/* ─── Fechas en tabla ─── */
-.date-col { display: flex; flex-direction: column; gap: 3px; }
-.date-row  { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
-.date-row--pedido   { background: #fafafa; border: 1px solid #eeeeee; color: #757575; }
-.date-row--entrega  { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; font-weight: 700; }
-.date-row--pendiente { background: #fff8e1; border: 1px solid #ffe082; color: #f57f17; font-style: italic; }
-
 /* ─── Paginación ─── */
 .pagination-bar {
   display: flex; align-items: center; justify-content: space-between;

@@ -198,12 +198,12 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
               </button>
             )}
 
-            {/* Crédito disponible (solo clientes) */}
+            {/* Saldo a favor (solo clientes) */}
             {!isLanding && user?.tipo === 'cliente' && credito > 0 && (
               <button
                 className="credito-chip"
                 onClick={() => navigate('/cliente/perfil')}
-                data-tooltip="Ver mi crédito disponible"
+                data-tooltip="Ver mi saldo a favor"
               >
                 🎁 {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(credito)}
               </button>

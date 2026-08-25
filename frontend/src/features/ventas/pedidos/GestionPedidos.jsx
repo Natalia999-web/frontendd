@@ -11,6 +11,7 @@ import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import CrearPedido from "./CrearPedido.jsx";
 import EditarPedido from "./EditarPedido.jsx";
+import { puedeEditarsePedido } from "./permisosEdicion.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   Trash2, Truck, Package,
@@ -146,11 +147,42 @@ function ModalConfirmarEstado({ pedido, nuevoEstado, onClose, onConfirm }) {
   );
 }
 
+/* Comprobante adjunto: aviso + imagen ampliable. Se usa para el del pedido y
+   para el del anticipo, que el cliente sube por separado desde su checkout. */
+function ComprobanteAdjunto({ url, titulo }) {
+  return (
+    <div>
+      <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
+        <span className="info-box__icon">✅</span>
+        <span className="info-box__text">{titulo}</span>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
+          Abrir →
+        </a>
+      </div>
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        <img
+          src={url}
+          alt={titulo}
+          style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
+        />
+      </a>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    MODAL — VER DETALLE
    ═══════════════════════════════════════════════════════════ */
 function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
   const navigate = useNavigate();
+  // El comprobante del pedido y el del anticipo respaldan el mismo pago —lo que
+  // el cliente transfirió al pedir—, aunque se guarden en dos campos: se muestra
+  // uno solo. El del saldo sí es otro cobro, el de la entrega.
+  const comprobantes = [
+    { url: pedido.comprobante || pedido.anticipo_comprobante_url, titulo: "Comprobante de pago adjuntado." },
+    { url: pedido.pago_final_comprobante_url,                     titulo: "Comprobante del saldo adjuntado." },
+  ].filter((c, i, todos) => c.url && todos.findIndex(o => o.url === c.url) === i);
   const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
   const epInicial = pedido.estado_pago;
   const [tab, setTab] = useState(
@@ -371,18 +403,28 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
               {(() => {
                 const totalPedido = Number(pedido.total || 0);
 
-                // Total realmente pagado según los campos del backend
-                let totalPagado = 0;
-                if (pedido.pago_final_registrado) {
-                  totalPagado = pedido.pago_final_monto != null ? pedido.pago_final_monto : totalPedido;
-                } else if (pedido.anticipo_registrado) {
-                  totalPagado = pedido.anticipo_monto ?? 0;
-                } else if (pedido.sobre_stock && pedido.anticipo_pagado != null) {
-                  totalPagado = pedido.anticipo_pagado;
-                }
+                const ep = pedido.estado_pago;
+
+                // Un pedido con anticipo se cobra en dos partes. Antes solo se
+                // contaba una: al registrar el saldo, el total pagado pasaba a ser
+                // ese saldo y el anticipo desaparecía, así que un pedido saldado
+                // seguía mostrando el 50% como pendiente.
+                const anticipoCobrado = pedido.anticipo_registrado
+                  ? Number(pedido.anticipo_monto ?? 0)
+                  : (pedido.sobre_stock && pedido.anticipo_pagado != null ? Number(pedido.anticipo_pagado) : 0);
+                const saldoCobrado = pedido.pago_final_registrado
+                  ? Number(pedido.pago_final_monto ?? Math.max(0, totalPedido - anticipoCobrado))
+                  : 0;
+
+                // Estados con los que el backend da el pago por cerrado: no queda
+                // saldo aunque los montos registrados no cuadren al peso.
+                const pagoCerrado = !!pedido.pago_final_registrado
+                  || ["pagado_completo", "efectivo_recibido"].includes(ep);
+
+                let totalPagado = anticipoCobrado + saldoCobrado;
+                if (pagoCerrado) totalPagado = Math.max(totalPagado, totalPedido);
 
                 const saldo = Math.max(0, totalPedido - totalPagado);
-                const ep = pedido.estado_pago;
                 const pct = totalPedido > 0 ? Math.min(100, Math.round((totalPagado / totalPedido) * 100)) : 0;
 
                 let estadoLabel, estadoColor, estadoBg, estadoBorder, estadoEmoji;
@@ -485,25 +527,11 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       )}
                     </div>
 
-                    {/* ── Sobre stock (pedido especial 50%) ── */}
-                    {pedido.sobre_stock && (
-                      <div style={{ background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#e65100", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          ⚠️ Pedido sobre stock — anticipo del 50%
-                        </p>
-                        <div className="ver-ped-field">
-                          <span className="ver-ped-field__label">Anticipo requerido</span>
-                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#bf360c" }}>{fmt(pedido.anticipo_requerido)}</span>
-                        </div>
-                        <div className="ver-ped-field">
-                          <span className="ver-ped-field__label">Anticipo pagado</span>
-                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: (pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "#2e7d32" : "#c62828" }}>
-                            {fmt(pedido.anticipo_pagado || 0)}{" "}
-                            {(pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "✅ Cubierto" : "⚠️ Pendiente"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    {/* El recuadro de "pedido sobre stock" mostraba el anticipo
+                        pagado con Anticipo_Pagado, que solo cuenta el crédito
+                        descontado en el servidor: quien pagó por transferencia
+                        veía "$0 — Pendiente" con el pedido ya saldado. Lo que se
+                        pagó sale arriba, en el estado del pago. */}
 
                     {/* ── Transferencia: datos bancarios + comprobante ── */}
                     {esTransferencia ? (
@@ -528,25 +556,10 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           <span className="info-box__icon">ℹ️</span>
                           <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
                         </div>
-                        {pedido.comprobante ? (
-                          <div>
-                            <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
-                              <span className="info-box__icon">✅</span>
-                              <span className="info-box__text">Comprobante de pago adjuntado.</span>
-                              <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer"
-                                style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
-                                Abrir →
-                              </a>
-                            </div>
-                            <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={pedido.comprobante}
-                                alt="Comprobante de pago"
-                                style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 10, border: "1.5px solid #c8e6c9", background: "#f9fdf9", cursor: "zoom-in" }}
-                              />
-                            </a>
-                          </div>
-                        ) : (
+                        {comprobantes.map(c => (
+                          <ComprobanteAdjunto key={c.url} url={c.url} titulo={c.titulo} />
+                        ))}
+                        {comprobantes.length === 0 && (
                           <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
                             <span className="info-box__icon">⚠️</span>
                             <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
@@ -554,12 +567,19 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         )}
                       </>
                     ) : (
-                      <div className="info-box info-box--success">
-                        <span className="info-box__icon">💵</span>
-                        <span className="info-box__text">
-                          Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
-                        </span>
-                      </div>
+                      <>
+                        <div className="info-box info-box--success">
+                          <span className="info-box__icon">💵</span>
+                          <span className="info-box__text">
+                            Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
+                          </span>
+                        </div>
+                        {/* El pedido es en efectivo, pero el anticipo o el saldo
+                            pudieron transferirse: ahí sí hay comprobante. */}
+                        {comprobantes.map(c => (
+                          <ComprobanteAdjunto key={c.url} url={c.url} titulo={c.titulo} />
+                        ))}
+                      </>
                     )}
                   </>
                 );
@@ -578,7 +598,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           >
             📄 Ver / Imprimir factura
           </button>
-          {!["Entregado", "Cancelado"].includes(pedido.estado) && (
+          {puedeEditarsePedido(pedido.estado) && (
             <button className="btn-save" onClick={() => { onClose(); onEdit(pedido); }}>✎ Editar Pedido</button>
           )}
         </div>
@@ -739,8 +759,8 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
   const handleSubmit = async () => {
     const e = {};
     if (!metodo) e.metodo = "Selecciona el método de pago del saldo";
-    if (metodo === "Efectivo 💵" && !efectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
-    if (metodo === "Transferencia 🏦" && !preview) e.archivo = "Adjunta el comprobante del saldo";
+    if (metodo === "Efectivo" && !efectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
+    if (metodo === "Transferencia" && !preview) e.archivo = "Adjunta el comprobante del saldo";
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setUploading(true);
@@ -789,17 +809,19 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
           <div>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método de pago del saldo <span style={{ color: "#e53935" }}>*</span></p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {["Efectivo 💵", "Transferencia 🏦"].map(m => (
-                <button key={m} onClick={() => { setMetodo(m); setEfectivo(false); setArchivo(null); setPreview(null); setErrors(x => ({ ...x, metodo: "", efectivo: "", archivo: "" })); }}
-                  style={{ padding: "11px 8px", borderRadius: 10, border: `2px solid ${metodo === m ? "#2e7d32" : "#e0e0e0"}`, background: metodo === m ? "#f1f8f1" : "#fff", color: metodo === m ? "#1b5e20" : "#888", fontWeight: metodo === m ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
-                  {m}
+              {/* El valor viaja a la API (que compara contra "transferencia"): el
+                  emoji se queda en la etiqueta y no en lo que se guarda. */}
+              {[{ id: "Efectivo", label: "Efectivo 💵" }, { id: "Transferencia", label: "Transferencia 🏦" }].map(m => (
+                <button key={m.id} onClick={() => { setMetodo(m.id); setEfectivo(false); setArchivo(null); setPreview(null); setErrors(x => ({ ...x, metodo: "", efectivo: "", archivo: "" })); }}
+                  style={{ padding: "11px 8px", borderRadius: 10, border: `2px solid ${metodo === m.id ? "#2e7d32" : "#e0e0e0"}`, background: metodo === m.id ? "#f1f8f1" : "#fff", color: metodo === m.id ? "#1b5e20" : "#888", fontWeight: metodo === m.id ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
+                  {m.label}
                 </button>
               ))}
             </div>
             {errors.metodo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginTop: 4 }}>{errors.metodo}</span>}
           </div>
 
-          {metodo === "Efectivo 💵" && (
+          {metodo === "Efectivo" && (
             <div className="fade-in">
               <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: efectivo ? "#f1f8f1" : "#fafafa", padding: "12px 14px", borderRadius: 10, border: `2px solid ${efectivo ? "#2e7d32" : "#e0e0e0"}` }}>
                 <input type="checkbox" checked={efectivo} onChange={e => { setEfectivo(e.target.checked); setErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 18, height: 18, accentColor: "#2e7d32" }} />
@@ -811,7 +833,7 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
             </div>
           )}
 
-          {metodo === "Transferencia 🏦" && (
+          {metodo === "Transferencia" && (
             <div className="fade-in">
               {preview ? (
                 <div style={{ position: "relative", height: 120, borderRadius: 10, overflow: "hidden", background: "#000" }}>
@@ -1230,7 +1252,7 @@ function ModalRechazarComprobante({ pedido, saving, onClose, onConfirm }) {
    ═══════════════════════════════════════════════════════════ */
 function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo, onEntregar, onAsignarDomicilio, onCancelar, onProponerFecha, onAprobarComprobante, onRechazarComprobante, onSubirComprobante, onRegistrarCobro }) {
   const necesitaProduccion  = ped.requiereFechaPropuesta;
-  const canEdit             = !["Asignado","En camino","Entregado","Cancelado"].includes(ped.estado);
+  const canEdit             = puedeEditarsePedido(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
   // Usar orden_produccion (¿hay OPs pendientes para ESTE pedido?) no requiereProduccion
@@ -1623,20 +1645,44 @@ export default function GestionPedidos() {
     if (!ped) return;
     setActionSaving(true);
     try {
-      if (ped.estado === "Listo") {
+      await cancelarPedido(id, motivo);
+
+      // Un pedido de recoger en tienda que ya estaba preparado (Listo) tenía el
+      // stock descontado, y al cancelar el backend lo devuelve al inventario.
+      // Pero el producto ya está hecho y no se puede revender: se registra la
+      // salida para darlo de baja y dejar el rastro.
+      //
+      // Va DESPUÉS de cancelar (antes el stock aún estaba descontado y la
+      // salida fallaba por "stock insuficiente"), y solo en pedidos sin
+      // domicilio: en los de domicilio el stock se descuenta al entregar, así
+      // que aquí no hay nada que dar de baja.
+      if (ped.estado === "Listo" && !ped.domicilio) {
         for (const prod of ped.productosItems) {
-          await registrarSalida({
-            tipo: "Producto",
-            idProducto: prod.idProducto,
-            cantidad: prod.cantidad,
-            motivo: `Pedido ${ped.numero} cancelado: ${motivo}`,
-          });
+          try {
+            await registrarSalida({
+              // El backend espera el motivo de la salida, no el tipo de
+              // artículo: antes se enviaba "Producto" y respondía
+              // "Input should be 'vencimiento', 'daño', ...".
+              tipo: "ajuste",
+              idProducto: prod.idProducto,
+              cantidad: prod.cantidad,
+              motivo: `Pedido ${ped.numero} cancelado: ${motivo}`,
+            });
+          } catch (errSalida) {
+            // El pedido ya quedó cancelado: no se revierte por esto, pero se
+            // avisa para que se ajuste el inventario a mano.
+            showToast(
+              `Pedido cancelado, pero no se pudo dar de baja "${prod.nombre}": ${errSalida.message || "error al registrar la salida"}`,
+              "warn",
+            );
+          }
         }
       }
-      await cancelarPedido(id, motivo);
+
       setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado: "Cancelado" } : p));
       showToast(`Pedido ${ped.numero} cancelado`);
       setModal(null);
+      cargarDatos().catch(() => {});
     } catch (err) {
       const errorMsg = err.message || "No se pudo cancelar el pedido.";
       setModal({ type: "errorEstado", mensaje: errorMsg });
@@ -1672,12 +1718,18 @@ export default function GestionPedidos() {
       const payload = {
         ID_Usuario: Number(formData.idCliente),
         Metodo_Pago: metodoPago,
-        comprobante_pago: formData.comprobante || null,
+        // Con anticipo el soporte que se adjunta es el del anticipo: sin esto el
+        // pedido queda "sin comprobante" y no se puede marcar como entregado.
+        comprobante_pago: formData.comprobante || formData.anticipo_comprobante_url || null,
         productos: (formData.productosItems || []).map(p => ({
           ID_Producto: Number(p.idProducto),
           Cantidad:    Number(p.cantidad),
         })),
         Fecha_entrega_esperada: formData.fecha_entrega || null,
+        // El formulario ofrecia aplicar el saldo a favor del cliente, pero el
+        // dato se perdia aqui al armar el request: el saldo nunca se descontaba.
+        usar_credito:     formData.usar_credito  || false,
+        credito_monto:    formData.credito_monto ?? null,
         creado_por_admin: true,
         requiere_anticipo:      formData.requiere_anticipo      || false,
         anticipo_monto:         formData.anticipo_monto         || null,

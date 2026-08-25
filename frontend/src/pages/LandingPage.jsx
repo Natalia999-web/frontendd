@@ -5,7 +5,6 @@ import {
   Plus, Minus, ShoppingCart, CheckCircle2, X, ChevronLeft, ChevronRight, Eye,
 } from 'lucide-react';
 import { getUser } from '../services/authService.js';
-import { crearPedido } from '../services/pedidosService.js';
 import { API_URL } from '../config/api.js';
 import { useNotificaciones, TIPOS } from '../features/notificaciones/context/NotificacionesContext.jsx';
 import Navbar from '../shared/components/Navbar.jsx';
@@ -13,6 +12,7 @@ import Footer from '../shared/components/Footer.jsx';
 
 import CartAside from '../features/sales/orders/components/CartAside';
 import CheckoutModal from '../features/sales/orders/components/CheckoutModal';
+import { crearPedidoCliente } from '../features/sales/orders/services/crearPedidoCliente';
 import {
   addToCartWithQty,
   getCart,
@@ -419,48 +419,16 @@ const LandingPage = ({ hideNavbar = false }) => {
     setCheckoutOpen(true);
   };
 
-  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo) => {
-    const currentUser = getUser();
-    const currentCart = getCart();
-
-    // deliveryInfo viene del modal (puede haber cambiado respecto al carrito)
-    const entrega = deliveryInfo ?? {
-      tieneDomicilio: orderDetails?.tieneDomicilio ?? false,
-      address:        orderDetails?.address || '',
-      municipio:      orderDetails?.municipio || '',
-      departamento:   orderDetails?.departamento || '',
-      date:           orderDetails?.date || '',
-      time:           '',
-      observaciones:  orderDetails?.observaciones || '',
-    };
-
-    const fechaEntrega = entrega.date
-      ? entrega.time
-        ? `${entrega.date}T${entrega.time}:00`
-        : `${entrega.date}T00:00:00`
-      : null;
-
-    const payload = {
-      ID_Usuario:              currentUser?.id || null,
-      Metodo_Pago:             paymentMethod === 'digital' ? 'Transferencia 🏦' : 'Efectivo 💵',
-      Fecha_entrega_esperada:  fechaEntrega,
-      productos:               currentCart.map(item => ({
-        ID_Producto: Number(item.id),
-        Cantidad:    Number(item.cantidad),
-      })),
-      usar_credito:            usarCredito ?? false,
-      codigo_descuento:        null,
-      domicilio:               entrega.tieneDomicilio ? {
-        Direccion_entrega:    entrega.address || '',
-        Municipio_entrega:    entrega.municipio || '',
-        Departamento_entrega: entrega.departamento || '',
-        Observaciones:        entrega.observaciones || null,
-      } : undefined,
-    };
-
+  // Mismo envío que usa "Hacer pedidos": esta pantalla tenía su propia copia
+  // que no subía el comprobante ni mandaba los datos del anticipo, así que los
+  // pedidos del cliente llegaban sin respaldo de pago y el backend los rechazaba.
+  const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, saldoAFavor, deliveryInfo, anticipoData) => {
     let res;
     try {
-      res = await crearPedido(payload);
+      res = await crearPedidoCliente({
+        paymentMethod, onBehalfOf, comprobante, saldoAFavor,
+        deliveryInfo, anticipoData, orderDetails,
+      });
     } catch (err) {
       alert(err.message || "Error al registrar el pedido");
       return;

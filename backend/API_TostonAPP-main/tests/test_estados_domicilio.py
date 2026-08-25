@@ -16,6 +16,7 @@ from src.features.ventas.domicilios.services.estados import (
     ESTADO_DOM_A_VENTA,
     EstadoDomicilio,
     normalizar_estado,
+    puede_reasignarse,
     validar_cambio,
 )
 
@@ -84,6 +85,22 @@ class ValidarCambioTests(unittest.TestCase):
     def test_rechaza_cambios_sobre_cancelado(self):
         with self.assertRaises(HTTPException):
             validar_cambio(EstadoDomicilio.CANCELADO, EstadoDomicilio.EN_CAMINO)
+
+
+class PuedeReasignarseTests(unittest.TestCase):
+    """Cambiar de domiciliario solo antes de que el pedido salga a la calle."""
+
+    def test_pendiente_y_asignado_se_pueden_reasignar(self):
+        self.assertTrue(puede_reasignarse(EstadoDomicilio.PENDIENTE))
+        self.assertTrue(puede_reasignarse(EstadoDomicilio.ASIGNADO))
+
+    def test_en_camino_no_se_reasigna(self):
+        # El repartidor ya salió con el pedido encima.
+        self.assertFalse(puede_reasignarse(EstadoDomicilio.EN_CAMINO))
+
+    def test_estados_finales_no_se_reasignan(self):
+        self.assertFalse(puede_reasignarse(EstadoDomicilio.ENTREGADO))
+        self.assertFalse(puede_reasignarse(EstadoDomicilio.CANCELADO))
 
 
 if __name__ == "__main__":

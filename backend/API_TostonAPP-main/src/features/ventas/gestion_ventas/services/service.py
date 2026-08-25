@@ -240,7 +240,13 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
     }
 
 
-def _aplicar_credito(db: Session, id_usuario: int, monto_restante: Decimal, id_venta: int) -> Decimal:
+def _aplicar_credito(
+    db: Session,
+    id_usuario: int,
+    monto_restante: Decimal,
+    id_venta: int,
+    tope: Decimal | None = None,
+) -> Decimal:
     # with_for_update() bloquea la fila de crédito hasta el commit de crear_venta:
     # evita que dos compras simultáneas gasten el mismo saldo (condición de carrera).
     credito = db.query(CreditoCliente).filter(
@@ -252,7 +258,17 @@ def _aplicar_credito(db: Session, id_usuario: int, monto_restante: Decimal, id_v
 
     # El monto usado se recalcula 100% en backend: min(saldo real, total real del
     # pedido). El cliente no puede manipular cuánto crédito se descuenta.
-    credito_usado        = min(credito.Saldo, monto_restante)
+    credito_usado = min(credito.Saldo, monto_restante)
+
+    # El cliente puede gastar solo una parte y guardar el resto para después.
+    # Lo que llega del checkout es un tope, nunca un permiso: si pide más de lo
+    # que tiene o más de lo que cuesta el pedido, manda el mínimo de arriba.
+    if tope is not None:
+        credito_usado = min(credito_usado, max(Decimal(str(tope)), Decimal("0")))
+
+    if credito_usado <= 0:
+        return Decimal("0")
+
     credito.Saldo       -= credito_usado
     credito.Fecha_Update = _now()
 
@@ -701,7 +717,9 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     credito_aplicado = Decimal("0")
 
     if datos.usar_credito:
-        credito_aplicado = _aplicar_credito(db, datos.ID_Usuario, monto_restante, nueva_venta.ID_Venta)
+        credito_aplicado = _aplicar_credito(
+            db, datos.ID_Usuario, monto_restante, nueva_venta.ID_Venta, datos.credito_monto
+        )
         monto_restante  -= credito_aplicado
 
     descuento_aplicado = Decimal("0")
@@ -727,23 +745,50 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         # Solo cuenta como pagado lo verificable en el servidor: el crédito
         # efectivamente descontado del libro mayor del cliente.
         anticipo_pagado    = credito_aplicado
-        # La transferencia no se puede verificar automáticamente, pero exige un
-        # comprobante adjunto que el administrador valida antes de confirmar.
-        tiene_soporte      = _es_transferencia(datos.Metodo_Pago) and bool(
-            (datos.comprobante_pago or "").strip()
+        # Ningún pago fuera del crédito se puede verificar desde el servidor: ni
+        # una transferencia (el comprobante es una imagen) ni un efectivo
+        # entregado en el local. En los dos casos quien valida es el
+        # administrador antes de confirmar el pedido.
+        #
+        # Se da por respaldado el anticipo cuando el checkout lo registró
+        # (anticipo_registrado: crédito que lo cubre, efectivo confirmado o
+        # comprobante adjunto) o cuando viene el comprobante del pedido pagado
+        # por transferencia.
+        #
+        # Antes esta regla solo aceptaba comprobante_pago + método Transferencia,
+        # así que rechazaba el flujo de anticipo del checkout: el comprobante
+        # viaja en otro campo y el método del PEDIDO puede ser Efectivo cuando el
+        # saldo se paga contra entrega. El cliente se quedaba sin forma de pasar.
+        comprobante_pedido   = (datos.comprobante_pago or "").strip()
+        comprobante_anticipo = (getattr(datos, "anticipo_comprobante_url", None) or "").strip()
+        anticipo_declarado   = bool(getattr(datos, "anticipo_registrado", False))
+        tiene_soporte = (
+            anticipo_declarado
+            or bool(comprobante_anticipo)
+            or (_es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido))
         )
 
         # El pedido creado por el personal en el mostrador se cobra en el acto:
         # queda marcado como sobre stock, pero no se le exige el anticipo online.
         if not datos.creado_por_admin and anticipo_pagado < anticipo_requerido and not tiene_soporte:
             faltante = anticipo_requerido - anticipo_pagado
+            # Se indica qué faltó exactamente: el rechazo por "no llegó nada" se
+            # confundía con "el monto no alcanza", y no había forma de saber si
+            # el problema estaba en el pago o en lo que envió la aplicación.
+            if not datos.requiere_anticipo:
+                motivo = "el pedido llegó sin registro de anticipo"
+            elif not anticipo_declarado and not comprobante_anticipo:
+                motivo = "no llegó el comprobante ni la confirmación del anticipo"
+            else:
+                motivo = "el anticipo registrado no cubre el mínimo"
             db.rollback()
             raise HTTPException(
                 status_code=400,
                 detail=(
                     f"Este pedido supera el stock disponible, por lo que requiere un anticipo "
                     f"del 50% (${anticipo_requerido:,.0f}). Te faltan ${faltante:,.0f}: págalo "
-                    f"con tus créditos o por transferencia adjuntando el comprobante."
+                    f"con tus créditos, o registra el anticipo indicando cómo lo pagaste. "
+                    f"({motivo})"
                 ),
             )
 
@@ -838,9 +883,15 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
 
     # Crear órdenes de producción cuando el admin confirma directamente
     if datos.creado_por_admin:
-        _crear_ordenes_produccion_para_venta(
+        _ordenes = _crear_ordenes_produccion_para_venta(
             db, nueva_venta.ID_Venta, nueva_venta.Fecha_entrega_esperada
         )
+        # Con producción pendiente el pedido NO está listo para despachar:
+        # queda "En producción" hasta que se completen sus órdenes, momento en
+        # que el módulo de producción lo pasa a Listo. Antes nacía "Confirmado"
+        # aunque no se hubiera fabricado nada.
+        if _ordenes > 0:
+            nueva_venta.Estado = EstadoPedido.PREPARANDO
         db.commit()
 
     # El push a los administradores lo dispara notificar() al crear la
@@ -940,8 +991,12 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
 
     # Comprobante obligatorio para marcar como entregado SOLO si el pago fue por
     # transferencia. Los pedidos en efectivo se cobran en mano y no tienen soporte.
+    # Cuando el pedido lleva anticipo, el soporte del cliente puede estar guardado
+    # como comprobante del anticipo: también cuenta, si no el pedido se queda sin
+    # poder entregarse.
     _metodo = (venta.Metodo_Pago or "").strip().lower()
-    if nuevo_estado == EstadoPedido.ENTREGADO and "transfer" in _metodo and not venta.Comprobante_Pago:
+    _soporte_pago = venta.Comprobante_Pago or getattr(venta, "Anticipo_Comprobante_Url", None)
+    if nuevo_estado == EstadoPedido.ENTREGADO and "transfer" in _metodo and not _soporte_pago:
         raise HTTPException(
             status_code=400,
             detail="Se requiere comprobante de pago para marcar el pedido como entregado",
@@ -1160,11 +1215,16 @@ def proponer_fecha(db: Session, id_venta: int, fecha_entrega) -> dict:
     return _formato_venta(venta, db)
 
 
-def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> None:
-    """Crea órdenes de producción para los productos que requieren producción."""
+def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entrega) -> int:
+    """Crea órdenes de producción para los productos que requieren producción.
+
+    Devuelve cuántas creó, para que quien llama deje el pedido en el estado que
+    corresponde: con producción pendiente el pedido no está listo para
+    despachar, así que va "En producción" y no "Confirmado".
+    """
     items_venta = db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all()
     if not items_venta:
-        return
+        return 0
 
     # Batch: precargar productos, fichas y templates en 3 queries
     prod_ids     = [item.ID_Producto for item in items_venta]
@@ -1185,6 +1245,7 @@ def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entre
                     .order_by(OrdenProduccion.ID_Orden_Produccion.desc()).all()):
             templates_m.setdefault(t.ID_Producto, t)
 
+    creadas = 0
     for item in items_venta:
         prod = productos_m.get(item.ID_Producto)
         if not prod or not getattr(prod, "Requiere_Produccion", 0):
@@ -1207,6 +1268,9 @@ def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entre
             Estado        = 1,
             Costo         = Decimal("0"),
         ))
+        creadas += 1
+
+    return creadas
 
 
 def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
@@ -1225,7 +1289,11 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
 
     venta.Estado = EstadoPedido.CONFIRMADO
 
-    _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada)
+    # Si el pedido lleva producción, aceptar la fecha no lo deja listo para
+    # despachar: arranca la fabricación. Queda "En producción" y pasará a Listo
+    # cuando se completen sus órdenes.
+    if _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada) > 0:
+        venta.Estado = EstadoPedido.PREPARANDO
 
     notificar(
         db, "fecha_aceptada", "Fecha aceptada por el cliente",
@@ -1239,7 +1307,9 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
         notificar_cambio_pedido_push(
             id_usuario_cliente=venta.ID_Usuario,
             id_venta=id_venta,
-            nuevo_estado=EstadoPedido.CONFIRMADO,
+            # El estado real tras aceptar: Confirmado, o En producción si el
+            # pedido arrancó fabricación.
+            nuevo_estado=venta.Estado,
             db=db,
         )
     except Exception:

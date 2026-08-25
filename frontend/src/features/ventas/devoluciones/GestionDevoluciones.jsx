@@ -155,7 +155,7 @@ function ModalVerDevolucion({ dev, creditoCliente, onClose }) {
                 <div className="credito-box" style={{ marginTop: 12 }}>
                   <span className="credito-box__icon">💳</span>
                   <div>
-                    <div className="credito-box__label">Crédito aplicado</div>
+                    <div className="credito-box__label">Saldo a favor abonado</div>
                     <div className="credito-box__val">{fmt(dev.totalDevuelto)}</div>
                     <div className="credito-box__saldo">
                       Saldo actual del cliente: {fmt(creditoCliente || 0)}

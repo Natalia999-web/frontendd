@@ -76,6 +76,11 @@ def normalizar_estado(valor, tiene_repartidor: bool = False) -> int | None:
     return estado
 
 
+def puede_reasignarse(estado: int) -> bool:
+    """Cambiar de domiciliario solo tiene sentido antes de que el pedido salga."""
+    return estado in (EstadoDomicilio.PENDIENTE, EstadoDomicilio.ASIGNADO)
+
+
 def validar_cambio(actual, nuevo: int) -> None:
     """Impide mover un domicilio ya entregado o cancelado, y estados inválidos.
 

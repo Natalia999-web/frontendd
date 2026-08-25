@@ -108,7 +108,7 @@ const InicioPage = () => {
               <div className="card" style={{ padding: 20, textAlign: 'center', background: 'linear-gradient(135deg, #f3e5f5 0%, #fff 100%)', border: '1.5px solid #ce93d8' }}>
                 <Gift size={32} color="#7b1fa2" style={{ marginBottom: 8 }} />
                 <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#4a148c' }}>{COP(credito)}</p>
-                <p style={{ margin: 0, fontSize: 13, color: '#7b1fa2', fontWeight: 600 }}>Crédito disponible</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#7b1fa2', fontWeight: 600 }}>Saldo a favor</p>
                 <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9e9e9e' }}>Aplica en tu próxima compra</p>
               </div>
             )}

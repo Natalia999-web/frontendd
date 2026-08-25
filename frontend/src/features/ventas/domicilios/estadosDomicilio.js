@@ -88,6 +88,11 @@ export const transicionesDom = (estadoId, esRepartidor = false) => {
 };
 
 /** Opciones para el filtro de la tabla. */
+/** Cambiar de domiciliario solo tiene sentido antes de que el pedido salga:
+ *  después ya lo lleva alguien encima y reasignarlo desordena a los dos. */
+export const puedeReasignarse = (estadoId) =>
+  estadoId === ESTADO_DOMICILIO.PENDIENTE || estadoId === ESTADO_DOMICILIO.ASIGNADO;
+
 export const FILTRO_ESTADOS_DOM = [
   { val: "todos",       label: "Todos",       dot: "#bdbdbd" },
   { val: "activos",     label: "Activos",     dot: "#43a047" },

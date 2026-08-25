@@ -164,6 +164,45 @@ class AnticipoTests(unittest.TestCase):
         credito_aplicado = Decimal("25000")
         self.assertLess(credito_aplicado, self.anticipo(100000))
 
+    def _soporte(self, metodo=None, comprobante_pedido="", comprobante_anticipo="",
+                 anticipo_registrado=False):
+        """Misma regla que aplica crear_venta para dar por respaldado el anticipo."""
+        return (
+            bool(anticipo_registrado)
+            or bool((comprobante_anticipo or "").strip())
+            or (_es_transferencia(metodo) and bool((comprobante_pedido or "").strip()))
+        )
+
+    def test_anticipo_en_efectivo_confirmado_respalda_el_pedido(self):
+        # El checkout marca anticipo_registrado cuando el cliente confirma que
+        # entregó el efectivo. Antes se rechazaba y no había forma de continuar.
+        self.assertTrue(self._soporte(metodo="Efectivo", anticipo_registrado=True))
+
+    def test_anticipo_cubierto_por_credito_respalda_el_pedido(self):
+        # El checkout también marca anticipo_registrado cuando el crédito lo cubre.
+        self.assertTrue(self._soporte(metodo="Efectivo", anticipo_registrado=True))
+
+    def test_sin_registrar_el_anticipo_no_hay_respaldo(self):
+        self.assertFalse(self._soporte(metodo="Efectivo", anticipo_registrado=False))
+
+    def test_comprobante_del_anticipo_respalda_el_pedido(self):
+        # El checkout del cliente sube el comprobante del ANTICIPO, no el del
+        # pedido: antes se rechazaba aunque viniera adjunto.
+        self.assertTrue(self._soporte(
+            metodo="Efectivo", comprobante_anticipo="https://res.cloudinary.com/x.jpg",
+        ))
+
+    def test_comprobante_del_pedido_por_transferencia_tambien_sirve(self):
+        self.assertTrue(self._soporte(
+            metodo="Transferencia", comprobante_pedido="https://res.cloudinary.com/y.jpg",
+        ))
+
+    def test_sin_ningun_comprobante_no_hay_respaldo(self):
+        self.assertFalse(self._soporte(metodo="Efectivo"))
+
+    def test_transferencia_sin_comprobante_no_hay_respaldo(self):
+        self.assertFalse(self._soporte(metodo="Transferencia"))
+
     def test_metodo_transferencia_detectado(self):
         self.assertTrue(_es_transferencia("Transferencia"))
         self.assertTrue(_es_transferencia("  transferencia bancaria "))
