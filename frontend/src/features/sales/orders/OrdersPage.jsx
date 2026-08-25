@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { addToCart, getCart, getCartCount, clearCart } from './services/cartService';
 import { getProductos } from '../../../services/productosService';
 import { getCategorias } from '../../../services/categoriasProductosService';
-import { crearPedido } from '../../../services/pedidosService';
 import ProductCard from './components/ProductCard';
 import {
   Search, SlidersHorizontal, ShoppingBag, Leaf,
@@ -10,9 +9,9 @@ import {
 } from 'lucide-react';
 import { getUser } from '../../../services/authService';
 import { updateUser } from '../../client/profile/services/profileService.js';
-import { subirImagenCloudinary } from '../../../utils/cloudinary.js';
 import CartAside from './components/CartAside';
 import CheckoutModal from './components/CheckoutModal';
+import { crearPedidoCliente, resolverEntrega } from './services/crearPedidoCliente';
 import '../../../styles/Client.css';
 
 /* ─── OrdersPage principal ────────────────────────────── */
@@ -99,92 +98,26 @@ const OrdersPage = () => {
     setCheckoutOpen(true);
   };
 
+  // El envío vive en crearPedidoCliente para que la landing use exactamente el
+  // mismo camino: allá se había quedado una copia vieja que no mandaba el
+  // comprobante ni el anticipo.
   const handleConfirmOrder = async (paymentMethod, onBehalfOf, comprobante, usarCredito, deliveryInfo, anticipoData) => {
-    const user = getUser();
-    const cart = getCart();
-
-    const tieneDomicilio = deliveryInfo?.tieneDomicilio ?? orderDetails?.tieneDomicilio;
-    const direccion      = deliveryInfo?.address      || orderDetails?.address      || '';
-    const municipio      = deliveryInfo?.municipio    || orderDetails?.municipio    || '';
-    const departamento   = deliveryInfo?.departamento || orderDetails?.departamento || '';
-
-    let fechaEntregaEsperada = null;
-    if (deliveryInfo?.date) {
-      const t = deliveryInfo.time || '00:00';
-      fechaEntregaEsperada = `${deliveryInfo.date}T${t}:00`;
-    }
-
-    // Subir comprobante principal a Cloudinary si existe.
-    // Si la subida falla, o devuelve una URL vacía, NO se crea el pedido: antes
-    // se creaba igual y quedaba sin comprobante sin que nadie se enterara hasta
-    // abrirlo. El mensaje incluye el motivo real para poder diagnosticarlo.
-    let comprobanteUrl = null;
-    if (paymentMethod === 'digital' && comprobante) {
-      try {
-        comprobanteUrl = await subirImagenCloudinary(comprobante);
-      } catch (e) {
-        showToast(`No se pudo subir el comprobante: ${e?.message || 'intenta de nuevo'}`, 'error');
-        return;
-      }
-      if (!comprobanteUrl) {
-        showToast('No se pudo guardar el comprobante. Intenta de nuevo.', 'error');
-        return;
-      }
-    }
-
-    // Subir comprobante del anticipo si aplica
-    let anticipoComprobanteUrl = null;
-    if (anticipoData?.requiere && anticipoData.metodo === 'digital' && anticipoData.comprobante) {
-      try {
-        anticipoComprobanteUrl = await subirImagenCloudinary(anticipoData.comprobante);
-      } catch (e) {
-        showToast(`No se pudo subir el comprobante del anticipo: ${e?.message || 'intenta de nuevo'}`, 'error');
-        return;
-      }
-      if (!anticipoComprobanteUrl) {
-        showToast('No se pudo guardar el comprobante del anticipo. Intenta de nuevo.', 'error');
-        return;
-      }
-    }
-
-    const payload = {
-      ID_Usuario:             user?.id || null,
-      productos:              cart.map(item => ({
-        ID_Producto: Number(item.id),
-        Cantidad:    Number(item.cantidad),
-      })),
-      Metodo_Pago:            paymentMethod === 'digital' ? 'Transferencia' : 'Efectivo',
-      A_Nombre_De:            onBehalfOf || null,
-      usar_credito:           usarCredito || false,
-      comprobante_pago:         comprobanteUrl,
-      Fecha_entrega_esperada:   fechaEntregaEsperada,
-      requiere_anticipo:        !!(anticipoData?.requiere),
-      anticipo_monto:           anticipoData?.monto ?? null,
-      anticipo_metodo_pago:     anticipoData?.requiere
-        ? (anticipoData.metodo === 'digital' ? 'Transferencia' : anticipoData.metodo === 'credito' ? 'Credito' : 'Efectivo')
-        : null,
-      anticipo_comprobante_url: anticipoComprobanteUrl,
-      anticipo_registrado:      !!(anticipoData?.requiere && (
-        anticipoData.creditoCubreAnticipo ? true
-        : anticipoData.metodo === 'efectivo' ? anticipoData.efectivo
-        : !!anticipoComprobanteUrl
-      )),
-      domicilio: tieneDomicilio && direccion ? {
-        Direccion_entrega:    direccion,
-        Municipio_entrega:    municipio || 'Sin municipio',
-        Departamento_entrega: departamento || 'Sin departamento',
-        Observaciones:        deliveryInfo?.observaciones || orderDetails?.observaciones || null,
-      } : null,
-    };
-
+    const entrega = resolverEntrega(deliveryInfo, orderDetails);
     try {
-      await crearPedido(payload);
+      await crearPedidoCliente({
+        paymentMethod, onBehalfOf, comprobante, usarCredito,
+        deliveryInfo, anticipoData, orderDetails,
+      });
       clearCart();
       setCheckoutOpen(false);
       showToast('¡Pedido creado exitosamente! 🎉');
       // Ofrecer guardar la dirección si es un domicilio
-      if (tieneDomicilio && direccion) {
-        setSaveAddressPrompt({ direccion, municipio, departamento });
+      if (entrega.tieneDomicilio && entrega.address) {
+        setSaveAddressPrompt({
+          direccion:    entrega.address,
+          municipio:    entrega.municipio,
+          departamento: entrega.departamento,
+        });
       }
     } catch (err) {
       showToast(err.message || 'Error al crear el pedido', 'error');
