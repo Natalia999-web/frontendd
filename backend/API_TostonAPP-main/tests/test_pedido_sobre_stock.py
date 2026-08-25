@@ -164,11 +164,26 @@ class AnticipoTests(unittest.TestCase):
         credito_aplicado = Decimal("25000")
         self.assertLess(credito_aplicado, self.anticipo(100000))
 
-    def _soporte(self, metodo=None, comprobante_pedido="", comprobante_anticipo=""):
+    def _soporte(self, metodo=None, comprobante_pedido="", comprobante_anticipo="",
+                 anticipo_registrado=False):
         """Misma regla que aplica crear_venta para dar por respaldado el anticipo."""
-        return bool((comprobante_anticipo or "").strip()) or (
-            _es_transferencia(metodo) and bool((comprobante_pedido or "").strip())
+        return (
+            bool(anticipo_registrado)
+            or bool((comprobante_anticipo or "").strip())
+            or (_es_transferencia(metodo) and bool((comprobante_pedido or "").strip()))
         )
+
+    def test_anticipo_en_efectivo_confirmado_respalda_el_pedido(self):
+        # El checkout marca anticipo_registrado cuando el cliente confirma que
+        # entregó el efectivo. Antes se rechazaba y no había forma de continuar.
+        self.assertTrue(self._soporte(metodo="Efectivo", anticipo_registrado=True))
+
+    def test_anticipo_cubierto_por_credito_respalda_el_pedido(self):
+        # El checkout también marca anticipo_registrado cuando el crédito lo cubre.
+        self.assertTrue(self._soporte(metodo="Efectivo", anticipo_registrado=True))
+
+    def test_sin_registrar_el_anticipo_no_hay_respaldo(self):
+        self.assertFalse(self._soporte(metodo="Efectivo", anticipo_registrado=False))
 
     def test_comprobante_del_anticipo_respalda_el_pedido(self):
         # El checkout del cliente sube el comprobante del ANTICIPO, no el del

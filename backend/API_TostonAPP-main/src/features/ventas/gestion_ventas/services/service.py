@@ -727,19 +727,27 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         # Solo cuenta como pagado lo verificable en el servidor: el crédito
         # efectivamente descontado del libro mayor del cliente.
         anticipo_pagado    = credito_aplicado
-        # Una transferencia no se puede verificar automáticamente, pero exige un
-        # comprobante adjunto que el administrador valida antes de confirmar.
-        # Vale cualquiera de los dos comprobantes:
-        #  - el del pago del pedido (cuando se paga todo por transferencia);
-        #  - el del ANTICIPO, que es el que sube el cliente cuando el pedido
-        #    lleva anticipo.
-        # Esta comprobación se escribió antes de que existiera el flujo de
-        # anticipo y solo miraba el primero: rechazaba pedidos cuyo comprobante
-        # de anticipo sí venía adjunto.
+        # Ningún pago fuera del crédito se puede verificar desde el servidor: ni
+        # una transferencia (el comprobante es una imagen) ni un efectivo
+        # entregado en el local. En los dos casos quien valida es el
+        # administrador antes de confirmar el pedido.
+        #
+        # Se da por respaldado el anticipo cuando el checkout lo registró
+        # (anticipo_registrado: crédito que lo cubre, efectivo confirmado o
+        # comprobante adjunto) o cuando viene el comprobante del pedido pagado
+        # por transferencia.
+        #
+        # Antes esta regla solo aceptaba comprobante_pago + método Transferencia,
+        # así que rechazaba el flujo de anticipo del checkout: el comprobante
+        # viaja en otro campo y el método del PEDIDO puede ser Efectivo cuando el
+        # saldo se paga contra entrega. El cliente se quedaba sin forma de pasar.
         comprobante_pedido   = (datos.comprobante_pago or "").strip()
         comprobante_anticipo = (getattr(datos, "anticipo_comprobante_url", None) or "").strip()
-        tiene_soporte = bool(comprobante_anticipo) or (
-            _es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido)
+        anticipo_declarado   = bool(getattr(datos, "anticipo_registrado", False))
+        tiene_soporte = (
+            anticipo_declarado
+            or bool(comprobante_anticipo)
+            or (_es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido))
         )
 
         # El pedido creado por el personal en el mostrador se cobra en el acto:
@@ -752,7 +760,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
                 detail=(
                     f"Este pedido supera el stock disponible, por lo que requiere un anticipo "
                     f"del 50% (${anticipo_requerido:,.0f}). Te faltan ${faltante:,.0f}: págalo "
-                    f"con tus créditos o adjunta el comprobante de la transferencia del anticipo."
+                    f"con tus créditos, o registra el anticipo indicando cómo lo pagaste."
                 ),
             )
 
