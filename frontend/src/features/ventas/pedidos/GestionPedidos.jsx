@@ -175,6 +175,14 @@ function ComprobanteAdjunto({ url, titulo }) {
    ═══════════════════════════════════════════════════════════ */
 function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
   const navigate = useNavigate();
+  // Los soportes de pago del pedido: el del pedido, el del anticipo y el del
+  // saldo. Se muestran todos (sin repetir si es el mismo archivo) porque cada
+  // uno respalda un cobro distinto.
+  const comprobantes = [
+    { url: pedido.comprobante,                 titulo: "Comprobante de pago adjuntado." },
+    { url: pedido.anticipo_comprobante_url,    titulo: "Comprobante del anticipo adjuntado." },
+    { url: pedido.pago_final_comprobante_url,  titulo: "Comprobante del saldo adjuntado." },
+  ].filter((c, i, todos) => c.url && todos.findIndex(o => o.url === c.url) === i);
   const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
   const epInicial = pedido.estado_pago;
   const [tab, setTab] = useState(
@@ -395,18 +403,28 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
               {(() => {
                 const totalPedido = Number(pedido.total || 0);
 
-                // Total realmente pagado según los campos del backend
-                let totalPagado = 0;
-                if (pedido.pago_final_registrado) {
-                  totalPagado = pedido.pago_final_monto != null ? pedido.pago_final_monto : totalPedido;
-                } else if (pedido.anticipo_registrado) {
-                  totalPagado = pedido.anticipo_monto ?? 0;
-                } else if (pedido.sobre_stock && pedido.anticipo_pagado != null) {
-                  totalPagado = pedido.anticipo_pagado;
-                }
+                const ep = pedido.estado_pago;
+
+                // Un pedido con anticipo se cobra en dos partes. Antes solo se
+                // contaba una: al registrar el saldo, el total pagado pasaba a ser
+                // ese saldo y el anticipo desaparecía, así que un pedido saldado
+                // seguía mostrando el 50% como pendiente.
+                const anticipoCobrado = pedido.anticipo_registrado
+                  ? Number(pedido.anticipo_monto ?? 0)
+                  : (pedido.sobre_stock && pedido.anticipo_pagado != null ? Number(pedido.anticipo_pagado) : 0);
+                const saldoCobrado = pedido.pago_final_registrado
+                  ? Number(pedido.pago_final_monto ?? Math.max(0, totalPedido - anticipoCobrado))
+                  : 0;
+
+                // Estados con los que el backend da el pago por cerrado: no queda
+                // saldo aunque los montos registrados no cuadren al peso.
+                const pagoCerrado = !!pedido.pago_final_registrado
+                  || ["pagado_completo", "efectivo_recibido"].includes(ep);
+
+                let totalPagado = anticipoCobrado + saldoCobrado;
+                if (pagoCerrado) totalPagado = Math.max(totalPagado, totalPedido);
 
                 const saldo = Math.max(0, totalPedido - totalPagado);
-                const ep = pedido.estado_pago;
                 const pct = totalPedido > 0 ? Math.min(100, Math.round((totalPagado / totalPedido) * 100)) : 0;
 
                 let estadoLabel, estadoColor, estadoBg, estadoBorder, estadoEmoji;
@@ -552,15 +570,10 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           <span className="info-box__icon">ℹ️</span>
                           <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
                         </div>
-                        {pedido.comprobante && (
-                          <ComprobanteAdjunto url={pedido.comprobante} titulo="Comprobante de pago adjuntado." />
-                        )}
-                        {/* Con anticipo el cliente sube su soporte en ese paso: sin
-                            mostrarlo, el pedido parecía no tener comprobante. */}
-                        {pedido.anticipo_comprobante_url && pedido.anticipo_comprobante_url !== pedido.comprobante && (
-                          <ComprobanteAdjunto url={pedido.anticipo_comprobante_url} titulo="Comprobante del anticipo adjuntado." />
-                        )}
-                        {!pedido.comprobante && !pedido.anticipo_comprobante_url && (
+                        {comprobantes.map(c => (
+                          <ComprobanteAdjunto key={c.url} url={c.url} titulo={c.titulo} />
+                        ))}
+                        {comprobantes.length === 0 && (
                           <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
                             <span className="info-box__icon">⚠️</span>
                             <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
@@ -575,11 +588,11 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                             Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
                           </span>
                         </div>
-                        {/* El saldo se paga en efectivo, pero el anticipo pudo
-                            haberse transferido: ahí sí hay comprobante. */}
-                        {pedido.anticipo_comprobante_url && (
-                          <ComprobanteAdjunto url={pedido.anticipo_comprobante_url} titulo="Comprobante del anticipo adjuntado." />
-                        )}
+                        {/* El pedido es en efectivo, pero el anticipo o el saldo
+                            pudieron transferirse: ahí sí hay comprobante. */}
+                        {comprobantes.map(c => (
+                          <ComprobanteAdjunto key={c.url} url={c.url} titulo={c.titulo} />
+                        ))}
                       </>
                     )}
                   </>
