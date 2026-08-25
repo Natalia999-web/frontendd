@@ -235,10 +235,11 @@ _ESTADOS_VENTA_FINALES = {5, 8, 9}  # Cancelado, Entregado, En camino
 # Estado del PEDIDO cuando su producción termina: Listo para despachar
 # (EstadoPedido.LISTO). Coincide con ESTADO_COMPLETADA de las órdenes, pero son
 # tablas distintas: se nombra aparte para que quede claro a qué se refiere.
-ESTADO_VENTA_LISTO = 11
+ESTADO_VENTA_LISTO      = 11
+ESTADO_VENTA_CONFIRMADO = 4
 # Solo se avanza a Listo desde estos: Confirmado (el cliente aceptó) o En
 # producción. Un pedido aún Pendiente o esperando fecha no se salta ese paso.
-_ESTADOS_VENTA_PRODUCIENDO = {4, 13}
+_ESTADOS_VENTA_PRODUCIENDO = {ESTADO_VENTA_CONFIRMADO, ESTADO_EN_PROCESO}
 
 
 def _sync_venta_por_ordenes(
@@ -277,15 +278,22 @@ def _sync_venta_por_ordenes(
     estados = [o.Estado for o in otras] + [nuevo_estado_orden]
     terminadas = {ESTADO_COMPLETADA, ESTADO_CANCELADA}
 
-    todas_terminadas = all(e in terminadas for e in estados)
+    todas_terminadas  = all(e in terminadas for e in estados)
+    # Cancelar no es fabricar: si ninguna orden se completó, no hay producto.
+    alguna_completada = any(e == ESTADO_COMPLETADA for e in estados)
 
     if todas_terminadas:
-        # Producción finalizada → el pedido queda Listo para despachar.
-        # Solo se avanza si el pedido ya venía confirmado o en producción: si
+        # Solo se mueve si el pedido ya venía confirmado o en producción: si
         # alguien creó una orden suelta sobre un pedido que aún esperaba
         # confirmación o fecha del cliente, no se salta ese paso.
         if venta.Estado in _ESTADOS_VENTA_PRODUCIENDO:
-            venta.Estado = ESTADO_VENTA_LISTO
+            # Se fabricó algo → Listo para despachar.
+            # Todas canceladas → no se fabricó nada: vuelve a Confirmado para
+            # que el admin decida (reprogramar producción, surtir de stock o
+            # cancelar). Marcarlo Listo diría que hay producto cuando no lo hay.
+            venta.Estado = (
+                ESTADO_VENTA_LISTO if alguna_completada else ESTADO_VENTA_CONFIRMADO
+            )
     elif venta.Estado not in {ESTADO_EN_PROCESO}:
         # Hay órdenes activas y el pedido aún no refleja "En producción"
         venta.Estado = ESTADO_EN_PROCESO

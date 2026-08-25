@@ -15,6 +15,7 @@ from src.features.produccion.ordenes_produccion.services.service import (
     ESTADO_CANCELADA,
     ESTADO_COMPLETADA,
     ESTADO_EN_PROCESO,
+    ESTADO_VENTA_CONFIRMADO,
     ESTADO_VENTA_LISTO,
     _sync_venta_por_ordenes,
 )
@@ -79,9 +80,17 @@ class SyncVentaPorOrdenesTests(unittest.TestCase):
         _sync_venta_por_ordenes(FakeDB(v), 1, 10, ESTADO_COMPLETADA)
         self.assertNotEqual(v.Estado, ESTADO_PENDIENTE)
 
-    def test_orden_cancelada_tambien_cierra_la_produccion(self):
+    def test_cancelar_la_unica_orden_no_deja_el_pedido_listo(self):
+        # Cancelar no es fabricar: no hay producto que despachar. El pedido
+        # vuelve a Confirmado para que el admin decida qué hacer.
         v = venta(ESTADO_EN_PROCESO)
         _sync_venta_por_ordenes(FakeDB(v), 1, 10, ESTADO_CANCELADA)
+        self.assertEqual(v.Estado, ESTADO_VENTA_CONFIRMADO)
+
+    def test_si_una_se_completo_y_otra_se_cancelo_queda_listo(self):
+        v = venta(ESTADO_EN_PROCESO)
+        db = FakeDB(v, otras_ordenes=[orden(ESTADO_COMPLETADA)])
+        _sync_venta_por_ordenes(db, 1, 10, ESTADO_CANCELADA)
         self.assertEqual(v.Estado, ESTADO_VENTA_LISTO)
 
     def test_pedido_aun_pendiente_no_salta_la_confirmacion(self):
