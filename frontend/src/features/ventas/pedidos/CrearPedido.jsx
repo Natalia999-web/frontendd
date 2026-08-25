@@ -752,7 +752,18 @@ export default function CrearPedido({ onClose, onSave }) {
               <p className="section-label" style={{ textTransform: "none", marginTop: 0, fontSize: 16 }}>4. Método de Pago</p>
               
               <div className="field-wrap">
-                <label className="field-label">Seleccione una opción <span className="required">*</span></label>
+                {/* Antes decía "Seleccione una opción", igual que el selector del
+                    anticipo de más abajo: dos bloques idénticos y no se sabía
+                    cuál era cuál. Ahora cada uno dice a qué corresponde. */}
+                <label className="field-label">
+                  Método de pago del pedido <span className="required">*</span>
+                </label>
+                {requiereAnticipo && (
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8d6e63" }}>
+                    Es el método con el que se cobrará el pedido. El del anticipo se
+                    elige más abajo.
+                  </p>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                   {METODOS_PAGO.map(m => (
                     <button
@@ -1040,10 +1051,32 @@ export default function CrearPedido({ onClose, onSave }) {
                       <span>-{fmt(creditoAplicar)}</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, fontWeight: 900, marginTop: 12, paddingTop: 12, borderTop: "1px dashed rgba(255,255,255,0.3)" }}>
-                    <span>TOTAL FINAL</span>
+                  {/* Total del pedido: con anticipo pasa a ser un dato de apoyo,
+                      porque lo que importa aquí es cuánto se paga AHORA. */}
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    fontSize: requiereAnticipo ? 15 : 22,
+                    fontWeight: requiereAnticipo ? 700 : 900,
+                    opacity: requiereAnticipo ? 0.9 : 1,
+                    marginTop: 12, paddingTop: 12,
+                    borderTop: "1px dashed rgba(255,255,255,0.3)",
+                  }}>
+                    <span>TOTAL DEL PEDIDO</span>
                     <span>{fmt(totalFinal)}</span>
                   </div>
+
+                  {/* Lo que se cobra en este momento, siempre destacado. */}
+                  {requiereAnticipo && (
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                      fontSize: 22, fontWeight: 900, marginTop: 10, paddingTop: 10,
+                      borderTop: "1px solid rgba(255,255,255,0.45)",
+                    }}>
+                      <span>TOTAL A PAGAR AHORA</span>
+                      <span>{fmt(montoAnticipo)}</span>
+                    </div>
+                  )}
+
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
                     💳 Pago vía: <strong>{form.metodo_pago}</strong>
                   </div>
