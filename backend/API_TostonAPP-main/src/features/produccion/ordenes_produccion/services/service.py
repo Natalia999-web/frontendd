@@ -232,6 +232,14 @@ ESTADO_CANCELADA  = 5
 # Estados de venta que no se deben tocar (ya terminados)
 _ESTADOS_VENTA_FINALES = {5, 8, 9}  # Cancelado, Entregado, En camino
 
+# Estado del PEDIDO cuando su producción termina: Listo para despachar
+# (EstadoPedido.LISTO). Coincide con ESTADO_COMPLETADA de las órdenes, pero son
+# tablas distintas: se nombra aparte para que quede claro a qué se refiere.
+ESTADO_VENTA_LISTO = 11
+# Solo se avanza a Listo desde estos: Confirmado (el cliente aceptó) o En
+# producción. Un pedido aún Pendiente o esperando fecha no se salta ese paso.
+_ESTADOS_VENTA_PRODUCIENDO = {4, 13}
+
 
 def _sync_venta_por_ordenes(
     db: Session,
@@ -244,10 +252,17 @@ def _sync_venta_por_ordenes(
 
     Reglas:
     - Si TODAS las órdenes vinculadas están Completadas o Canceladas
-      → el pedido vuelve a Pendiente (1) para que el admin lo confirme.
+      → el pedido queda Listo (11): ya está fabricado y es el estado desde el
+        que se entrega en tienda o se asigna domiciliario.
     - Si hay alguna orden activa (Pendiente o En proceso)
       → el pedido pasa/permanece en En producción (13).
     - Nunca toca pedidos en estado final (Cancelado/Entregado/En camino).
+
+    Antes, al terminar la producción el pedido volvía a Pendiente (1). Eso
+    rompía el flujo de fecha propuesta: el pedido perdía el Confirmado que
+    había ganado cuando el cliente aceptó la fecha y, al quedar Pendiente, el
+    panel volvía a ofrecer "Proponer fecha" sobre un pedido cuya fecha el
+    cliente YA había aceptado.
     """
     venta = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
     if not venta or venta.Estado in _ESTADOS_VENTA_FINALES:
@@ -265,8 +280,12 @@ def _sync_venta_por_ordenes(
     todas_terminadas = all(e in terminadas for e in estados)
 
     if todas_terminadas:
-        # Producción finalizada → pedido queda Pendiente para confirmación del admin
-        venta.Estado = ESTADO_PENDIENTE
+        # Producción finalizada → el pedido queda Listo para despachar.
+        # Solo se avanza si el pedido ya venía confirmado o en producción: si
+        # alguien creó una orden suelta sobre un pedido que aún esperaba
+        # confirmación o fecha del cliente, no se salta ese paso.
+        if venta.Estado in _ESTADOS_VENTA_PRODUCIENDO:
+            venta.Estado = ESTADO_VENTA_LISTO
     elif venta.Estado not in {ESTADO_EN_PROCESO}:
         # Hay órdenes activas y el pedido aún no refleja "En producción"
         venta.Estado = ESTADO_EN_PROCESO
