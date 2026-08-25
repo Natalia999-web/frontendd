@@ -175,13 +175,12 @@ function ComprobanteAdjunto({ url, titulo }) {
    ═══════════════════════════════════════════════════════════ */
 function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
   const navigate = useNavigate();
-  // Los soportes de pago del pedido: el del pedido, el del anticipo y el del
-  // saldo. Se muestran todos (sin repetir si es el mismo archivo) porque cada
-  // uno respalda un cobro distinto.
+  // El comprobante del pedido y el del anticipo respaldan el mismo pago —lo que
+  // el cliente transfirió al pedir—, aunque se guarden en dos campos: se muestra
+  // uno solo. El del saldo sí es otro cobro, el de la entrega.
   const comprobantes = [
-    { url: pedido.comprobante,                 titulo: "Comprobante de pago adjuntado." },
-    { url: pedido.anticipo_comprobante_url,    titulo: "Comprobante del anticipo adjuntado." },
-    { url: pedido.pago_final_comprobante_url,  titulo: "Comprobante del saldo adjuntado." },
+    { url: pedido.comprobante || pedido.anticipo_comprobante_url, titulo: "Comprobante de pago adjuntado." },
+    { url: pedido.pago_final_comprobante_url,                     titulo: "Comprobante del saldo adjuntado." },
   ].filter((c, i, todos) => c.url && todos.findIndex(o => o.url === c.url) === i);
   const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
   const epInicial = pedido.estado_pago;
