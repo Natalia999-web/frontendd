@@ -1623,20 +1623,44 @@ export default function GestionPedidos() {
     if (!ped) return;
     setActionSaving(true);
     try {
-      if (ped.estado === "Listo") {
+      await cancelarPedido(id, motivo);
+
+      // Un pedido de recoger en tienda que ya estaba preparado (Listo) tenía el
+      // stock descontado, y al cancelar el backend lo devuelve al inventario.
+      // Pero el producto ya está hecho y no se puede revender: se registra la
+      // salida para darlo de baja y dejar el rastro.
+      //
+      // Va DESPUÉS de cancelar (antes el stock aún estaba descontado y la
+      // salida fallaba por "stock insuficiente"), y solo en pedidos sin
+      // domicilio: en los de domicilio el stock se descuenta al entregar, así
+      // que aquí no hay nada que dar de baja.
+      if (ped.estado === "Listo" && !ped.domicilio) {
         for (const prod of ped.productosItems) {
-          await registrarSalida({
-            tipo: "Producto",
-            idProducto: prod.idProducto,
-            cantidad: prod.cantidad,
-            motivo: `Pedido ${ped.numero} cancelado: ${motivo}`,
-          });
+          try {
+            await registrarSalida({
+              // El backend espera el motivo de la salida, no el tipo de
+              // artículo: antes se enviaba "Producto" y respondía
+              // "Input should be 'vencimiento', 'daño', ...".
+              tipo: "ajuste",
+              idProducto: prod.idProducto,
+              cantidad: prod.cantidad,
+              motivo: `Pedido ${ped.numero} cancelado: ${motivo}`,
+            });
+          } catch (errSalida) {
+            // El pedido ya quedó cancelado: no se revierte por esto, pero se
+            // avisa para que se ajuste el inventario a mano.
+            showToast(
+              `Pedido cancelado, pero no se pudo dar de baja "${prod.nombre}": ${errSalida.message || "error al registrar la salida"}`,
+              "warn",
+            );
+          }
         }
       }
-      await cancelarPedido(id, motivo);
+
       setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado: "Cancelado" } : p));
       showToast(`Pedido ${ped.numero} cancelado`);
       setModal(null);
+      cargarDatos().catch(() => {});
     } catch (err) {
       const errorMsg = err.message || "No se pudo cancelar el pedido.";
       setModal({ type: "errorEstado", mensaje: errorMsg });
