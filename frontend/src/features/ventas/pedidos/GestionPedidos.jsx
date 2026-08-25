@@ -527,25 +527,11 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       )}
                     </div>
 
-                    {/* ── Sobre stock (pedido especial 50%) ── */}
-                    {pedido.sobre_stock && (
-                      <div style={{ background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#e65100", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          ⚠️ Pedido sobre stock — anticipo del 50%
-                        </p>
-                        <div className="ver-ped-field">
-                          <span className="ver-ped-field__label">Anticipo requerido</span>
-                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: "#bf360c" }}>{fmt(pedido.anticipo_requerido)}</span>
-                        </div>
-                        <div className="ver-ped-field">
-                          <span className="ver-ped-field__label">Anticipo pagado</span>
-                          <span className="ver-ped-field__value" style={{ fontWeight: 800, color: (pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "#2e7d32" : "#c62828" }}>
-                            {fmt(pedido.anticipo_pagado || 0)}{" "}
-                            {(pedido.anticipo_pagado || 0) >= (pedido.anticipo_requerido || 1) ? "✅ Cubierto" : "⚠️ Pendiente"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    {/* El recuadro de "pedido sobre stock" mostraba el anticipo
+                        pagado con Anticipo_Pagado, que solo cuenta el crédito
+                        descontado en el servidor: quien pagó por transferencia
+                        veía "$0 — Pendiente" con el pedido ya saldado. Lo que se
+                        pagó sale arriba, en el estado del pago. */}
 
                     {/* ── Transferencia: datos bancarios + comprobante ── */}
                     {esTransferencia ? (
