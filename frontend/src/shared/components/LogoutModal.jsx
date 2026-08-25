@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { LogOut } from "lucide-react";
 import "./LogoutModal.css";
 
 export default function LogoutModal({ onConfirm, onCancel }) {
@@ -12,7 +13,7 @@ export default function LogoutModal({ onConfirm, onCancel }) {
         {/* Icon circle */}
         <div className="lm-icon-wrap">
           <div className="lm-icon-ring" />
-          <span className="lm-icon">⏏</span>
+          <span className="lm-icon"><LogOut size={28} /></span>
         </div>
 
         {/* Text */}

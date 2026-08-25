@@ -3,6 +3,7 @@ import { getUser } from "../../../services/authService";
 import { getDomicilios } from "../../../services/domiciliosService";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import "./Domicilios.css";
+import { Banknote, CheckCircle2, BarChart2 } from "lucide-react";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
@@ -80,6 +81,12 @@ export default function GananciasDomiciliario() {
     return { label: p.label, total: ents.reduce((s, d) => s + (d.total || 0), 0), count: ents.length };
   });
 
+  const STATS_PERIODO = [
+    { label: "Total del periodo", value: fmt(totalGanado),  Icon: Banknote,      color: "#2e7d32", bg: "#e8f5e9" },
+    { label: "Entregas",          value: totalEntregas,     Icon: CheckCircle2,  color: "#1565c0", bg: "#e3f2fd" },
+    { label: "Promedio",          value: fmt(promedio),     Icon: BarChart2,     color: "#6a1b9a", bg: "#f3e5f5" },
+  ];
+
   return (
     <div className="page-wrapper">
       <div className="page-header">
@@ -141,11 +148,7 @@ export default function GananciasDomiciliario() {
               display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               gap: 14, marginBottom: 24,
             }}>
-              {[
-                { label: "Total del periodo", value: fmt(totalGanado),        icon: "💰", color: "#2e7d32", bg: "#e8f5e9" },
-                { label: "Entregas",          value: totalEntregas,           icon: "✅", color: "#1565c0", bg: "#e3f2fd" },
-                { label: "Promedio",          value: fmt(promedio),           icon: "📊", color: "#6a1b9a", bg: "#f3e5f5" },
-              ].map(s => (
+              {STATS_PERIODO.map(s => (
                 <div key={s.label} style={{
                   background: "#fff", borderRadius: 14, padding: "20px 18px",
                   border: `1.5px solid ${s.bg}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
@@ -153,8 +156,8 @@ export default function GananciasDomiciliario() {
                   <div style={{
                     width: 40, height: 40, borderRadius: 10, background: s.bg,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18, marginBottom: 12,
-                  }}>{s.icon}</div>
+                    color: s.color, marginBottom: 12,
+                  }}><s.Icon size={20} strokeWidth={1.5} /></div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
                   <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 4, fontWeight: 600 }}>{s.label}</div>
                 </div>
@@ -164,7 +167,9 @@ export default function GananciasDomiciliario() {
             {/* ── Lista de entregas del periodo ── */}
             {entregados.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>💰</div>
+                <div style={{ marginBottom: 12, color: "#bdbdbd", display: "flex", justifyContent: "center" }}>
+                  <Banknote size={48} strokeWidth={1} />
+                </div>
                 <p style={{ fontSize: 15, fontWeight: 600 }}>Sin entregas en este período</p>
               </div>
             ) : (

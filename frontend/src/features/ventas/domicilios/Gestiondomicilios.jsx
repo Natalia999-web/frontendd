@@ -5,6 +5,7 @@ import {
   MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
   Banknote, Building2, Eye, Globe, Zap, PenLine, FileText,
   Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
+  Utensils,
 } from "lucide-react";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
@@ -168,7 +169,7 @@ function ModalConfirmarDesactivar({ usuario, pedidosActivos, onConfirm, onClose 
             <p className="modal-header__eyebrow">Advertencia</p>
             <h2 className="modal-header__title">Desactivar domiciliario</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ overflow: "visible" }}>
@@ -266,11 +267,11 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
             <p className="modal-header__eyebrow">Domicilio {pedido.numero}</p>
             <h2 className="modal-header__title">Registrar cobro en efectivo</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="modal-body">
           <div className="info-box" style={{ marginBottom: 14 }}>
-            <span className="info-box__icon">💰</span>
+            <span className="info-box__icon"><Banknote size={14} /></span>
             <span className="info-box__text">
               Total a cobrar: <strong>{fmt(pedido.total)}</strong>
             </span>
@@ -345,7 +346,7 @@ function ModalCambiarEstado({ pedido, esRepartidor = false, onClose, onSave }) {
             <p className="modal-header__eyebrow">Domicilio</p>
             <h2 className="modal-header__title">Cambiar estado</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="modal-body">
           <p style={{ margin: "0 0 14px", fontSize: 13, color: "#616161" }}>
@@ -442,7 +443,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
               </div>
               <div style={{ fontSize: 11, color: "#999" }}>{cfg.desc}</div>
             </div>
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
           </div>
         </div>
 
@@ -606,8 +607,8 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                           <div style={{
                             width: 46, height: 46, borderRadius: 8, background: "#e8f5e9",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 20, flexShrink: 0,
-                          }}>🍽️</div>
+                            color: "#a5d6a7", flexShrink: 0,
+                          }}><Utensils size={20} strokeWidth={1.5} /></div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
@@ -701,8 +702,8 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                       <div style={{
                         width: 42, height: 42, borderRadius: "50%", background: "#e8f5e9",
                         border: "1.5px solid #a5d6a7", display: "flex", alignItems: "center",
-                        justifyContent: "center", fontSize: 20, flexShrink: 0,
-                      }}>🛵</div>
+                        justifyContent: "center", color: "#2e7d32", flexShrink: 0,
+                      }}><Bike size={20} strokeWidth={1.5} /></div>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>
                           {emp.nombre} {emp.apellidos}
@@ -800,7 +801,7 @@ function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
             <p className="modal-header__eyebrow">Logística</p>
             <h2 className="modal-header__title">Reasignar domiciliario</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ overflow: "visible" }}>
@@ -809,13 +810,13 @@ function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
           </p>
 
           <div className="info-box info-box--info">
-            <span className="info-box__icon">📍</span>
+            <span className="info-box__icon"><MapPin size={14} /></span>
             <span className="info-box__text">{pedido.direccion_entrega}</span>
           </div>
 
           {empActual && (
             <div className="info-box info-box--warn">
-              <span className="info-box__icon">🛵</span>
+              <span className="info-box__icon"><Bike size={14} /></span>
               <span className="info-box__text">
                 Actual: <strong>{empActual.nombre} {empActual.apellidos}</strong>
               </span>
@@ -862,7 +863,7 @@ function ModalObservaciones({ pedido, onClose, onConfirm }) {
             <p className="modal-header__eyebrow">Domicilio</p>
             <h2 className="modal-header__title">Observaciones</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ overflow: "visible" }}>
@@ -870,7 +871,7 @@ function ModalObservaciones({ pedido, onClose, onConfirm }) {
             Pedido: <strong>{pedido.numero}</strong> · {pedido.cliente?.nombre}
           </p>
           <div className="info-box info-box--info">
-            <span className="info-box__icon">📍</span>
+            <span className="info-box__icon"><MapPin size={14} /></span>
             <span className="info-box__text">{pedido.direccion_entrega}</span>
           </div>
           <div>
@@ -937,8 +938,8 @@ function HistorialDomiciliario({ domicilios, empleados, onDesactivar }) {
               <div style={{
                 width: 38, height: 38, borderRadius: "50%", background: "#e8f5e9",
                 border: "1.5px solid #a5d6a7", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 18, flexShrink: 0,
-              }}>🛵</div>
+                justifyContent: "center", color: "#2e7d32", flexShrink: 0,
+              }}><Bike size={18} strokeWidth={1.5} /></div>
               <div>
                 <div className="hist-emp-name">{emp.nombre} {emp.apellidos}</div>
                 <div style={{ fontSize: 11, color: "#9e9e9e" }}>{emp.correo}</div>
@@ -1467,7 +1468,7 @@ export default function GestionDomicilios() {
                                 <span style={{
                                   fontSize: 10, fontWeight: 700, color: "#c62828",
                                   background: "#ffebee", borderRadius: 4, padding: "2px 5px",
-                                }}>⚠ Pedido cancelado</span>
+                                }}>Pedido cancelado</span>
                               )}
                             </div>
                           </td>

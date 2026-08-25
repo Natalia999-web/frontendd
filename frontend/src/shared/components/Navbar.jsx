@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { getUser, logout } from "../../services/authService";
 import { crearPedido, getMiCredito } from "../../services/pedidosService";
-import { Menu, X, ShoppingCart, Bell, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, Bell, LogOut, Gift } from "lucide-react";
 import "./Navbar.css";
 import { getCartCount, getCart, getTotal } from "../../features/sales/orders/services/cartService";
 import CartAside from "../../features/sales/orders/components/CartAside";
@@ -86,7 +86,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
 
     const payload = {
       ID_Usuario:        currentUser?.id || null,
-      Metodo_Pago:       paymentMethod === 'digital' ? 'Transferencia 🏦' : 'Efectivo 💵',
+      Metodo_Pago:       paymentMethod === 'digital' ? 'Transferencia' : 'Efectivo',
       productos:         currentCart.map(item => ({
         ID_Producto: Number(item.id),
         Cantidad:    Number(item.cantidad),
@@ -205,7 +205,7 @@ export default function Navbar({ isLanding = false, onToggleSidebar }) {
                 onClick={() => navigate('/cliente/perfil')}
                 data-tooltip="Ver mi saldo a favor"
               >
-                🎁 {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(credito)}
+                <Gift size={14} style={{ marginRight: 4 }} />{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(credito)}
               </button>
             )}
 

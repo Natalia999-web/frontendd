@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getUser } from "../../../services/authService";
 import { getDomicilios } from "../../../services/domiciliosService";
 import "./Domicilios.css";
+import { CheckCircle2, XCircle, Banknote, ClipboardList, MapPin } from "lucide-react";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
@@ -44,8 +45,8 @@ function getRango(filtro) {
 }
 
 const ESTADO_CFG = {
-  "Entregado": { color: "#2e7d32", bg: "#e8f5e9", icon: "✅" },
-  "Cancelado": { color: "#c62828", bg: "#ffebee", icon: "❌" },
+  "Entregado": { color: "#2e7d32", bg: "#e8f5e9", Icon: CheckCircle2 },
+  "Cancelado": { color: "#c62828", bg: "#ffebee", Icon: XCircle },
 };
 
 export default function HistorialEntregas() {
@@ -90,6 +91,12 @@ export default function HistorialEntregas() {
     .filter(d => d.estado === "Entregado")
     .reduce((s, d) => s + (d.total || 0), 0);
 
+  const STATS = [
+    { label: "Entregas",       value: totalEntregadas,                        Icon: CheckCircle2, color: "#2e7d32", bg: "#e8f5e9" },
+    { label: "Canceladas",     value: domicilios.length - totalEntregadas,    Icon: XCircle,      color: "#c62828", bg: "#ffebee" },
+    { label: "Valor entregado", value: fmt(totalValor),                       Icon: Banknote,     color: "#2e7d32", bg: "#e8f5e9", wide: true },
+  ];
+
   return (
     <div className="page-wrapper">
       <div className="page-header">
@@ -124,17 +131,13 @@ export default function HistorialEntregas() {
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
             gap: 12, marginBottom: 20,
           }}>
-            {[
-              { label: "Entregas",          value: totalEntregadas, icon: "✅", color: "#2e7d32", bg: "#e8f5e9" },
-              { label: "Canceladas",         value: domicilios.length - totalEntregadas, icon: "❌", color: "#c62828", bg: "#ffebee" },
-              { label: "Valor entregado",    value: fmt(totalValor), icon: "💰", color: "#2e7d32", bg: "#e8f5e9", wide: true },
-            ].map(s => (
+            {STATS.map(s => (
               <div key={s.label} style={{
                 background: "#fff", borderRadius: 12, padding: "16px",
                 border: `1.5px solid ${s.bg}`,
                 gridColumn: s.wide ? "span 2" : undefined,
               }}>
-                <div style={{ fontSize: 18, marginBottom: 6 }}>{s.icon}</div>
+                <div style={{ color: s.color, marginBottom: 6 }}><s.Icon size={18} /></div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: "#9e9e9e", fontWeight: 600, marginTop: 3 }}>{s.label}</div>
               </div>
@@ -159,13 +162,15 @@ export default function HistorialEntregas() {
           </div>
         ) : domicilios.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+            <div style={{ marginBottom: 12, color: "#bdbdbd", display: "flex", justifyContent: "center" }}>
+              <ClipboardList size={48} strokeWidth={1} />
+            </div>
             <p style={{ fontSize: 15, fontWeight: 600 }}>Sin registros en este período</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {domicilios.map(dom => {
-              const cfg = ESTADO_CFG[dom.estado] || { color: "#757575", bg: "#f5f5f5", icon: "•" };
+              const cfg = ESTADO_CFG[dom.estado] || { color: "#757575", bg: "#f5f5f5", Icon: null };
               return (
                 <div key={dom.id} style={{
                   background: "#fff", borderRadius: 14, padding: "18px 20px",
@@ -178,8 +183,9 @@ export default function HistorialEntregas() {
                       <div style={{ fontSize: 15, fontWeight: 700, color: "#212121", marginTop: 3 }}>
                         {dom.cliente?.nombre || "Cliente"}
                       </div>
-                      <div style={{ fontSize: 12, color: "#757575", marginTop: 4 }}>
-                        📍 {dom.direccion_entrega || "Sin dirección"}
+                      <div style={{ fontSize: 12, color: "#757575", marginTop: 4, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                        <MapPin size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                        {dom.direccion_entrega || "Sin dirección"}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -189,7 +195,7 @@ export default function HistorialEntregas() {
                         background: cfg.bg, color: cfg.color,
                         fontSize: 11, fontWeight: 700,
                       }}>
-                        {cfg.icon} {dom.estado}
+                        {cfg.Icon && <cfg.Icon size={11} />} {dom.estado}
                       </span>
                       <div style={{ fontSize: 16, fontWeight: 800, color: "#2e7d32", marginTop: 6 }}>
                         {fmt(dom.total || 0)}

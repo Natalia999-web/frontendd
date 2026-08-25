@@ -212,7 +212,7 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
   const handleConfirm = async () => {
     // Si es transferencia y no subió comprobante, bloquear
     if (esTransferencia && !comprobanteFile && tab !== "comprobante") {
-      setError("⚠️ Este pedido fue pagado por transferencia. Debes subir el comprobante de pago antes de marcar como entregado.");
+      setError("Este pedido fue pagado por transferencia. Debes subir el comprobante de pago antes de marcar como entregado.");
       return;
     }
     setError(null);
@@ -380,7 +380,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span className="toast-icon">{toast.type === "error" ? "✕" : "✓"}</span>
+      <span className="toast-icon">{toast.type === "error" ? <X size={14} /> : <Check size={14} />}</span>
       {toast.message}
     </div>
   );

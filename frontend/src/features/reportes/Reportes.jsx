@@ -7,6 +7,7 @@ import { getDashboard } from "../../services/dashboardService.js";
 import { getHistorialPedidos } from "../../services/pedidosService.js";
 import { getDevoluciones } from "../../services/devolucionesService.js";
 import "./Reportes.css";
+import { AlertTriangle, Banknote, Package, Users, Target } from "lucide-react";
 
 /* ── Constantes ─────────────────────────────────────────── */
 const fmt = (n) =>
@@ -183,7 +184,7 @@ export default function Reportes() {
         {/* Error banner dashboard */}
         {errores.dashboard && (
           <div style={{ background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 12, padding: "12px 16px", color: "#c62828", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-            ⚠️ {errores.dashboard}
+            {errores.dashboard}
           </div>
         )}
 
@@ -194,25 +195,25 @@ export default function Reportes() {
           ) : (
             <>
               <KpiCard
-                icon="💰" label="Ventas del período"
+                icon={<Banknote size={20} />} label="Ventas del período"
                 valor={kpis?.ventas?.valor || "—"}
                 delta={kpis?.ventas?.delta} positive={kpis?.ventas?.positive}
                 color="#2e7d32" bg="#e8f5e9"
               />
               <KpiCard
-                icon="📦" label="Pedidos del período"
+                icon={<Package size={20} />} label="Pedidos del período"
                 valor={kpis?.pedidos?.valor || "—"}
                 delta={kpis?.pedidos?.delta} positive={kpis?.pedidos?.positive}
                 color="#1565c0" bg="#e3f2fd"
               />
               <KpiCard
-                icon="👥" label="Clientes atendidos"
+                icon={<Users size={20} />} label="Clientes atendidos"
                 valor={kpis?.clientes?.valor || "—"}
                 delta={kpis?.clientes?.delta} positive={kpis?.clientes?.positive}
                 color="#6a1b9a" bg="#f3e5f5"
               />
               <KpiCard
-                icon="🎯" label="Ticket promedio"
+                icon={<Target size={20} />} label="Ticket promedio"
                 valor={kpis?.ticket?.valor || "—"}
                 delta={kpis?.ticket?.delta} positive={kpis?.ticket?.positive}
                 color="#e65100" bg="#fff3e0"

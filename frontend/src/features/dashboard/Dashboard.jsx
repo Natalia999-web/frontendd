@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import "./dashboard.css";
 import { getDashboard } from "../../services/dashboardService";
+import { AlertTriangle, Banknote, Package, User, Tag } from "lucide-react";
 
 const PERIODOS      = ["hoy", "semana", "mes", "custom"];
 const PERIODO_LABEL = { hoy: "Hoy", semana: "Esta semana", mes: "Este mes", custom: "Rango" };
@@ -143,7 +144,7 @@ export default function Dashboard() {
     return (
       <div className="dash-wrapper dash-wrapper--in">
         <div className="dash-inner" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 300, gap: 12 }}>
-          <span style={{ fontSize: 32 }}>⚠️</span>
+          <AlertTriangle size={32} style={{ color: "#e65100" }} />
           <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#424242" }}>No se pudieron cargar los datos del dashboard</p>
           <p style={{ margin: 0, fontSize: 13, color: "#9e9e9e" }}>Verifica tu conexión o que el servidor esté activo.</p>
           <button
@@ -369,10 +370,10 @@ function KpiStripInner({ kpi, periodo, setPeriodo }) {
       </div>
       <div className="kpi-strip__body">
         <div className="kpi-grid">
-          <KpiCard icon="💰" label="Total ventas"    valor={kpi.ventas?.valor   ?? "$0"} delta={kpi.ventas?.delta   ?? "0%"} positive={kpi.ventas?.positive   ?? true} color="#2e7d32" />
-          <KpiCard icon="📦" label="Pedidos"         valor={kpi.pedidos?.valor  ?? "0"}  delta={kpi.pedidos?.delta  ?? "0%"} positive={kpi.pedidos?.positive  ?? true} color="#fb8c00" />
-          <KpiCard icon="👤" label="Clientes nuevos" valor={kpi.clientes?.valor ?? "0"}  delta={kpi.clientes?.delta ?? "0%"} positive={kpi.clientes?.positive ?? true} color="#5c6bc0" />
-          <KpiCard icon="🎫" label="Ticket promedio" valor={kpi.ticket?.valor   ?? "$0"} delta={kpi.ticket?.delta   ?? "0%"} positive={kpi.ticket?.positive   ?? true} color="#26c6da" />
+          <KpiCard icon={<Banknote size={20} />} label="Total ventas"    valor={kpi.ventas?.valor   ?? "$0"} delta={kpi.ventas?.delta   ?? "0%"} positive={kpi.ventas?.positive   ?? true} color="#2e7d32" />
+          <KpiCard icon={<Package size={20} />} label="Pedidos"         valor={kpi.pedidos?.valor  ?? "0"}  delta={kpi.pedidos?.delta  ?? "0%"} positive={kpi.pedidos?.positive  ?? true} color="#fb8c00" />
+          <KpiCard icon={<User size={20} />}    label="Clientes nuevos" valor={kpi.clientes?.valor ?? "0"}  delta={kpi.clientes?.delta ?? "0%"} positive={kpi.clientes?.positive ?? true} color="#5c6bc0" />
+          <KpiCard icon={<Tag size={20} />}     label="Ticket promedio" valor={kpi.ticket?.valor   ?? "$0"} delta={kpi.ticket?.delta   ?? "0%"} positive={kpi.ticket?.positive   ?? true} color="#26c6da" />
         </div>
       </div>
     </div>

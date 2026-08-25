@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import "./Domicilios.css";
+import { X, Check, Clock } from "lucide-react";
 
 const DISPONIBILIDAD = {
-  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", icon: "🟢" },
-  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", icon: "🟡" },
-  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", icon: "⚫" },
+  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", dot: "#2e7d32" },
+  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", dot: "#e65100" },
+  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", dot: "#616161" },
 };
 
 function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span className="toast-icon">{toast.type === "error" ? "✕" : "✓"}</span>
+      <span className="toast-icon">{toast.type === "error" ? <X size={14} /> : <Check size={14} />}</span>
       {toast.message}
     </div>
   );
@@ -85,7 +86,7 @@ export default function PerfilDomiciliario() {
     <div className="page-wrapper">
       <div className="page-header"><h1 className="page-header__title">Mi Perfil</h1><div className="page-header__line" /></div>
       <div className="page-inner" style={{ textAlign: "center", paddingTop: 60, color: "#9e9e9e" }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>⌛</div>
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "center", color: "#bdbdbd" }}><Clock size={36} strokeWidth={1} /></div>
         <p style={{ fontWeight: 600 }}>Cargando perfil...</p>
       </div>
     </div>
@@ -129,7 +130,8 @@ export default function PerfilDomiciliario() {
                 marginTop: 10, padding: "5px 12px", borderRadius: 20,
                 background: "rgba(255,255,255,0.2)", fontSize: 12, fontWeight: 700,
               }}>
-                {statusInfo.icon} {statusInfo.label}
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: statusInfo.dot }} />
+                {statusInfo.label}
               </div>
             </div>
           </div>
@@ -153,7 +155,8 @@ export default function PerfilDomiciliario() {
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   }}
                 >
-                  {cfg.icon} {cfg.label}
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: cfg.dot }} />
+                  {cfg.label}
                 </button>
               ))}
             </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { getUser } from "../../../services/authService";
 import { getDomicilios } from "../../../services/domiciliosService";
 import "./Domicilios.css";
+import { Package, CheckCircle2, XCircle, Bell, X } from "lucide-react";
 
 const POLL_INTERVAL = 30_000; // 30 segundos
 const STORAGE_KEY   = "domiciliario_notifs_visto";
@@ -17,6 +18,12 @@ const fmtFecha = (iso) => {
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24)   return `Hace ${diffH}h`;
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+};
+
+const NOTIF_ICON = {
+  cancelado: <XCircle size={20} />,
+  nuevo:     <Package size={20} />,
+  entregado: <CheckCircle2 size={20} />,
 };
 
 function generarNotifs(domicilios) {
@@ -35,7 +42,6 @@ function generarNotifs(domicilios) {
         titulo:  "Entrega cancelada",
         mensaje: `${dom.numero} · ${dom.cliente?.nombre || "Cliente"}`,
         fecha:   dom.fecha_pedido,
-        icon:    "❌",
         color:   "#c62828",
         bg:      "#ffebee",
       });
@@ -51,7 +57,6 @@ function generarNotifs(domicilios) {
         titulo:  "Nueva entrega asignada",
         mensaje: `${dom.numero} · ${dom.cliente?.nombre || "Cliente"} · ${dom.direccion_entrega || "Sin dirección"}`,
         fecha:   dom.fecha_pedido,
-        icon:    "📦",
         color:   "#1565c0",
         bg:      "#e3f2fd",
       });
@@ -67,7 +72,6 @@ function generarNotifs(domicilios) {
           titulo:  "Entrega completada",
           mensaje: `${dom.numero} · ${dom.cliente?.nombre || "Cliente"}`,
           fecha:   dom.fecha_entrega_real,
-          icon:    "✅",
           color:   "#2e7d32",
           bg:      "#e8f5e9",
         });
@@ -89,14 +93,14 @@ function Toast({ msg, onClose }) {
       boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
       display: "flex", alignItems: "flex-start", gap: 10,
     }}>
-      <span style={{ fontSize: 20 }}>📦</span>
+      <span style={{ display: "flex", alignItems: "center" }}><Package size={20} /></span>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>{msg.titulo}</div>
         <div style={{ fontSize: 12, opacity: 0.85 }}>{msg.mensaje}</div>
       </div>
       <button onClick={onClose}
-        style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, padding: 0 }}>
-        ✕
+        style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
+        <X size={16} />
       </button>
     </div>
   );
@@ -208,7 +212,9 @@ export default function NotificacionesDomiciliario() {
           </div>
         ) : notifs.length === 0 ? (
           <div style={{ textAlign: "center", padding: "70px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>🔔</div>
+            <div style={{ marginBottom: 14, color: "#bdbdbd", display: "flex", justifyContent: "center" }}>
+              <Bell size={52} strokeWidth={1} />
+            </div>
             <p style={{ fontSize: 15, fontWeight: 600, color: "#424242" }}>Sin notificaciones</p>
             <p style={{ fontSize: 13, marginTop: 6 }}>
               Aquí aparecerán nuevas asignaciones y actualizaciones de tus entregas.
@@ -218,6 +224,7 @@ export default function NotificacionesDomiciliario() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {notifs.map(n => {
               const esLeida = leidas.includes(n.id);
+              const IconEl = NOTIF_ICON[n.tipo] || null;
               return (
                 <div
                   key={n.id}
@@ -237,9 +244,9 @@ export default function NotificacionesDomiciliario() {
                     width: 44, height: 44, borderRadius: 12, flexShrink: 0,
                     background: esLeida ? "#f5f5f5" : n.bg,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 20,
+                    color: esLeida ? "#9e9e9e" : n.color,
                   }}>
-                    {n.icon}
+                    {IconEl}
                   </div>
 
                   {/* Contenido */}
