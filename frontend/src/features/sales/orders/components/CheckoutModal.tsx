@@ -5,6 +5,7 @@ import { getUser } from '../../../../services/authService';
 import { getMiCredito } from '../../../../services/pedidosService';
 import { apiFetch } from '../../../../utils/api';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
+import SaldoSlider from '../../../../shared/components/SaldoSlider';
 import './CheckoutModal.css';
 
 // Datos de la cuenta bancaria — actualiza en GestionPedidos.jsx también
@@ -52,7 +53,6 @@ const SaldoAFavorPicker: React.FC<{
   onToggle: () => void;
   onPorcentaje: (p: number) => void;
 }> = ({ saldo, maximo, activo, porcentaje, onToggle, onPorcentaje }) => {
-  const aplicado = Math.round((maximo * porcentaje) / 100);
   return (
     <div className={`rounded-2xl border-2 transition-all ${activo ? 'border-green-500 bg-green-50' : 'border-gray-100 bg-white hover:border-green-200'}`}>
       <div onClick={onToggle} className="flex items-center gap-3 p-3 cursor-pointer">
@@ -63,7 +63,6 @@ const SaldoAFavorPicker: React.FC<{
           <p className="text-xs font-black text-gray-700">Usar saldo a favor</p>
           <p className="text-[10px] font-bold text-green-700">{COP(saldo)} disponibles</p>
         </div>
-        {activo && <span className="text-xs font-black text-green-700">-{COP(aplicado)}</span>}
         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${activo ? 'bg-green-600 border-green-600' : 'border-gray-300'}`}>
           {activo && <CheckCircle2 size={10} className="text-white" />}
         </div>
@@ -71,27 +70,13 @@ const SaldoAFavorPicker: React.FC<{
 
       {activo && (
         <div className="px-3 pb-3 pt-2.5 border-t border-green-200">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-gray-500">Cuanto aplicas a este pedido</span>
-            <span className="text-xs font-black text-green-700">{COP(aplicado)}</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={porcentaje}
-            onChange={e => onPorcentaje(Number(e.target.value))}
-            className="w-full accent-green-600 cursor-pointer"
-            aria-label="Parte del saldo a favor que se aplica al pedido"
+          <p className="text-[10px] font-bold text-gray-500 mb-1">Cuánto aplicas a este pedido</p>
+          <SaldoSlider
+            saldo={saldo}
+            maximo={maximo}
+            porcentaje={porcentaje}
+            onPorcentaje={onPorcentaje}
           />
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] font-bold text-gray-400">$0</span>
-            <span className="text-[10px] font-bold text-gray-500">
-              Te quedan {COP(saldo - aplicado)}
-            </span>
-            <span className="text-[10px] font-bold text-gray-400">{COP(maximo)}</span>
-          </div>
         </div>
       )}
     </div>
