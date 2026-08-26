@@ -280,9 +280,10 @@ export default function CrearPedido({ onClose, onSave }) {
   const [productos, setProductos] = useState([]);
   const [form, setForm]     = useState({ ...EMPTY_FORM });
   const [errors, setErrors] = useState({});
-  const [saved,          setSaved]          = useState(false);
-  const [step,           setStep]           = useState(1);
-  const [saveError,      setSaveError]      = useState(null);
+  const [saved,              setSaved]          = useState(false);
+  const [step,               setStep]           = useState(1);
+  const [saveError,          setSaveError]      = useState(null);
+  const [terminosAceptados,  setTerminosAceptados] = useState(false);
   const [pagarTodo,      setPagarTodo]      = useState(false);
   const [creditoCliente, setCreditoCliente] = useState(0);
   const [usarCredito,    setUsarCredito]    = useState(false);
@@ -1169,6 +1170,29 @@ export default function CrearPedido({ onClose, onSave }) {
                     </p>
                   </div>
                 )}
+
+                {/* Términos y condiciones */}
+                <label style={{
+                  display: "flex", gap: 12, alignItems: "flex-start",
+                  padding: "14px 16px",
+                  background: terminosAceptados ? "#f1f8e9" : "#fff8e1",
+                  border: `1px solid ${terminosAceptados ? "#aed581" : "#ffe082"}`,
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={terminosAceptados}
+                    onChange={e => setTerminosAceptados(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: "#2e7d32", flexShrink: 0, cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: 12.5, color: "#37474f", lineHeight: 1.5 }}>
+                    He leído y acepto los <strong>términos y condiciones</strong>: entiendo que{" "}
+                    <strong>Tostón no realiza devoluciones de dinero</strong> una vez confirmado el pedido.
+                    Los productos son de naturaleza alimenticia y se preparan bajo pedido,
+                    por lo que no se aceptan cancelaciones después de la confirmación.
+                  </span>
+                </label>
               </div>
             </div>
           )}
@@ -1196,7 +1220,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     onClick={handleNext}
                     disabled={step === 3 && form.domicilio && (clienteSeleccionado?.telefono || "").replace(/\D/g, "").length !== 10}
                   >Continuar →</button>
-                : <button className="btn-save" style={{ padding: "10px 40px", fontSize: 15, background: "#2e7d32" }} onClick={handleSave} disabled={saved}>
+                : <button className="btn-save" style={{ padding: "10px 40px", fontSize: 15, background: "#2e7d32" }} onClick={handleSave} disabled={saved || !terminosAceptados}>
                     {saved ? "Procesando…" : "Confirmar Pedido"}
                   </button>
               }
