@@ -4,6 +4,7 @@ import AppRouter from "./routes/AppRouter";
 import { AppProvider } from "./AppContext.jsx";
 import { NotificacionesProvider } from "./features/notificaciones/context/NotificacionesContext";
 import { PrivilegiosProvider } from "./context/PrivilegiosContext.jsx";
+import ErrorBoundary from "./shared/components/ErrorBoundary.jsx";
 import { getUser } from "./services/authService.js";
 import { getCompras } from "./services/comprasService.js";
 import { updateActivity, isInactive, isNearlyInactive, clearSession } from "./utils/api.js";
@@ -223,14 +224,18 @@ function NotificacionesWrapper({ children }) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <PrivilegiosProvider>
-      <AppProvider>
-        <InactivityGuard>
-          <NotificacionesWrapper>
-            <AppRouter />
-          </NotificacionesWrapper>
-        </InactivityGuard>
-      </AppProvider>
-    </PrivilegiosProvider>
+    {/* Si algo revienta al renderizar, React desmonta todo y queda una
+        pantalla en blanco. Esto la reemplaza por el mensaje del error. */}
+    <ErrorBoundary>
+      <PrivilegiosProvider>
+        <AppProvider>
+          <InactivityGuard>
+            <NotificacionesWrapper>
+              <AppRouter />
+            </NotificacionesWrapper>
+          </InactivityGuard>
+        </AppProvider>
+      </PrivilegiosProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
