@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Search, X, Eye, PenLine, Trash2, AlertTriangle, Tag, Package, Ban } from "lucide-react";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import { Toast, ModalOverlay } from "./ui.jsx";
 import CrearCategoriaInsumo from "./CrearCategoriaInsumo.jsx";
@@ -60,7 +61,7 @@ function ModalDesactivarCategoriaInsumo({ cat, count, onClose, onConfirm }) {
   return (
     <ModalOverlay onClose={onClose}>
       <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-        <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100", fontSize: 24 }}>⚠️</div>
+        <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100", fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center" }}><AlertTriangle size={24} /></div>
         <h3 className="delete-title">Desactivar categoría</h3>
         <p className="delete-body">
           La categoría <strong>"{cat.nombre}"</strong> tiene {count} insumo{count > 1 ? "s" : ""} asociado{count > 1 ? "s" : ""}.
@@ -114,7 +115,7 @@ function VerCategoria({ cat, onClose }) {
           <p className="modal-header__eyebrow">Categorías de Insumo</p>
           <h2 className="modal-header__title">Detalle de Categoría</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}>✕</button>
+        <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
       </div>
       <div className="modal-body">
         <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 20, marginBottom: 16 }}>
@@ -298,7 +299,7 @@ export default function CategoriaInsumos() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input
               type="text"
               className="search-input"
@@ -330,8 +331,8 @@ export default function CategoriaInsumos() {
           </div>
 
           {(filter !== "todos" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -360,7 +361,7 @@ export default function CategoriaInsumos() {
                   <tr>
                     <td colSpan={6}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🧺</div>
+                        <div className="empty-state__icon"><Tag size={48} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                         <p className="empty-state__text">Sin resultados</p>
                       </div>
                     </td>
@@ -390,11 +391,11 @@ export default function CategoriaInsumos() {
                     <td>
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view" data-tooltip="Ver categoría"
-                          onClick={() => setModal({ type: "ver", cat })}>👁</button>
+                          onClick={() => setModal({ type: "ver", cat })}><Eye size={15} /></button>
                         <button className="act-btn act-btn--edit" data-tooltip="Editar categoría"
-                          onClick={() => setModal({ type: "editar", cat })}>✎</button>
+                          onClick={() => setModal({ type: "editar", cat })}><PenLine size={15} /></button>
                         <button className="act-btn act-btn--delete" data-tooltip="Eliminar categoría"
-                          onClick={() => setModal({ type: "eliminar", cat })}>🗑️</button>
+                          onClick={() => setModal({ type: "eliminar", cat })}><Trash2 size={15} /></button>
                       </div>
                     </td>
                   </tr>
@@ -436,15 +437,15 @@ export default function CategoriaInsumos() {
             <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()} style={{ overflow: "hidden", padding: 0 }}>
 
               <div style={{ background: "linear-gradient(135deg, #b71c1c 0%, #c62828 100%)", padding: "28px 24px 22px", textAlign: "center", position: "relative" }}>
-                <button onClick={() => setModal(null)} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 30 }}>🚫</div>
+                <button onClick={() => setModal(null)} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><Ban size={30} /></div>
                 <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>No se puede eliminar</h3>
                 <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>"{modal.cat.nombre}"</p>
               </div>
 
               <div style={{ padding: "18px 24px" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📦</span>
+                  <Package size={18} style={{ flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>
                       Tiene {modal.cat.totalInsumos} insumo{modal.cat.totalInsumos !== 1 ? "s" : ""} asociado{modal.cat.totalInsumos !== 1 ? "s" : ""}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import { ModalOverlay } from "./ui.jsx";
 import EmojiPicker from "../../../shared/components/EmojiPicker";
 import CharCount from "../../../shared/components/CharCount";
@@ -74,7 +75,7 @@ export default function CrearCategoriaInsumo({ onClose, onSave, existingCategori
           <p className="modal-header__eyebrow">Categorías de Insumos</p>
           <h2 className="modal-header__title">Nueva categoría</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}>✕</button>
+        <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
       </div>
 
       <div className="modal-body">

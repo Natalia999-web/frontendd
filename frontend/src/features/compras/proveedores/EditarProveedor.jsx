@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, Building2, MapPin, Phone, Mail } from "lucide-react";
 import { esUbicacionValida } from "../../../utils/inputFilters";
 import { fmtFecha } from "../../../utils/dateUtils";
 import "./Proveedores.css";
@@ -80,7 +81,7 @@ function VistaProveedor({ proveedor, onClose }) {
             <p className="modal-header__eyebrow">Proveedores</p>
             <h2 className="modal-header__title">Detalles del Proveedor</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -89,7 +90,7 @@ function VistaProveedor({ proveedor, onClose }) {
           <div style={{ display: "flex", alignItems: "center", gap: 14,
                         padding: "12px 14px", background: "#f1f8f1",
                         border: "1.5px solid #c8e6c9", borderRadius: 12 }}>
-            <div className="prov-avatar" style={{ width: 44, height: 44, fontSize: 22, flexShrink: 0 }}>🏭</div>
+            <div className="prov-avatar" style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Building2 size={22} /></div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: "#1a1a1a" }}>{responsable}</div>
               <div style={{ fontSize: 11, color: "#9e9e9e", marginTop: 2 }}>ID: {proveedor.id}</div>
@@ -101,11 +102,11 @@ function VistaProveedor({ proveedor, onClose }) {
             <p className="section-label" style={{ margin: "0 0 8px" }}>Contacto</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {celular
-                ? <a href={`https://wa.me/${celular.replace(/\D/g, "")}`} className="prov-contact-link prov-contact-link--tel" target="_blank" rel="noopener noreferrer">📞 {celular}</a>
+                ? <a href={`https://wa.me/${celular.replace(/\D/g, "")}`} className="prov-contact-link prov-contact-link--tel" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Phone size={13} /> {celular}</a>
                 : <span className="prov-contact-empty">Sin teléfono</span>
               }
               {correo
-                ? <a href={`mailto:${correo}`} className="prov-contact-link prov-contact-link--mail">✉ {correo}</a>
+                ? <a href={`mailto:${correo}`} className="prov-contact-link prov-contact-link--mail" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Mail size={13} /> {correo}</a>
                 : <span className="prov-contact-empty">Sin correo</span>
               }
             </div>
@@ -115,7 +116,7 @@ function VistaProveedor({ proveedor, onClose }) {
           {ubicacion && (
             <div>
               <p className="section-label" style={{ margin: "0 0 6px" }}>Ubicación</p>
-              <span style={{ fontSize: 13, color: "#424242" }}>📍 {ubicacion}</span>
+              <span style={{ fontSize: 13, color: "#424242", display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={13} /> {ubicacion}</span>
             </div>
           )}
 
@@ -144,7 +145,7 @@ function VistaProveedor({ proveedor, onClose }) {
             {insumosProvistos.length > 0
               ? <div className="prov-chips">
                   {insumosProvistos.map(n => (
-                    <span key={n} className="prov-chip">🧺 {n}</span>
+                    <span key={n} className="prov-chip">{n}</span>
                   ))}
                 </div>
               : <span className="prov-chip prov-chip--empty">Sin compras registradas</span>
@@ -243,7 +244,7 @@ export default function EditarProveedor({ proveedor, mode = "edit", onClose, onS
             <p className="modal-header__eyebrow">Proveedores</p>
             <h2 className="modal-header__title">Editar Proveedor</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="modal-body">

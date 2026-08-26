@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
+import { Search, X, Check, Banknote, Building2, Paperclip, Receipt, Tag } from "lucide-react";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import { getInsumos } from "../../../services/insumosService.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./compras.css";
 
 const METODOS_PAGO = [
-  { value: "efectivo",      label: "Efectivo",      icon: "💵" },
-  { value: "transferencia", label: "Transferencia", icon: "🏦" },
+  { value: "efectivo",      label: "Efectivo",      Icon: Banknote  },
+  { value: "transferencia", label: "Transferencia", Icon: Building2 },
 ];
 
 const COP = (n) =>
@@ -62,7 +63,7 @@ function StepsBar({ current }) {
         return (
           <div key={s.idx} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : "none" }}>
             <div style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${active || done ? "#2e7d32" : "#d0d0d0"}`, background: done ? "#2e7d32" : "#fff", color: active ? "#2e7d32" : done ? "#fff" : "#bdbdbd", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
-              {done ? "✓" : s.idx}
+              {done ? <Check size={13} /> : s.idx}
             </div>
             <span style={{ marginLeft: 10, fontSize: 14, fontWeight: active ? 700 : 500, color: active ? "#2e7d32" : done ? "#9e9e9e" : "#bdbdbd", whiteSpace: "nowrap", transition: "color 0.2s" }}>
               {s.label}
@@ -128,7 +129,7 @@ function InsumoSelect({ value, insumosActivos, idsSeleccionados, onChange, error
         }}>
           {/* Buscador */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderBottom: "1px solid #f0f0f0", background: "#fafdf9" }}>
-            <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+            <Search size={13} style={{ color: "#9e9e9e", flexShrink: 0 }} />
             <input
               ref={inputRef}
               type="text"
@@ -139,8 +140,8 @@ function InsumoSelect({ value, insumosActivos, idsSeleccionados, onChange, error
             />
             {query && (
               <button type="button" onClick={() => setQuery("")}
-                style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
-                ✕
+                style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", padding: 0, lineHeight: 1, display: "flex", alignItems: "center" }}>
+                <X size={14} />
               </button>
             )}
           </div>
@@ -414,7 +415,7 @@ export default function CrearCompra({ onClose, onSave }) {
             <p className="modal-header__eyebrow">Compras</p>
             <h2 className="modal-header__title">Nueva Compra</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose} style={{ flexShrink: 0 }}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{ flexShrink: 0 }}><X size={16} /></button>
         </div>
 
         <StepsBar current={step} />
@@ -434,7 +435,7 @@ export default function CrearCompra({ onClose, onSave }) {
                   getValue={p => p.ID_Proveedor || p.id}
                   getLabel={p => `${p.Responsable || p.responsable || ""} · ${p.Municipio || p.ciudad || ""}`}
                   placeholder="— Seleccionar proveedor —"
-                  searchPlaceholder="🔍 Buscar proveedor…"
+                  searchPlaceholder="Buscar proveedor…"
                   className="field-select"
                   error={!!errors.idProveedor}
                 />
@@ -460,9 +461,9 @@ export default function CrearCompra({ onClose, onSave }) {
                     value={form.metodoPago}
                     onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
                     getValue={m => m.value}
-                    getLabel={m => `${m.icon} ${m.label}`}
+                    getLabel={m => m.label}
                     placeholder="— Seleccionar método —"
-                    searchPlaceholder="🔍 Método…"
+                    searchPlaceholder="Método…"
                     className={`field-select ${errors.metodoPago ? "error" : ""}`}
                   />
                   {errors.metodoPago && <span className="field-error">{errors.metodoPago}</span>}
@@ -480,7 +481,7 @@ export default function CrearCompra({ onClose, onSave }) {
                         style={{ display: "none" }}
                         onChange={e => setComprobante(e.target.files?.[0] || null)}
                       />
-                      <span className="comprobante-upload-icon">📎</span>
+                      <span className="comprobante-upload-icon" style={{ display: "flex", alignItems: "center" }}><Paperclip size={16} /></span>
                       {comprobante
                         ? <span className="comprobante-filename">{comprobante.name}</span>
                         : <span>Adjuntar comprobante (imagen)</span>
@@ -490,9 +491,9 @@ export default function CrearCompra({ onClose, onSave }) {
                       <button
                         type="button"
                         onClick={e => { e.preventDefault(); setComprobante(null); }}
-                        style={{ flexShrink: 0, padding: "0 12px", height: 36, borderRadius: 8, border: "1.5px solid #ef5350", background: "#fff", color: "#c62828", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                        style={{ flexShrink: 0, padding: "0 12px", height: 36, borderRadius: 8, border: "1.5px solid #ef5350", background: "#fff", color: "#c62828", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                       >
-                        ✕ Quitar
+                        <X size={14} /> Quitar
                       </button>
                     )}
                   </div>
@@ -544,7 +545,7 @@ export default function CrearCompra({ onClose, onSave }) {
                         ));
                       }}
                     />
-                    <button className="detalle-remove-btn" type="button" onClick={() => removeDetalle(d._key)}>✕</button>
+                    <button className="detalle-remove-btn" type="button" onClick={() => removeDetalle(d._key)}><X size={16} /></button>
                   </div>
                   {errors[`ins_${i}`] && <span className="field-error" style={{ marginBottom: 6, display: "block" }}>{errors[`ins_${i}`]}</span>}
 
@@ -666,11 +667,11 @@ export default function CrearCompra({ onClose, onSave }) {
 
               <div className="gastos-grid gastos-grid--standalone">
                 <div className="field-wrap">
-                  <label className="field-label">🚚 Transporte</label>
+                  <label className="field-label">Transporte</label>
                   <input type="number" className="field-input" placeholder="$ 0" value={gastos.transporte} onChange={e => setGasto("transporte", e.target.value)} />
                 </div>
                 <div className="field-wrap">
-                  <label className="field-label">🧾 IVA (%)</label>
+                  <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><Receipt size={14} /> IVA (%)</label>
                   <div style={{ position: "relative" }}>
                     <input type="number" className="field-input" placeholder="0" value={gastos.iva} onChange={e => setGasto("iva", e.target.value)} style={{ paddingRight: 30 }} />
                     <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#9e9e9e", fontWeight: 700 }}>%</span>
@@ -678,7 +679,7 @@ export default function CrearCompra({ onClose, onSave }) {
                   {valorIva > 0 && <span className="field-hint" style={{ color: "#2e7d32", fontWeight: 600 }}>+ {COP(valorIva)}</span>}
                 </div>
                 <div className="field-wrap">
-                  <label className="field-label">🏷️ Descuento (%)</label>
+                  <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><Tag size={14} /> Descuento (%)</label>
                   <div style={{ position: "relative" }}>
                     <input type="number" className="field-input gastos-descuento-input" placeholder="0" value={gastos.descuento} onChange={e => setGasto("descuento", e.target.value)} style={{ paddingRight: 30 }} />
                     <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#c62828", fontWeight: 700 }}>%</span>
@@ -686,7 +687,7 @@ export default function CrearCompra({ onClose, onSave }) {
                   {valorDescuento > 0 && <span className="field-hint" style={{ color: "#c62828", fontWeight: 600 }}>− {COP(valorDescuento)}</span>}
                 </div>
                 <div className="field-wrap">
-                  <label className="field-label">➕ Otros costos</label>
+                  <label className="field-label">Otros costos</label>
                   <input type="number" className="field-input" placeholder="$ 0" value={gastos.otros} onChange={e => setGasto("otros", e.target.value)} />
                 </div>
               </div>

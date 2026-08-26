@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, Check } from "lucide-react";
 import { esUbicacionValida } from "../../../utils/inputFilters";
 import "./Proveedores.css";
 
@@ -22,7 +23,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item" style={{ flex: 1 }}>
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={13} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -191,7 +192,7 @@ export default function CrearProveedor({ onClose, onSave }) {
             <p className="modal-header__eyebrow">Proveedores</p>
             <h2 className="modal-header__title">Nuevo Proveedor</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div style={{ padding: "16px 24px 0" }}>

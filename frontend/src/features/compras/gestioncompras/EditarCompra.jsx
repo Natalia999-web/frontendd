@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Check, X, Package, ClipboardList, Building2, Calendar, CreditCard, PenLine, AlertTriangle, CheckCircle2, Ban, Banknote, Receipt, Tag, Paperclip, Clock, ShoppingCart } from "lucide-react";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import { getInsumos, getLotesInsumo } from "../../../services/insumosService.js";
 import { fmtFecha } from "../../../utils/dateUtils";
@@ -10,8 +11,8 @@ const TOTAL_MIN = 1_000;
 const TOTAL_MAX = 50_000_000;
 
 const METODOS_PAGO = [
-  { value: "efectivo",      label: "Efectivo",      icon: "💵" },
-  { value: "transferencia", label: "Transferencia", icon: "🏦" },
+  { value: "efectivo",      label: "Efectivo",      Icon: Banknote  },
+  { value: "transferencia", label: "Transferencia", Icon: Building2 },
 ];
 
 const COP = (n) =>
@@ -81,7 +82,7 @@ function StepsBar({ current }) {
         return (
           <div key={s.idx} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : "none" }}>
             <div style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${active || done ? "#2e7d32" : "#d0d0d0"}`, background: done ? "#2e7d32" : "#fff", color: active ? "#2e7d32" : done ? "#fff" : "#bdbdbd", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
-              {done ? "✓" : s.idx}
+              {done ? <Check size={13} /> : s.idx}
             </div>
             <span style={{ marginLeft: 10, fontSize: 14, fontWeight: active ? 700 : 500, color: active ? "#2e7d32" : done ? "#9e9e9e" : "#bdbdbd", whiteSpace: "nowrap", transition: "color 0.2s" }}>
               {s.label}
@@ -98,7 +99,7 @@ function StepsBar({ current }) {
 export function LotesInsumoPanel() {
   return (
     <div className="lotes-empty">
-      <span>📦</span>
+      <Package size={48} strokeWidth={1} style={{ color: "#bdbdbd" }} />
       <p>No hay lotes registrados para este insumo todavía.</p>
       <p className="lotes-empty__sub">Los lotes se crean automáticamente al completar una compra.</p>
     </div>
@@ -123,12 +124,12 @@ export function AnularCompraModal({ compra, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
         <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-          <div className="delete-icon-wrap">🚫</div>
+          <div className="delete-icon-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><Ban size={24} /></div>
           <h3 className="delete-title">Anular compra #{compra.id}</h3>
           {yaCompletada ? (
             <div className="stock-aviso stock-aviso--block" style={{ marginTop: 12, textAlign: "left" }}>
               <p style={{ margin: "0 0 6px" }}>
-                ⚠️ Esta compra ya fue <strong>completada</strong> y su stock fue aplicado al inventario.
+                <AlertTriangle size={13} style={{ verticalAlign: "middle" }} /> Esta compra ya fue <strong>completada</strong> y su stock fue aplicado al inventario.
                 Al anularla, el sistema intentará <strong>revertir el stock</strong> de cada insumo.
               </p>
               <p style={{ margin: 0, fontSize: 12, color: "#b71c1c" }}>
@@ -390,7 +391,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
               <span className={`estado-chip estado-chip--${compra.estado}`}>
                 {String(compra.estado || "").charAt(0).toUpperCase() + String(compra.estado || "").slice(1)}
               </span>
-              <button type="button" className="modal-close-btn" onClick={onClose}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={onClose}><X size={16} /></button>
             </div>
           </div>
 
@@ -400,14 +401,14 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
               className={`compra-det-tab${viewTab === "resumen" ? " compra-det-tab--active" : ""}`}
               onClick={() => setViewTab("resumen")}
             >
-              📋 Resumen
+              <ClipboardList size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Resumen
             </button>
             {compra.stockAplicado && (
               <button
                 className={`compra-det-tab${viewTab === "lotes" ? " compra-det-tab--active" : ""}`}
                 onClick={() => setViewTab("lotes")}
               >
-                📦 Lotes generados
+                <Package size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> Lotes generados
               </button>
             )}
           </div>
@@ -421,26 +422,26 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                 <div className="compra-det-info-grid">
                   <div className="compra-det-info-card compra-det-info-card--prov">
                     <div className="compra-det-info-card__lbl">Proveedor</div>
-                    <div className="compra-det-info-card__val">🏭 {provNombre}</div>
+                    <div className="compra-det-info-card__val" style={{ display: "flex", alignItems: "center", gap: 4 }}><Building2 size={14} /> {provNombre}</div>
                   </div>
                   <div className="compra-det-info-card">
                     <div className="compra-det-info-card__lbl">Fecha de compra</div>
-                    <div className="compra-det-info-card__val">📅 {fmtFecha(compra.fecha)}</div>
+                    <div className="compra-det-info-card__val" style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={14} /> {fmtFecha(compra.fecha)}</div>
                   </div>
                   <div className="compra-det-info-card">
                     <div className="compra-det-info-card__lbl">Método de pago</div>
-                    <div className="compra-det-info-card__val">{metodo?.icon || "💳"} {metodo?.label || compra.metodoPago || "—"}</div>
+                    <div className="compra-det-info-card__val" style={{ display: "flex", alignItems: "center", gap: 4 }}>{metodo ? <metodo.Icon size={14} /> : <CreditCard size={14} />} {metodo?.label || compra.metodoPago || "—"}</div>
                   </div>
                   {compra.fecha_llegada && (
                     <div className="compra-det-info-card">
                       <div className="compra-det-info-card__lbl">Fecha de llegada</div>
-                      <div className="compra-det-info-card__val">📦 {fmtFecha(compra.fecha_llegada)}</div>
+                      <div className="compra-det-info-card__val" style={{ display: "flex", alignItems: "center", gap: 4 }}><Package size={14} /> {fmtFecha(compra.fecha_llegada)}</div>
                     </div>
                   )}
                 </div>
 
                 {compra.notas && (
-                  <div className="compra-det-notas">📝 {compra.notas}</div>
+                  <div className="compra-det-notas" style={{ display: "flex", alignItems: "flex-start", gap: 6 }}><PenLine size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {compra.notas}</div>
                 )}
 
                 <p className="section-label">Insumos comprados</p>
@@ -469,7 +470,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                           <span className="compra-det-insumos__sub">{COP(d.cantidad * d.precioUnd)}</span>
                           <span className={`compra-det-insumos__venc${dias !== null && dias < 0 ? " venc-danger" : dias !== null && dias <= 7 ? " venc-warn" : ""}`}>
                             {d.fechaVencimiento ? fmtFecha(d.fechaVencimiento) : "—"}
-                            {dias !== null && dias < 0 && " ⚠️"}
+                            {dias !== null && dias < 0 && <AlertTriangle size={13} style={{ verticalAlign: "middle" }} />}
                             {dias !== null && dias >= 0 && dias <= 7 && ` (${dias}d)`}
                           </span>
                         </div>
@@ -494,22 +495,22 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                       </div>
                       {transporte > 0 && (
                         <div className="compra-det-costos__row">
-                          <span>🚚 Transporte</span><span>{COP(transporte)}</span>
+                          <span>Transporte</span><span>{COP(transporte)}</span>
                         </div>
                       )}
                       {valorIva > 0 && (
                         <div className="compra-det-costos__row">
-                          <span>🧾 IVA ({ivaPct}%)</span><span>{COP(valorIva)}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Receipt size={13} /> IVA ({ivaPct}%)</span><span>{COP(valorIva)}</span>
                         </div>
                       )}
                       {valorDesc > 0 && (
                         <div className="compra-det-costos__row compra-det-costos__row--desc">
-                          <span>🏷️ Descuento ({descPct}%)</span><span>−{COP(valorDesc)}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Tag size={13} /> Descuento ({descPct}%)</span><span>−{COP(valorDesc)}</span>
                         </div>
                       )}
                       {otros > 0 && (
                         <div className="compra-det-costos__row">
-                          <span>➕ Otros costos</span><span>{COP(otros)}</span>
+                          <span>Otros costos</span><span>{COP(otros)}</span>
                         </div>
                       )}
                       <div className="compra-det-costos__total">
@@ -525,8 +526,8 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
             {viewTab === "lotes" && (
               <>
                 <p className="section-label" style={{ marginTop: 0 }}>Lotes generados</p>
-                <div className="compra-det-lotes-info">
-                  ✅ Compra completada el {fmtFecha(compra.fecha_llegada || compra.fecha)}. Stock aplicado al inventario.
+                <div className="compra-det-lotes-info" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <CheckCircle2 size={13} /> Compra completada el {fmtFecha(compra.fecha_llegada || compra.fecha)}. Stock aplicado al inventario.
                 </div>
 
                 {lotesLoading ? (
@@ -543,7 +544,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                     return (
                       <div key={d.idInsumo || idx} className="compra-det-lote-grupo">
                         <div className="compra-det-lote-grupo__header">
-                          <span>📦 {nombre}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Package size={14} /> {nombre}</span>
                           <span className="compra-det-lote-grupo__qty">{d.cantidad} {uni} comprados</span>
                         </div>
 
@@ -573,7 +574,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                                   </div>
                                   {idCompraLote && Number(idCompraLote) !== Number(compra.id) && (
                                     <div className="compra-det-lote-item__origen">
-                                      ℹ️ Generado por compra #{idCompraLote}
+                                      Generado por compra #{idCompraLote}
                                     </div>
                                   )}
                                 </div>
@@ -617,7 +618,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
             <span className={`estado-chip estado-chip--${compra.estado}`}>
               {compra.estado.toUpperCase()}
             </span>
-            <button type="button" className="modal-close-btn" onClick={onClose} style={{ flexShrink: 0 }}>✕</button>
+            <button type="button" className="modal-close-btn" onClick={onClose} style={{ flexShrink: 0 }}><X size={16} /></button>
           </div>
         </div>
 
@@ -625,7 +626,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
           <>
             <div className="modal-body" style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
               <div className="stock-aviso stock-aviso--info" style={{ marginBottom: 16 }}>
-                ℹ️ Esta compra ya fue <strong>completada y su stock fue aplicado</strong>. Solo puedes editar las notas y el método de pago.
+                Esta compra ya fue <strong>completada y su stock fue aplicado</strong>. Solo puedes editar las notas y el método de pago.
               </div>
               <div className="field-grid-2">
                 <div className="field-wrap">
@@ -635,9 +636,9 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                     value={form.metodoPago}
                     onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
                     getValue={m => m.value}
-                    getLabel={m => `${m.icon} ${m.label}`}
+                    getLabel={m => m.label}
                     placeholder="— Seleccionar —"
-                    searchPlaceholder="🔍 Método…"
+                    searchPlaceholder="Método…"
                     className="field-select"
                   />
                 </div>
@@ -650,7 +651,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <label className="comprobante-upload-btn" style={{ flex: 1 }}>
                       <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setComprobante(e.target.files?.[0] || null)} />
-                      <span className="comprobante-upload-icon">📎</span>
+                      <span className="comprobante-upload-icon" style={{ display: "flex", alignItems: "center" }}><Paperclip size={16} /></span>
                       {comprobante
                         ? <span className="comprobante-filename">{comprobante.name}</span>
                         : compra.comprobante
@@ -662,9 +663,9 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                       <button
                         type="button"
                         onClick={e => { e.preventDefault(); setComprobante(null); }}
-                        style={{ flexShrink: 0, padding: "0 12px", height: 36, borderRadius: 8, border: "1.5px solid #ef5350", background: "#fff", color: "#c62828", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                        style={{ flexShrink: 0, padding: "0 12px", height: 36, borderRadius: 8, border: "1.5px solid #ef5350", background: "#fff", color: "#c62828", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                       >
-                        ✕ Quitar
+                        <X size={14} /> Quitar
                       </button>
                     )}
                   </div>
@@ -710,7 +711,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                       getValue={p => p.ID_Proveedor || p.id}
                       getLabel={p => `${p.Responsable || p.responsable} · ${p.Municipio || p.ciudad}`}
                       placeholder="— Seleccionar proveedor —"
-                      searchPlaceholder="🔍 Buscar proveedor…"
+                      searchPlaceholder="Buscar proveedor…"
                       className={`field-select ${errors.idProveedor ? "error" : ""}`}
                     />
                     {errors.idProveedor && <span className="field-error">{errors.idProveedor}</span>}
@@ -737,7 +738,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                             className={`estado-toggle-btn ${form.estado === est ? `estado-toggle-btn--${est}` : ""}`}
                             onClick={() => set("estado", est)}
                           >
-                            {est === "pendiente" ? "⏳" : "✅"} {est.charAt(0).toUpperCase() + est.slice(1)}
+                            {est === "pendiente" ? <Clock size={13} style={{ verticalAlign: "middle" }} /> : <CheckCircle2 size={13} style={{ verticalAlign: "middle" }} />} {est.charAt(0).toUpperCase() + est.slice(1)}
                           </button>
                         ))}
                       </div>
@@ -751,9 +752,9 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                       value={form.metodoPago}
                       onChange={e => { set("metodoPago", e.target.value); setComprobante(null); }}
                       getValue={m => m.value}
-                      getLabel={m => `${m.icon} ${m.label}`}
+                      getLabel={m => m.label}
                       placeholder="— Seleccionar método —"
-                      searchPlaceholder="🔍 Método…"
+                      searchPlaceholder="Método…"
                       className={`field-select ${errors.metodoPago ? "error" : ""}`}
                     />
                     {errors.metodoPago && <span className="field-error">{errors.metodoPago}</span>}
@@ -792,7 +793,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                           <div className="detalle-summary">
                             <div className="detalle-summary__info">
                               <span className="detalle-num">{String(i + 1).padStart(2, "0")}</span>
-                              <span className="insumo-icon">📦</span>
+                              <span className="insumo-icon" style={{ display: "flex", alignItems: "center" }}><Package size={14} /></span>
                               <div>
                                 <span className="detalle-summary__name">{insumoSel?.nombre || d.nombre || "Insumo"}</span>
                                 <div className="detalle-summary__meta">
@@ -809,7 +810,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                                 className="detalle-remove-btn"
                                 type="button"
                                 onClick={e => { e.stopPropagation(); removeDetalle(d._key); }}
-                              >✕</button>
+                              ><X size={16} /></button>
                             </div>
                           </div>
                         </div>
@@ -846,7 +847,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                               getValue={ins => ins.id}
                               getLabel={ins => ins.nombre}
                               placeholder="— Seleccionar insumo —"
-                              searchPlaceholder="🔍 Buscar insumo…"
+                              searchPlaceholder="Buscar insumo…"
                               className={`field-select ${errors[`ins_${i}`] ? "error" : ""}`}
                             />
                             {errors[`ins_${i}`] && <span className="field-error">{errors[`ins_${i}`]}</span>}
@@ -937,7 +938,7 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                           className="detalle-remove-btn"
                           type="button"
                           onClick={() => removeDetalle(d._key)}
-                        >✕</button>
+                        ><X size={16} /></button>
                       </div>
                     );
                   })}

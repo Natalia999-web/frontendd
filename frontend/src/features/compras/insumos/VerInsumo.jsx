@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { X, Package, Search, CheckCircle2, AlertTriangle, Ban, ShoppingCart, ClipboardList } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getLotesInsumo } from "../../../services/insumosService.js";
 import { fmtFecha } from "../../../utils/dateUtils";
@@ -83,7 +84,7 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
   );
   if (!lotes.length) return (
     <div style={{ textAlign: "center", padding: "28px 0", color: "#9e9e9e" }}>
-      <div style={{ fontSize: 28, marginBottom: 8 }}>📦</div>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Package size={28} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
       <p style={{ margin: 0, fontSize: 13 }}>No hay lotes registrados.</p>
     </div>
   );
@@ -103,7 +104,9 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
 
   if (!mostrar.length) return (
     <div style={{ textAlign: "center", padding: "28px 0", color: "#9e9e9e" }}>
-      <div style={{ fontSize: 28, marginBottom: 8 }}>{tipo === "vencidos" ? "✅" : "📦"}</div>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+        {tipo === "vencidos" ? <CheckCircle2 size={28} strokeWidth={1} style={{ color: "#bdbdbd" }} /> : <Package size={28} strokeWidth={1} style={{ color: "#bdbdbd" }} />}
+      </div>
       <p style={{ margin: 0, fontSize: 13 }}>
         {tipo === "vencidos" ? "Sin lotes vencidos." : "Sin lotes activos."}
       </p>
@@ -121,7 +124,7 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
         const bg          = l.vencido ? "#fff8f8" : urgente ? "#fff3e0" : pronto ? "#fffde7" : "#f9fdf9";
         return (
           <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${borderColor}`, background: bg }}>
-            <span style={{ fontSize: 18 }}>📦</span>
+            <Package size={18} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 13, color: "#1a1a1a" }}>
                 Lote #{l.id}
@@ -136,8 +139,8 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
                   : "Sin fecha de vencimiento"}
               </div>
               {(l.id_compra || l.ID_Compra) && (
-                <div style={{ fontSize: 11, color: "#1565c0", marginTop: 3, fontWeight: 600 }}>
-                  🛒 Compra de origen: #{l.id_compra || l.ID_Compra}
+                <div style={{ fontSize: 11, color: "#1565c0", marginTop: 3, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                  <ShoppingCart size={11} /> Compra de origen: #{l.id_compra || l.ID_Compra}
                 </div>
               )}
             </div>
@@ -150,21 +153,21 @@ function LotesTab({ lotes, loading, tipo, unidad }) {
             {l.vencido && (
               <BadgeVenc
                 color="#c62828" bg="#ffebee" border="#ef9a9a"
-                icon="🚫" label="Vencido"
+                icon={<Ban size={10} />} label="Vencido"
                 tooltip={dias !== null ? `Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"} — no apto para producción` : "Este lote ya está vencido — no apto para producción"}
               />
             )}
             {urgente && (
               <BadgeVenc
                 color="#e65100" bg="#fff3e0" border="#ffcc80"
-                icon="⚠️" label={`${dias}d`}
+                icon={<AlertTriangle size={10} />} label={`${dias}d`}
                 tooltip={`Vence en ${dias} día${dias === 1 ? "" : "s"} — requiere atención urgente`}
               />
             )}
             {pronto && (
               <BadgeVenc
                 color="#f9a825" bg="#fff8e1" border="#ffe082"
-                icon="🟡" label={`${dias}d`}
+                icon={<span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f9a825" }} />} label={`${dias}d`}
                 tooltip={`Próximo a vencer — quedan ${dias} días`}
               />
             )}
@@ -201,11 +204,11 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
         <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
           <div className="modal-header">
             <h2 className="modal-header__title">Insumo no encontrado</h2>
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
           </div>
           <div className="modal-body">
             <div className="empty-state" style={{ padding: "32px 0" }}>
-              <div className="empty-state__icon" style={{ fontSize: 36 }}>🔍</div>
+              <div className="empty-state__icon"><Search size={36} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
               <p className="empty-state__text">El insumo no existe o fue eliminado del sistema.</p>
             </div>
           </div>
@@ -222,9 +225,9 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
   const est    = calcEstado(ins.stockActual, ins.stockMinimo);
 
   const estConfig = {
-    disponible: { label: "Disponible", color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "✅" },
-    bajo:       { label: "Stock bajo", color: "#f57f17", bg: "#fff8e1", border: "#ffe082", icon: "⚠️" },
-    agotado:    { label: "Agotado",    color: "#c62828", bg: "#ffebee", border: "#ef9a9a", icon: "🚫" },
+    disponible: { label: "Disponible", color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: <CheckCircle2 size={13} /> },
+    bajo:       { label: "Stock bajo", color: "#f57f17", bg: "#fff8e1", border: "#ffe082", icon: <AlertTriangle size={13} /> },
+    agotado:    { label: "Agotado",    color: "#c62828", bg: "#ffebee", border: "#ef9a9a", icon: <Ban size={13} /> },
   };
   const ec = estConfig[est];
 
@@ -245,13 +248,13 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
               <h2 className="modal-header__title">{ins.nombre}</h2>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="ver-ins-tabs">
-          <button className={`ver-ins-tab${tab === "info"     ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("info")}>📋 Información</button>
-          <button className={`ver-ins-tab${tab === "lotes"    ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("lotes")}>📦 Lotes en inventario</button>
-          <button className={`ver-ins-tab${tab === "vencidos" ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("vencidos")}>📦 Lotes vencidos</button>
+          <button className={`ver-ins-tab${tab === "info"     ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("info")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><ClipboardList size={14} /> Información</button>
+          <button className={`ver-ins-tab${tab === "lotes"    ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("lotes")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Package size={14} /> Lotes en inventario</button>
+          <button className={`ver-ins-tab${tab === "vencidos" ? " ver-ins-tab--active" : ""}`} onClick={() => setTab("vencidos")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Package size={14} /> Lotes vencidos</button>
         </div>
 
         <div className="modal-body" style={{ flex: 1, overflowY: "auto" }}>
@@ -267,7 +270,7 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
                     <button onClick={handleSolicitarProveedor} style={{ fontSize: 12, fontWeight: 600, color: "#1565c0", background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 8, padding: "5px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
-                      🛒 Solicitar al proveedor →
+                      <ShoppingCart size={14} /> Solicitar al proveedor →
                     </button>
                   </div>
                 </>
