@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../services/authService";
-import { Mail, Lock, Eye, EyeOff, Leaf, ChevronRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Leaf, ChevronRight, AlertTriangle } from "lucide-react";
 import "./Auth.css";
 
 const Login = () => {
@@ -85,7 +85,7 @@ const Login = () => {
 
           {error && (
             <div className="auth-error">
-              <span>⚠</span> {error}
+              <AlertTriangle size={13} /> {error}
             </div>
           )}
 

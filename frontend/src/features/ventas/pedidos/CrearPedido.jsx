@@ -331,10 +331,8 @@ export default function CrearPedido({ onClose, onSave }) {
   const totalFinal    = Math.max(0, total - creditoAplicar);
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa. No depende del monto — antes se pedía por pasar de
-  // $50.000 y caía en pedidos normales. Los productos por encargo no cuentan:
-  // su déficit lo cubre la orden de producción.
   const requiereAnticipo = form.productosItems.some(
-    p => !p.requiereProduccion && p.cantidad > p.stockActual
+    p => p.cantidad > p.stockActual
   );
   const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   // Con anticipo el método se elige una sola vez, en el bloque del anticipo, y de

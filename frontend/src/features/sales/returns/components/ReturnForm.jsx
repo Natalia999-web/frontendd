@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { crearDevolucion } from '../../../../services/devolucionesService.js';
-import { PackageMinus, AlertCircle, FileText, Image, X } from 'lucide-react';
+import { PackageMinus, AlertCircle, Image, X, Check } from 'lucide-react';
 
 const MOTIVOS = [
   'Producto en mal estado',
@@ -11,66 +11,169 @@ const MOTIVOS = [
   'Otro',
 ];
 
+const COP = (n) =>
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+  }).format(n);
+
+/* ── fila de un producto ── */
+function ProductRow({ item, checked, motivo, onToggle, onMotivo }) {
+  return (
+    <div style={{
+      borderRadius: 14,
+      border: `2px solid ${checked ? '#a7f3d0' : '#e5e7eb'}`,
+      background: checked ? '#f0fdf4' : '#fafafa',
+      padding: '12px 14px',
+      transition: 'border-color .15s, background .15s',
+    }}>
+      {/* cabecera del producto */}
+      <label style={{
+        display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+      }}>
+        {/* checkbox custom */}
+        <span
+          onClick={onToggle}
+          style={{
+            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+            border: `2px solid ${checked ? '#10b981' : '#d1d5db'}`,
+            background: checked ? '#10b981' : 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'all .12s',
+          }}
+        >
+          {checked && <Check size={12} color="white" strokeWidth={3} />}
+        </span>
+
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: checked ? '#065f46' : '#374151' }}>
+            {item.nombre}
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+            {item.cantidad} {item.cantidad === 1 ? 'unidad' : 'unidades'} · {COP(item.precio * item.cantidad)}
+          </p>
+        </div>
+      </label>
+
+      {/* selector de motivo (visible solo si está marcado) */}
+      {checked && (
+        <div style={{ marginTop: 10 }}>
+          <label style={{
+            display: 'block', fontSize: 10, fontWeight: 700,
+            color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em',
+            marginBottom: 4,
+          }}>
+            Motivo de devolución <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <select
+            value={motivo}
+            onChange={e => onMotivo(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px', borderRadius: 10,
+              border: `1.5px solid ${motivo ? '#a7f3d0' : '#fca5a5'}`,
+              background: 'white', fontSize: 12, fontWeight: 600,
+              color: motivo ? '#065f46' : '#9ca3af',
+              outline: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            <option value="">— Selecciona el motivo —</option>
+            {MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── componente principal ── */
 const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
-  const [form,  setForm]  = useState({
-    idVenta:   defaultIdVenta,
-    productId: '',
-    motivo:    '',
-    evidencia: null,
-    comentario: '',
-  });
-
-  useEffect(() => {
-    setForm(prev => ({
-      ...prev,
-      idVenta: defaultIdVenta || prev.idVenta,
-    }));
-  }, [defaultIdVenta]);
-
-  const [error,   setError]   = useState('');
-  const [loading, setLoading] = useState(false);
+  /* estado por producto: { checked, motivo } */
+  const [prodState, setProdState] = useState({});
+  const [comentario, setComentario] = useState('');
+  const [evidencia,  setEvidencia]  = useState(null);
+  const [error,      setError]      = useState('');
+  const [loading,    setLoading]    = useState(false);
   const fileRef = useRef(null);
 
-  const set = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (field === 'productId' && !value) setError('Selecciona un producto');
-    else if (field === 'motivo' && !value) setError('Selecciona el motivo');
-    else setError('');
-  };
+  /* reiniciar cuando cambia el pedido seleccionado */
+  useEffect(() => {
+    setProdState({});
+    setComentario('');
+    setEvidencia(null);
+    setError('');
+  }, [defaultIdVenta]);
+
+  const toggle = (id) =>
+    setProdState(prev => ({
+      ...prev,
+      [id]: { checked: !prev[id]?.checked, motivo: prev[id]?.motivo || '' },
+    }));
+
+  const setMotivo = (id, motivo) =>
+    setProdState(prev => ({
+      ...prev,
+      [id]: { ...prev[id], motivo },
+    }));
 
   const handleFile = (file) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => set('evidencia', { nombre: file.name, base64: ev.target.result, tipo: file.type });
+    reader.onload = (ev) =>
+      setEvidencia({ nombre: file.name, base64: ev.target.result, tipo: file.type });
     reader.readAsDataURL(file);
   };
 
+  /* productos seleccionados con todos sus datos */
+  const seleccionados = orderProducts
+    .filter(p => prodState[p.idProducto || p.id]?.checked)
+    .map(p => ({
+      ...p,
+      motivoProd: prodState[p.idProducto || p.id]?.motivo || '',
+    }));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.idVenta || !form.productId || !form.motivo) {
-      setError('Completa los campos obligatorios: Producto y motivo.');
+
+    if (seleccionados.length === 0) {
+      setError('Selecciona al menos un producto para devolver.');
+      return;
+    }
+    const sinMotivo = seleccionados.find(p => !p.motivoProd);
+    if (sinMotivo) {
+      setError(`Indica el motivo de devolución para "${sinMotivo.nombre}".`);
       return;
     }
 
-    const selectedProduct = orderProducts.find(p => String(p.idProducto || p.id) === String(form.productId));
-    if (!selectedProduct) { setError('Producto no encontrado.'); return; }
+    /* construir motivo global y comentario combinado */
+    const motivoGlobal =
+      seleccionados.length === 1
+        ? seleccionados[0].motivoProd
+        : 'Múltiples productos';
+
+    const detalleProductos = seleccionados
+      .map(p => `• ${p.nombre}: ${p.motivoProd}`)
+      .join('\n');
+
+    const comentarioCombinado =
+      seleccionados.length > 1
+        ? `${detalleProductos}${comentario ? '\n\n' + comentario : ''}`
+        : comentario;
 
     setLoading(true);
     setError('');
     try {
       await crearDevolucion({
-        idPedido:   form.idVenta,
-        motivo:     form.motivo,
-        comentario: form.comentario.trim(),
-        evidencia:  form.evidencia,
-        productos:  [{
-          idProducto:     selectedProduct.idProducto || selectedProduct.id,
-          nombre:         selectedProduct.nombre,
-          cantidad:       selectedProduct.cantidad,
-          precioUnitario: selectedProduct.precio,
-        }],
+        idPedido:   defaultIdVenta,
+        motivo:     motivoGlobal,
+        comentario: comentarioCombinado.trim(),
+        evidencia,
+        productos: seleccionados.map(p => ({
+          idProducto:     p.idProducto || p.id,
+          nombre:         p.nombre,
+          cantidad:       p.cantidad,
+          precioUnitario: p.precio,
+        })),
       });
-      setForm({ idVenta: defaultIdVenta, productId: '', motivo: '', evidencia: null, comentario: '' });
       onSuccess();
     } catch (err) {
       setError(err.message || 'Error al enviar la solicitud. Intenta de nuevo.');
@@ -80,109 +183,161 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {error && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in zoom-in duration-300">
-          <AlertCircle size={18} className="text-red-500 shrink-0" />
-          <p className="text-xs font-bold text-red-700">{error}</p>
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          background: '#fef2f2', border: '1px solid #fecaca',
+          borderRadius: 12, padding: '12px 14px',
+        }}>
+          <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#991b1b', lineHeight: 1.5 }}>{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Producto */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            <PackageMinus size={12} className="text-emerald-500" /> Producto <span className="text-red-500">*</span>
-          </label>
-          <select
-            className="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-3.5 px-4 text-xs font-bold text-gray-700 focus:bg-white focus:border-emerald-500 transition-all outline-none appearance-none"
-            value={form.productId}
-            onChange={e => set('productId', e.target.value)}
-          >
-            <option value="">— Elegir producto —</option>
-            {orderProducts.map(p => (
-              <option key={p.idProducto || p.id} value={p.idProducto || p.id}>{p.nombre}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Motivo */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            <FileText size={12} className="text-emerald-500" /> Motivo <span className="text-red-500">*</span>
-          </label>
-          <select
-            className="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-3.5 px-4 text-xs font-bold text-gray-700 focus:bg-white focus:border-emerald-500 transition-all outline-none appearance-none"
-            value={form.motivo}
-            onChange={e => set('motivo', e.target.value)}
-          >
-            <option value="">— Elegir motivo —</option>
-            {MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+      {/* lista de productos */}
+      <div>
+        <p style={{
+          margin: '0 0 8px', fontSize: 10, fontWeight: 700,
+          color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em',
+        }}>
+          Productos del pedido <span style={{ color: '#ef4444' }}>*</span>
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {orderProducts.length === 0 ? (
+            <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
+              No hay productos disponibles.
+            </p>
+          ) : (
+            orderProducts.map(p => {
+              const key = p.idProducto || p.id;
+              return (
+                <ProductRow
+                  key={key}
+                  item={p}
+                  checked={!!prodState[key]?.checked}
+                  motivo={prodState[key]?.motivo || ''}
+                  onToggle={() => toggle(key)}
+                  onMotivo={(m) => setMotivo(key, m)}
+                />
+              );
+            })
+          )}
         </div>
       </div>
 
-      {/* Evidencia */}
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-          <Image size={12} className="text-emerald-500" /> Evidencia
-          <span className="text-[9px] font-bold text-gray-300 normal-case">(Opcional: foto del producto)</span>
-        </label>
-
-        {form.evidencia ? (
-          <div className="flex items-center gap-3 bg-gray-50 border-2 border-emerald-200 rounded-2xl p-3">
-            <img src={form.evidencia.base64} alt="evidencia" className="w-14 h-14 object-cover rounded-xl shrink-0" />
-            <p className="text-xs font-bold text-gray-600 flex-1 truncate">{form.evidencia.nombre}</p>
+      {/* evidencia */}
+      <div>
+        <p style={{
+          margin: '0 0 6px', fontSize: 10, fontWeight: 700,
+          color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em',
+        }}>
+          Evidencia <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', color: '#9ca3af' }}>(opcional · foto del producto)</span>
+        </p>
+        {evidencia ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: '#f0fdf4', border: '1.5px solid #a7f3d0',
+            borderRadius: 12, padding: '10px 12px',
+          }}>
+            <Image size={16} color="#10b981" style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {evidencia.nombre}
+            </span>
             <button
               type="button"
-              onClick={() => { set('evidencia', null); if (fileRef.current) fileRef.current.value = ''; }}
-              className="text-gray-400 hover:text-red-500 transition-colors p-1"
-              data-tooltip="Quitar foto"
+              onClick={() => { setEvidencia(null); if (fileRef.current) fileRef.current.value = ''; }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2, display: 'flex' }}
             >
-              <X size={16} strokeWidth={3} />
+              <X size={15} />
             </button>
           </div>
         ) : (
           <div
             onClick={() => fileRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl py-6 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/30 transition-all"
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 6, background: '#f9fafb', border: '2px dashed #e5e7eb',
+              borderRadius: 12, padding: '20px 16px', cursor: 'pointer',
+              transition: 'border-color .15s, background .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#a7f3d0'; e.currentTarget.style.background = '#f0fdf4'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#f9fafb'; }}
           >
-            <Image size={20} className="text-gray-300" />
-            <p className="text-xs font-bold text-gray-400">Haz clic para subir una foto</p>
+            <Image size={18} color="#d1d5db" />
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>
+              Haz clic para subir una foto
+            </p>
             <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
+              ref={fileRef} type="file" accept="image/*"
+              style={{ display: 'none' }}
               onChange={e => handleFile(e.target.files[0])}
             />
           </div>
         )}
       </div>
 
-      {/* Comentario */}
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-          <FileText size={12} className="text-emerald-500" /> Descripción detallada
-        </label>
+      {/* comentario adicional */}
+      <div>
+        <p style={{
+          margin: '0 0 6px', fontSize: 10, fontWeight: 700,
+          color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em',
+        }}>
+          Descripción adicional <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span>
+        </p>
         <textarea
-          className="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 px-4 text-xs font-bold text-gray-700 focus:bg-white focus:border-emerald-500 transition-all outline-none resize-none"
-          rows={3}
-          placeholder="Explícanos brevemente qué sucedió con el producto..."
-          value={form.comentario}
-          onChange={e => set('comentario', e.target.value)}
+          rows={2}
+          placeholder="Cuéntanos más detalles sobre el problema…"
+          value={comentario}
+          onChange={e => setComentario(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: 12,
+            border: '1.5px solid #e5e7eb', background: '#f9fafb',
+            fontSize: 12, fontWeight: 500, color: '#374151',
+            outline: 'none', resize: 'none', fontFamily: 'var(--font-body)',
+            transition: 'border-color .15s',
+            boxSizing: 'border-box',
+          }}
+          onFocus={e => e.target.style.borderColor = '#a7f3d0'}
+          onBlur={e => e.target.style.borderColor = '#e5e7eb'}
         />
       </div>
 
+      {/* resumen de selección */}
+      {seleccionados.length > 0 && (
+        <div style={{
+          background: '#f0fdf4', border: '1px solid #a7f3d0',
+          borderRadius: 12, padding: '10px 14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#065f46' }}>
+            {seleccionados.length} producto{seleccionados.length !== 1 ? 's' : ''} seleccionado{seleccionados.length !== 1 ? 's' : ''}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#065f46' }}>
+            {COP(seleccionados.reduce((sum, p) => sum + p.precio * p.cantidad, 0))}
+          </span>
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={loading}
-        className="w-full group relative overflow-hidden flex items-center justify-center gap-3 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200"
+        disabled={loading || seleccionados.length === 0}
+        style={{
+          width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+          background: seleccionados.length === 0 ? '#d1d5db' : '#065f46',
+          color: 'white', fontSize: 12, fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: '.06em',
+          cursor: seleccionados.length === 0 ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          transition: 'background .15s',
+          fontFamily: 'var(--font-body)',
+        }}
+        onMouseEnter={e => { if (seleccionados.length > 0 && !loading) e.currentTarget.style.background = '#047857'; }}
+        onMouseLeave={e => { if (seleccionados.length > 0) e.currentTarget.style.background = '#065f46'; }}
       >
-        <PackageMinus size={16} strokeWidth={3} />
-        {loading ? 'Enviando…' : 'Enviar Solicitud de Devolución'}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+        <PackageMinus size={15} strokeWidth={2.5} />
+        {loading ? 'Enviando…' : 'Enviar solicitud de devolución'}
       </button>
     </form>
   );

@@ -1259,9 +1259,18 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canEdit             = puedeEditarsePedido(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
-  // Usar orden_produccion (¿hay OPs pendientes para ESTE pedido?) no requiereProduccion
-  // (flag del tipo de producto). Si hay stock, no hay OP y se puede marcar como listo.
-  const canMarcarListo      = ped.estado === "Confirmado" && !ped.orden_produccion;
+  // canMarcarListo: no debe quedar desbloqueado solo porque no hay OPs pendientes.
+  // sobre_stock indica que el pedido se creó con más unidades de las que había en
+  // stock, por lo tanto sí necesitaba OPs. Si además no hay ninguna OP creada
+  // (total_ordenes_produccion = 0), la OP nunca se generó y el pedido no puede
+  // marcarse como listo. Esto distingue "OP terminada" de "OP nunca creada".
+  // requiereProduccion solo señala el tipo de producto, no si había stock:
+  // un producto que requiere producción con stock disponible no genera OP.
+  const opsPendientes       = ped.orden_produccion;
+  const opsCreadas          = ped.total_ordenes_produccion > 0;
+  const canMarcarListo      = ped.estado === "Confirmado"
+    && !opsPendientes
+    && (!ped.sobre_stock || opsCreadas);
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canEntregar         = ped.estado === "En camino";

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { getUser } from "../services/authService";
+import { Lock } from "lucide-react";
 
 export default function SinAcceso() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function SinAcceso() {
       justifyContent: "center", minHeight: "60vh", gap: 20, padding: 32,
       textAlign: "center",
     }}>
-      <div style={{ fontSize: 72, lineHeight: 1 }}>🔒</div>
+      <div style={{ lineHeight: 1 }}><Lock size={72} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>
       <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#212121" }}>
         Sin acceso
       </h1>
