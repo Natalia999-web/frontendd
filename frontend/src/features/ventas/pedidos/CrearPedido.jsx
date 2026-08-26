@@ -933,7 +933,7 @@ export default function CrearPedido({ onClose, onSave }) {
                         </div>
                       ) : (
                         <label className={`comprobante-dropzone${errors.anticipo_comprobante ? " error" : ""}`} style={{ height: 110, background: "rgba(255,255,255,0.7)" }}>
-                          <input type="file" accept="image/*,application/pdf" onChange={handleAnticipo} hidden />
+                          <input type="file" accept="image/*" onChange={handleAnticipo} hidden />
                           <div style={{ textAlign: "center" }}>
                             <span style={{ fontSize: 26 }}>📎</span>
                             <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante {pagarTodo ? "del pago" : "del anticipo"}</p>

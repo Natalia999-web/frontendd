@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Check, Eye, EyeOff } from "lucide-react";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import { soloLetras, soloDigitos, esUbicacionValida } from "../../../utils/inputFilters";
 import { GB, getRolStyle, EMPTY_FORM, TIPO_DOC, validatePassword, validateCedula, validateTelefono } from "./usuariosUtils.js";
@@ -126,7 +127,7 @@ function LocationSelects({ departamento, municipio, onDepto, onMunicipio, errDep
           getValue={o => o.value}
           getLabel={o => o.label}
           placeholder="Seleccione…"
-          searchPlaceholder="🔍 Buscar municipio…"
+          searchPlaceholder="Buscar municipio…"
           className={`field-select${errMunicipio ? " error" : ""}`}
         />
         {errMunicipio && <span className="field-error">{errMunicipio}</span>}
@@ -175,7 +176,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -429,7 +430,7 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                     getValue={o => o.value}
                     getLabel={o => o.label}
                     placeholder="Seleccione…"
-                    searchPlaceholder="🔍 Tipo…"
+                    searchPlaceholder="Tipo…"
                     className="field-select"
                   />
                 </Field>
@@ -496,7 +497,7 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                           className={`field-input${errors.contrasena ? " error" : ""}`}
                         />
                         <button type="button" className="pass-eye-btn" onClick={() => setShowPass(v => !v)}>
-                          {showPass ? "🙈" : "👁"}
+                          {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
                     </Field>
@@ -511,7 +512,7 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                           className={`field-input${errors.confirmar ? " error" : ""}`}
                         />
                         <button type="button" className="pass-eye-btn" onClick={() => setShowConfirm(v => !v)}>
-                          {showConfirm ? "🙈" : "👁"}
+                          {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
                     </Field>
@@ -529,7 +530,7 @@ export default function CrearUsuario({ user, roles = [], onClose, onSave }) {
                   getValue={r => r.nombre}
                   getLabel={r => `${r.icono && !r.iconoPreview ? r.icono + " " : ""}${r.nombre}`}
                   placeholder="Seleccione un rol…"
-                  searchPlaceholder="🔍 Buscar rol…"
+                  searchPlaceholder="Buscar rol…"
                 />
                 {errors.rol && <span className="field-error">{errors.rol}</span>}
 

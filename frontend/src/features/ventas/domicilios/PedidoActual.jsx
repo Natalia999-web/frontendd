@@ -346,7 +346,7 @@ function EvidenciaModal({ pedido, onClose, onConfirm }) {
                 ? <img src={comprobantePreview} alt="Comprobante" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8 }} />
                 : <><CreditCard size={32} strokeWidth={1.5} style={{ color: "#bdbdbd" }} /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar comprobante de pago</span></>
               }
-              <input type="file" accept="image/*,application/pdf"
+              <input type="file" accept="image/*"
                 onChange={handleFileChange(setComprobanteFile, setComprobantePreview)} style={{ display: "none" }} />
             </label>
             {comprobanteFile && (

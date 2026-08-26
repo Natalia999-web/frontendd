@@ -846,7 +846,7 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
                 </div>
               ) : (
                 <label className={`comprobante-dropzone${errors.archivo ? " error" : ""}`} style={{ height: 100 }}>
-                  <input type="file" accept="image/*,application/pdf" onChange={handleFile} hidden />
+                  <input type="file" accept="image/*" onChange={handleFile} hidden />
                   <div style={{ textAlign: "center" }}>
                     <Paperclip size={24} color="#1565c0" />
                     <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Comprobante del saldo</p>
@@ -1172,7 +1172,7 @@ function ModalSubirComprobante({ pedido, saving, onClose, onConfirm }) {
               ? <img src={preview} alt="Comprobante" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8 }} />
               : <><Paperclip size={32} color="#9e9e9e" /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar imagen del comprobante</span></>
             }
-            <input type="file" accept="image/*,application/pdf" onChange={handleFile} style={{ display: "none" }} />
+            <input type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
           </label>
           {file && <p style={{ fontSize: 11, color: "#2e7d32", fontWeight: 700, display:"flex", alignItems:"center", gap:4 }}><Check size={12} /> {file.name}</p>}
           {error && <p style={{ fontSize: 12, color: "#c62828", background: "#ffebee", padding: "8px 12px", borderRadius: 8 }}>{error}</p>}

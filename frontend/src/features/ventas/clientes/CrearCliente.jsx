@@ -3,6 +3,7 @@ import { getUsuarios } from "../../../services/usuariosService.js";
 import "./clientes.css";
 import { soloLetras } from "../../../utils/inputFilters";
 import CharCount from "../../../shared/components/CharCount";
+import { Check, X, User, Eye, EyeOff, Camera } from "lucide-react";
 
 const TIPOS_DOC = ["CC", "TI", "CE", "Pasaporte", "NIT", "PPT"];
 const fmtTel = raw => {
@@ -82,7 +83,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14}/> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -249,7 +250,7 @@ export default function CrearCliente({ onClose, onSave }) {
             <p className="modal-header__eyebrow">Clientes</p>
             <h2 className="modal-header__title">Nuevo Cliente</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         <div style={{ padding: "16px 24px 0" }}>
@@ -265,8 +266,8 @@ export default function CrearCliente({ onClose, onSave }) {
                 <div className="avatar-upload-wrap" onClick={() => fotoRef.current.click()}>
                   {form.fotoPreview
                     ? <img className="avatar-upload-img" src={form.fotoPreview} alt="avatar" />
-                    : <div className="avatar-upload-placeholder">👤</div>}
-                  <div className="avatar-upload-overlay">📷</div>
+                    : <div className="avatar-upload-placeholder"><User size={36}/></div>}
+                  <div className="avatar-upload-overlay"><Camera size={16}/></div>
                 </div>
                 <p style={{ margin: 0, fontSize: 11, color: "#9e9e9e" }}>Foto de perfil (opcional)</p>
                 <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFoto} />
@@ -398,7 +399,7 @@ export default function CrearCliente({ onClose, onSave }) {
                       placeholder="Mínimo 6 caracteres"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e  => e.target.style.borderColor = errors.contrasena ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
                   </div>
                   {errors.contrasena && <p className="field-error">{errors.contrasena}</p>}
                 </div>
@@ -411,7 +412,7 @@ export default function CrearCliente({ onClose, onSave }) {
                       placeholder="Repetir contraseña"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e  => e.target.style.borderColor = errors.confirmar ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
                   </div>
                   {errors.confirmar && <p className="field-error">{errors.confirmar}</p>}
                 </div>

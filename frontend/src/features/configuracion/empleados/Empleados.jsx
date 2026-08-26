@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Check, X, Search, User, Eye, PenLine, Trash2 } from "lucide-react";
 import { ITEMS_PER_PAGE } from "./empleadosUtils.js";
 import { RolBadge } from "./CrearEmpleado.jsx";
 import CrearEmpleado from "./CrearEmpleado.jsx";
@@ -24,7 +25,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "success" ? "#2e7d32" : "#c62828" }}>
-      <span style={{ fontSize:15 }}>{toast.type === "success" ? "✓" : "✕"}</span>
+      {toast.type === "success" ? <Check size={15} /> : <X size={16} />}
       {toast.message}
     </div>
   );
@@ -190,7 +191,7 @@ export default function GestionEmpleados() {
         {/* Toolbar */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Search size={16} /></span>
             <input type="text" className="search-input"
               placeholder="Buscar por nombre, correo, ciudad, documento o rol…"
               value={search} onChange={e => handleSearch(e.target.value)} />
@@ -221,8 +222,8 @@ export default function GestionEmpleados() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol(0); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol(0); }} style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -264,7 +265,7 @@ export default function GestionEmpleados() {
                     <td><span className="row-num">{String((safePage-1)*ITEMS_PER_PAGE+idx+1).padStart(2,"0")}</span></td>
                     <td>
                       <div className="emp-cell">
-                        <div className="avatar-wrap">{emp.fotoPreview ? <img src={emp.fotoPreview} alt={emp.nombre} /> : <span>👤</span>}</div>
+                        <div className="avatar-wrap">{emp.fotoPreview ? <img src={emp.fotoPreview} alt={emp.nombre} /> : <User size={22} />}</div>
                         <div>
                           <div className="emp-name">{emp.nombre} {emp.apellidos}</div>
                           <div className="emp-email">{emp.correo}</div>
@@ -278,9 +279,9 @@ export default function GestionEmpleados() {
                     <td><Toggle value={emp.estado} onChange={() => toggleEstado(emp)} /></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   onClick={() => setModal({ type:"ver",      empleado:emp })}>👁</button>
-                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ type:"editar",   empleado:emp })}>✎</button>
-                        <button className="act-btn act-btn--delete" onClick={() => setModal({ type:"eliminar", empleado:emp })}>🗑️</button>
+                        <button className="act-btn act-btn--view"   onClick={() => setModal({ type:"ver",      empleado:emp })}><Eye size={16} /></button>
+                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ type:"editar",   empleado:emp })}><PenLine size={16} /></button>
+                        <button className="act-btn act-btn--delete" onClick={() => setModal({ type:"eliminar", empleado:emp })}><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { AlertTriangle, Check, X, Search, Eye, PenLine, Trash2 } from "lucide-react";
 import { usePrivilegio } from "../../../context/PrivilegiosContext";
 import { getRoles, eliminarRol, toggleEstadoRol } from "../../../services/rolesService.js";
 import CrearRol from "./CrearRol.jsx";
@@ -42,7 +43,7 @@ function ModalConfirmarDesactivarRol({ rol, onConfirm, onCancel }) {
         width: "min(420px, 95vw)", boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
         textAlign: "center",
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 38, marginBottom: 12 }}>⚠️</div>
+        <AlertTriangle size={38} strokeWidth={1} style={{color:"#b71c1c",marginBottom:12}} />
         <h3 style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 800, color: "#b71c1c" }}>
           Desactivar rol "{rol.nombre}"
         </h3>
@@ -71,7 +72,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span className="toast-icon">{toast.type === "error" ? "✕" : "✓"}</span>
+      {toast.type === "error" ? <X size={15} /> : <Check size={15} />}
       {toast.message}
     </div>
   );
@@ -190,7 +191,7 @@ export default function GestionRoles() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Search size={16} /></span>
             <input
               type="text"
               className="search-input"
@@ -226,8 +227,8 @@ export default function GestionRoles() {
           </div>
 
           {(filter !== "todos" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }} style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -307,7 +308,7 @@ export default function GestionRoles() {
                           className="act-btn act-btn--view"
                           data-tooltip="Ver rol"
                           onClick={() => setModal({ mode: "view", rol })}
-                        >👁</button>
+                        ><Eye size={16} /></button>
                         {!rol.esAdmin && (
                           <>
                             {puedeEditar && (
@@ -315,14 +316,14 @@ export default function GestionRoles() {
                                 className="act-btn act-btn--edit"
                                 data-tooltip="Editar rol"
                                 onClick={() => setModal({ mode: "edit", rol })}
-                              >✎</button>
+                              ><PenLine size={16} /></button>
                             )}
                             {puedeEliminar && (
                               <button
                                 className="act-btn act-btn--delete"
                                 data-tooltip="Eliminar rol"
                                 onClick={() => setModal({ mode: "delete", rol })}
-                              >🗑️</button>
+                              ><Trash2 size={16} /></button>
                             )}
                           </>
                         )}

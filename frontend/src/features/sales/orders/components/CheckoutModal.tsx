@@ -503,7 +503,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                   </div>
                 </div>
                 <div className="relative group">
-                  <input type="file" accept="image/*,application/pdf"
+                  <input type="file" accept="image/*"
                     onChange={e => { setComprobante(e.target.files?.[0] || null); setComprobanteError(''); }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   <div className="border-2 border-dashed border-green-200 bg-white group-hover:bg-green-50 transition-all rounded-xl p-3 text-center">
@@ -614,7 +614,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                         Transfiere <strong>{COP(montoAnticipo)}</strong> a <strong>{CUENTA.banco}</strong> · {CUENTA.tipo} · <strong>{CUENTA.numero}</strong> — {CUENTA.titular}
                       </div>
                       <div className="relative group">
-                        <input type="file" accept="image/*,application/pdf"
+                        <input type="file" accept="image/*"
                           onChange={e => { setAnticipoComprobante(e.target.files?.[0] || null); setAnticipoError(''); }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                         <div className="border-2 border-dashed border-yellow-300 bg-white group-hover:bg-yellow-50 transition-all rounded-xl p-3 text-center">

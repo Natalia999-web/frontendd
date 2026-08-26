@@ -3,6 +3,7 @@ import { getSalidas, registrarSalida, anularSalida, procesarVencidos } from "../
 import { getProductos } from "../../services/productosService.js";
 import { getInsumos } from "../../services/insumosService.js";
 import { usePrivilegios } from "../../context/PrivilegiosContext.jsx";
+import { Clock, Flame, Scale, Utensils, CornerUpLeft, ClipboardList, X, Package, Archive, Ban, Search, CheckCircle2, XCircle, RefreshCw, BarChart2, Calendar, Printer, TrendingDown, Lock, AlertTriangle, Eye } from "lucide-react";
 import "./Salidas.css";
 
 /* ══════════════════════════════════════════════════════════
@@ -14,11 +15,11 @@ const ITEMS_PER_PAGE = 5;
 function hoyISO() { return new Date().toISOString().split("T")[0]; }
 
 const TIPOS = [
-  { val: "vencimiento", label: "Vencido",    icon: "🕒", color: "#e65100", bg: "#fff3e0", border: "#ffcc80" },
-  { val: "daño",        label: "Dañado",     icon: "💥", color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
-  { val: "ajuste",      label: "Ajuste",     icon: "⚖️", color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
-  { val: "consumo",     label: "Consumo",    icon: "🍽️", color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8" },
-  { val: "devolución",  label: "Devolución", icon: "↩️", color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
+  { val: "vencimiento", label: "Vencido",    Icon: Clock,        color: "#e65100", bg: "#fff3e0", border: "#ffcc80" },
+  { val: "daño",        label: "Dañado",     Icon: Flame,        color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
+  { val: "ajuste",      label: "Ajuste",     Icon: Scale,        color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
+  { val: "consumo",     label: "Consumo",    Icon: Utensils,     color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8" },
+  { val: "devolución",  label: "Devolución", Icon: CornerUpLeft, color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
 ];
 const TIPO_MAP = Object.fromEntries(TIPOS.map(t => [t.val, t]));
 
@@ -61,21 +62,21 @@ function InfoRow({ label, value, color }) {
 }
 
 function ModalVerDetalle({ salida, onClose }) {
-  const tc = TIPO_MAP[salida.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋", label: salida.tipo };
+  const tc = TIPO_MAP[salida.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", Icon: ClipboardList, label: salida.tipo };
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 30000 }}>
       <div className="modal-box" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header" style={{ background: `linear-gradient(135deg, ${tc.color} 0%, ${tc.color}cc 100%)` }}>
           <div>
             <p className="modal-header__eyebrow">Detalle de salida #{salida.id}</p>
-            <h2 className="modal-header__title">{tc.icon} {tc.label}</h2>
+            <h2 className="modal-header__title" style={{display:"flex",alignItems:"center",gap:8}}><tc.Icon size={16}/> {tc.label}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
         <div className="modal-body" style={{ padding: "20px 24px 24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <InfoRow label="Estado"         value={salida.estadoLabel} color={salida.anulada ? "#c62828" : "#2e7d32"} />
-            <InfoRow label="Tipo elemento"  value={salida.entidadTipo === "producto" ? "📦 Producto" : "🧺 Insumo"} />
+            <InfoRow label="Tipo elemento"  value={salida.entidadTipo === "producto" ? "Producto" : "Insumo"} />
             <InfoRow label="Elemento"       value={salida.entidadNombre} />
             <InfoRow label="Categoría"      value={salida.entidadCat} />
             <InfoRow label="Cantidad"       value={`-${salida.cantidad} ${salida.unidad}`} color="#c62828" />
@@ -106,7 +107,7 @@ function ModalVerDetalle({ salida, onClose }) {
    MODAL CONFIRMAR ANULAR
 ══════════════════════════════════════════════════════════ */
 function ModalConfirmarAnular({ salida, onConfirmar, onCancelar }) {
-  const tc = TIPO_MAP[salida.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋", label: salida.tipo };
+  const tc = TIPO_MAP[salida.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", Icon: ClipboardList, label: salida.tipo };
   return (
     <div className="modal-overlay" onClick={onCancelar}>
       <div className="modal-box" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
@@ -115,21 +116,21 @@ function ModalConfirmarAnular({ salida, onConfirmar, onCancelar }) {
             <p className="modal-header__eyebrow">Confirmar acción</p>
             <h2 className="modal-header__title">Anular salida</h2>
           </div>
-          <button className="modal-close-btn" onClick={onCancelar}>✕</button>
+          <button className="modal-close-btn" onClick={onCancelar}><X size={16}/></button>
         </div>
         <div className="modal-body" style={{ padding: "20px 24px 24px" }}>
           <div className="sl-confirm-card">
-            <div className="sl-confirm-card__icon">🚫</div>
+            <div className="sl-confirm-card__icon"><Ban size={30}/></div>
             <p className="sl-confirm-card__text">
               ¿Estás seguro de que deseas anular esta salida? El stock será <strong>reintegrado automáticamente</strong>.
             </p>
             <div className="sl-confirm-card__detail" style={{ borderColor: tc.border, background: tc.bg }}>
-              <span style={{ fontSize: 18 }}>{salida.entidadTipo === "producto" ? "📦" : "🧺"}</span>
+              <span style={{ display:"flex",alignItems:"center" }}>{salida.entidadTipo === "producto" ? <Package size={18}/> : <Archive size={18}/>}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#1a1a1a" }}>{salida.entidadNombre}</div>
                 <div style={{ display: "flex", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
-                  <span className="sl-tipo-badge" style={{ color: tc.color, background: "#fff", border: `1px solid ${tc.border}`, fontSize: 11 }}>
-                    {tc.icon} {tc.label}
+                  <span className="sl-tipo-badge" style={{ color: tc.color, background: "#fff", border: `1px solid ${tc.border}`, fontSize: 11, display:"flex",alignItems:"center",gap:4 }}>
+                    <tc.Icon size={11}/> {tc.label}
                   </span>
                   <span style={{ fontSize: 12, color: "#c62828", fontWeight: 700 }}>-{salida.cantidad} uds.</span>
                   <span style={{ fontSize: 12, color: "#9e9e9e" }}>{salida.fecha}</span>
@@ -223,7 +224,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
             <p className="modal-header__eyebrow">Logística</p>
             <h2 className="modal-header__title">Registrar Salida</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         <div className="modal-body">
@@ -232,16 +233,18 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
               <p className="sl-panel__title">1 · Seleccionar elemento</p>
               <div className="sl-tipo-tabs">
                 <button className={`sl-tipo-tab${entidadTipo === "producto" ? " active" : ""}`}
-                  onClick={() => { setEntidadTipo("producto"); setSeleccionado(null); setBusqueda(""); }}>
-                  📦 Productos
+                  onClick={() => { setEntidadTipo("producto"); setSeleccionado(null); setBusqueda(""); }}
+                  style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Package size={14}/> Productos
                 </button>
                 <button className={`sl-tipo-tab${entidadTipo === "insumo" ? " active" : ""}`}
-                  onClick={() => { setEntidadTipo("insumo"); setSeleccionado(null); setBusqueda(""); }}>
-                  🧺 Insumos
+                  onClick={() => { setEntidadTipo("insumo"); setSeleccionado(null); setBusqueda(""); }}
+                  style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Archive size={14}/> Insumos
                 </button>
               </div>
               <div className="sl-search">
-                <span className="sl-search__icon">🔍</span>
+                <span className="sl-search__icon"><Search size={16}/></span>
                 <input className="sl-search__input" placeholder="Buscar por nombre o categoría…"
                   value={busqueda}
                   onChange={e => { setBusqueda(e.target.value); setErrors(p => ({ ...p, seleccionado: "" })); }} />
@@ -287,7 +290,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
               <p className="sl-panel__title">2 · Registrar salida</p>
               {seleccionado ? (
                 <div className="sl-seleccionado">
-                  <span style={{ fontSize: 22 }}>{seleccionado._tipo === "producto" ? "📦" : "🧺"}</span>
+                  <span style={{ display:"flex",alignItems:"center" }}>{seleccionado._tipo === "producto" ? <Package size={22}/> : <Archive size={22}/>}</span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{seleccionado.nombre}</div>
                     <div style={{ fontSize: 12, color: "#9e9e9e" }}>
@@ -295,11 +298,11 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                     </div>
                   </div>
                   <button onClick={() => { setSeleccionado(null); setCantidad(""); setErrors({}); }}
-                    style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#bdbdbd" }}>✕</button>
+                    style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#bdbdbd" }}><X size={16}/></button>
                 </div>
               ) : (
                 <div className="sl-seleccionado sl-seleccionado--empty">
-                  <span style={{ fontSize: 26, opacity: 0.3 }}>👈</span>
+                  <span style={{ opacity: 0.3 }}><Package size={26}/></span>
                   <span style={{ fontSize: 13, color: "#bdbdbd" }}>Selecciona un elemento</span>
                 </div>
               )}
@@ -311,7 +314,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
                     <button key={t.val} onClick={() => setTipoSalida(t.val)}
                       className={`sl-tipo-btn${tipoSalida === t.val ? " active" : ""}`}
                       style={tipoSalida === t.val ? { borderColor: t.border, background: t.bg, color: t.color } : {}}>
-                      <span style={{ fontSize: 17 }}>{t.icon}</span>
+                      <t.Icon size={17}/>
                       <span>{t.label}</span>
                     </button>
                   ))}
@@ -366,7 +369,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
               <button className="sl-btn-registrar" onClick={handleRegistrar}
                 disabled={saving || !seleccionado || stockActual === 0}
                 style={{ background: tipoActual.color }}>
-                {saving ? "Registrando…" : `${tipoActual.icon} Registrar ${tipoActual.label.toLowerCase()}`}
+                {saving ? "Registrando…" : <><tipoActual.Icon size={14}/> {`Registrar ${tipoActual.label.toLowerCase()}`}</>}
               </button>
             </div>
           </div>
@@ -375,7 +378,7 @@ function RegistrarSalida({ productos, insumos, onClose, onRegistrada }) {
 
       {errToast && (
         <div className="sl-toast" style={{ background: "#c62828" }}>
-          <span>❌</span> {errToast}
+          <XCircle size={14}/> {errToast}
         </div>
       )}
     </div>
@@ -468,7 +471,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
             <div key={t.val} className={`sl-stat-card ${filtroTipo === t.val ? "active" : ""}`}
               style={{ borderColor: count > 0 ? (filtroTipo === t.val ? t.color : t.border) : "#e0e0e0", cursor: "pointer" }}
               onClick={() => toggleFiltroTipo(t.val)}>
-              <span style={{ fontSize: 18 }}>{t.icon}</span>
+              <t.Icon size={18}/>
               <span className="sl-stat-card__num" style={{ color: count > 0 ? t.color : "#bdbdbd", fontSize: 18 }}>{count}</span>
               <span className="sl-stat-card__label">{t.label}</span>
             </div>
@@ -479,7 +482,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
       {/* Toolbar */}
       <div className="sl-toolbar" style={{ alignItems: "stretch" }}>
         <div className="sl-search" style={{ flex: 1, marginBottom: 0, display: "flex", alignItems: "center" }}>
-          <span className="sl-search__icon">🔍</span>
+          <span className="sl-search__icon"><Search size={16}/></span>
           <input className="sl-search__input" placeholder="Buscar por nombre o motivo…"
             value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{ height: "100%" }} />
         </div>
@@ -492,10 +495,10 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
                 <div>
                   <p className="sl-filter-title">Tipo de salida</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-                    {[{ val: "todos", label: "Todos", icon: "📋" }, ...TIPOS].map(t => (
+                    {[{ val: "todos", label: "Todos", Icon: ClipboardList }, ...TIPOS].map(t => (
                       <button key={t.val} className={`sl-filter-opt${filtroTipo === t.val ? " active" : ""}`}
-                        onClick={() => setFiltroTipo(t.val)}>
-                        <span>{t.icon}</span>{t.val === "todos" ? "Todos los tipos" : t.label}
+                        onClick={() => setFiltroTipo(t.val)} style={{display:"flex",alignItems:"center",gap:6}}>
+                        <t.Icon size={13}/>{t.val === "todos" ? "Todos los tipos" : t.label}
                       </button>
                     ))}
                   </div>
@@ -503,11 +506,12 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
                 <div style={{ borderLeft: "1px solid #f0f0f0", paddingLeft: 12 }}>
                   <p className="sl-filter-title">Tipo de elemento</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-                    {[{ val: "todos", label: "Todos", icon: "📋" }, { val: "producto", label: "Productos", icon: "📦" }, { val: "insumo", label: "Insumos", icon: "🧺" }]
+                    {[{ val: "todos", label: "Todos", Icon: ClipboardList }, { val: "producto", label: "Productos", Icon: Package }, { val: "insumo", label: "Insumos", Icon: Archive }]
                       .map(opt => (
                         <button key={opt.val} className={`sl-filter-opt${filtroEntidad === opt.val ? " active" : ""}`}
-                          onClick={() => { setFiltroEntidad(opt.val); setShowFilter(false); }}>
-                          <span>{opt.icon}</span>{opt.label}
+                          onClick={() => { setFiltroEntidad(opt.val); setShowFilter(false); }}
+                          style={{display:"flex",alignItems:"center",gap:6}}>
+                          <opt.Icon size={13}/>{opt.label}
                         </button>
                       ))}
                   </div>
@@ -517,8 +521,8 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
           )}
         </div>
         {(filtroTipo !== "todos" || filtroEntidad !== "todos" || busqueda) && (
-          <button className="btn-limpiar" onClick={() => { setBusqueda(""); setFiltroTipo("todos"); setFiltroEntidad("todos"); }}>
-            ✕ Limpiar
+          <button className="btn-limpiar" onClick={() => { setBusqueda(""); setFiltroTipo("todos"); setFiltroEntidad("todos"); }} style={{display:"flex",alignItems:"center",gap:6}}>
+            <X size={14}/> Limpiar
           </button>
         )}
 
@@ -546,22 +550,22 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
               ) : paginadas.length === 0 ? (
                 <tr><td colSpan={7}>
                   <div className="empty-state">
-                    <div className="empty-state__icon">📋</div>
+                    <div className="empty-state__icon"><ClipboardList size={36} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
                     <p className="empty-state__text">No hay salidas registradas</p>
                   </div>
                 </td></tr>
               ) : paginadas.map((s, idx) => {
-                const tc = TIPO_MAP[s.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋", label: s.tipo };
+                const tc = TIPO_MAP[s.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", Icon: ClipboardList, label: s.tipo };
                 return (
                   <tr key={s.id || idx} className="tbl-row" style={{ opacity: s.anulada ? 0.5 : 1 }}>
                     <td>
-                      <span className="sl-tipo-badge" style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>
-                        {tc.icon} {tc.label}
+                      <span className="sl-tipo-badge" style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}`, display:"flex",alignItems:"center",gap:4 }}>
+                        <tc.Icon size={12}/> {tc.label}
                       </span>
                     </td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 15 }}>{s.entidadTipo === "producto" ? "📦" : "🧺"}</span>
+                        <span style={{ display:"flex",alignItems:"center" }}>{s.entidadTipo === "producto" ? <Package size={15}/> : <Archive size={15}/>}</span>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 13 }}>{s.entidadNombre}</div>
                           <div style={{ fontSize: 11, color: "#9e9e9e" }}>{s.entidadTipo}</div>
@@ -575,10 +579,10 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
                     <td>
                       <div className="sl-table-actions">
                         <button className="sl-action-btn" data-tooltip="Ver detalles" onClick={() => setSalidaAVer(s)}
-                          style={{ background: "#e3f2fd", color: "#1565c0", border: "1.5px solid #90caf9" }}>👁</button>
+                          style={{ background: "#e3f2fd", color: "#1565c0", border: "1.5px solid #90caf9" }}><Eye size={15}/></button>
                         {s.anulada
-                          ? <span className="sl-action-locked" title="Salida anulada">🚫</span>
-                          : <button className="sl-action-btn sl-action-btn--delete" data-tooltip="Anular salida" onClick={() => setSalidaAAnular(s)}>🚫</button>
+                          ? <span className="sl-action-locked" title="Salida anulada"><Ban size={15}/></span>
+                          : <button className="sl-action-btn sl-action-btn--delete" data-tooltip="Anular salida" onClick={() => setSalidaAAnular(s)}><Ban size={15}/></button>
                         }
                       </div>
                     </td>
@@ -616,7 +620,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
 
       {toast && (
         <div className="sl-toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-          <span>{toast.type === "error" ? "❌" : "✅"}</span> {toast.msg}
+          {toast.type === "error" ? <XCircle size={14}/> : <CheckCircle2 size={14}/>} {toast.msg}
         </div>
       )}
     </div>
@@ -671,26 +675,26 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
         <div className={`sl-stat-card ${filtro === "todos" ? "active" : ""}`}
           style={{ cursor: "pointer", borderColor: vencimientos.length > 0 ? (filtro === "todos" ? "#c62828" : "#ef9a9a") : "#e0e0e0" }}
           onClick={() => setFiltro("todos")}>
-          <span style={{ fontSize: 18 }}>⛔</span>
+          <AlertTriangle size={18}/>
           <span className="sl-stat-card__num" style={{ color: vencimientos.length > 0 ? "#c62828" : "#bdbdbd" }}>{vencimientos.length}</span>
           <span className="sl-stat-card__label">Total vencimientos</span>
         </div>
         <div className="sl-stat-card">
-          <span style={{ fontSize: 18 }}>📉</span>
+          <TrendingDown size={18}/>
           <span className="sl-stat-card__num" style={{ color: totalUnidades > 0 ? "#c62828" : "#bdbdbd" }}>{totalUnidades}</span>
           <span className="sl-stat-card__label">Unidades perdidas</span>
         </div>
         <div className={`sl-stat-card ${filtro === "producto" ? "active" : ""}`}
           style={{ cursor: "pointer", borderColor: porProducto.length > 0 ? (filtro === "producto" ? "#c62828" : "#ef9a9a") : "#e0e0e0" }}
           onClick={() => setFiltro("producto")}>
-          <span style={{ fontSize: 18 }}>📦</span>
+          <Package size={18}/>
           <span className="sl-stat-card__num" style={{ color: porProducto.length > 0 ? "#c62828" : "#bdbdbd" }}>{porProducto.length}</span>
           <span className="sl-stat-card__label">Productos</span>
         </div>
         <div className={`sl-stat-card ${filtro === "insumo" ? "active" : ""}`}
           style={{ cursor: "pointer", borderColor: porInsumo.length > 0 ? (filtro === "insumo" ? "#c62828" : "#ef9a9a") : "#e0e0e0" }}
           onClick={() => setFiltro("insumo")}>
-          <span style={{ fontSize: 18 }}>🧺</span>
+          <Archive size={18}/>
           <span className="sl-stat-card__num" style={{ color: porInsumo.length > 0 ? "#c62828" : "#bdbdbd" }}>{porInsumo.length}</span>
           <span className="sl-stat-card__label">Insumos</span>
         </div>
@@ -700,20 +704,20 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
       <div className="sl-toolbar">
         <div style={{ display: "flex", gap: 6 }}>
           {[
-            { val: "todos",    label: "Todos",     icon: "📋" },
-            { val: "producto", label: "Productos", icon: "📦" },
-            { val: "insumo",   label: "Insumos",   icon: "🧺" },
+            { val: "todos",    label: "Todos",     Icon: ClipboardList },
+            { val: "producto", label: "Productos", Icon: Package },
+            { val: "insumo",   label: "Insumos",   Icon: Archive },
           ].map(opt => (
             <button key={opt.val}
               className={`sl-pill${filtro === opt.val ? " active" : ""}`}
-              onClick={() => setFiltro(opt.val)}>
-              {opt.icon} {opt.label}
+              onClick={() => setFiltro(opt.val)} style={{display:"flex",alignItems:"center",gap:6}}>
+              <opt.Icon size={13}/> {opt.label}
             </button>
           ))}
         </div>
         <button className="btn-agregar" onClick={handleProcesar} disabled={procesando}
           style={{ marginLeft: "auto", background: procesando ? "#bdbdbd" : "#c62828" }}>
-          {procesando ? "Procesando…" : "🔄 Procesar vencidos"}
+          {procesando ? "Procesando…" : <><RefreshCw size={14}/> Procesar vencidos</>}
         </button>
       </div>
 
@@ -736,7 +740,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
             ) : paginados.length === 0 ? (
               <tr><td colSpan={6}>
                 <div className="empty-state">
-                  <div className="empty-state__icon">✅</div>
+                  <div className="empty-state__icon"><CheckCircle2 size={36} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
                   <p className="empty-state__text">No hay registros de vencimiento</p>
                 </div>
               </td></tr>
@@ -767,7 +771,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
                     color: s.anulada ? "#9e9e9e" : "#c62828",
                     border: `1px solid ${s.anulada ? "#e0e0e0" : "#ef9a9a"}`,
                   }}>
-                    {s.anulada ? "🚫 Anulada" : "⛔ Vencido"}
+                    {s.anulada ? <><Ban size={11}/> Anulada</> : <><AlertTriangle size={11}/> Vencido</>}
                   </span>
                 </td>
               </tr>
@@ -791,7 +795,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
 
       {toast && (
         <div className="sl-toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-          <span>{toast.type === "error" ? "❌" : "✅"}</span> {toast.msg}
+          {toast.type === "error" ? <XCircle size={14}/> : <CheckCircle2 size={14}/>} {toast.msg}
         </div>
       )}
     </div>
@@ -874,7 +878,7 @@ function ReporteSalidas({ salidas, loading }) {
     return (
       <div className="sl-tab-content">
         <div className="empty-state" style={{ marginTop: 60 }}>
-          <div className="empty-state__icon">🔒</div>
+          <div className="empty-state__icon"><Lock size={36} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
           <p className="empty-state__text">No tienes permiso para generar reportes de salidas.</p>
         </div>
       </div>
@@ -892,7 +896,7 @@ function ReporteSalidas({ salidas, loading }) {
 
       {/* ─── Filtro de fechas ─── */}
       <div className="sl-report-filter card no-print">
-        <h3 className="sl-report-filter__title">📅 Selecciona el rango de fechas</h3>
+        <h3 className="sl-report-filter__title" style={{display:"flex",alignItems:"center",gap:8}}><Calendar size={16}/> Selecciona el rango de fechas</h3>
         <div className="sl-report-dates">
           <div className="sl-report-date-field">
             <label>Desde</label>
@@ -915,7 +919,7 @@ function ReporteSalidas({ salidas, loading }) {
             style={{ alignSelf: "flex-end" }}
             onClick={handleGenerar}
             disabled={loading}>
-            {loading ? "Cargando…" : "📊 Generar reporte"}
+            {loading ? "Cargando…" : <><BarChart2 size={14}/> Generar reporte</>}
           </button>
         </div>
         {errFecha && <p className="field-error" style={{ marginTop: 6 }}>{errFecha}</p>}
@@ -935,7 +939,7 @@ function ReporteSalidas({ salidas, loading }) {
           {filtradas.length === 0 ? (
             /* CA_48_05 – estado vacío */
             <div className="empty-state" style={{ marginTop: 40 }}>
-              <div className="empty-state__icon">📋</div>
+              <div className="empty-state__icon"><ClipboardList size={36} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
               <p className="empty-state__text">No hay salidas en el periodo seleccionado.</p>
               <p style={{ fontSize: 13, color: "#9e9e9e", marginTop: 4 }}>
                 Intenta con un rango de fechas diferente.
@@ -945,11 +949,11 @@ function ReporteSalidas({ salidas, loading }) {
             <>
               {/* CA_48_04 – botones de exportación */}
               <div className="sl-report-actions no-print">
-                <button className="sl-report-btn sl-report-btn--csv" onClick={exportCSV}>
-                  📊 Exportar Excel / CSV
+                <button className="sl-report-btn sl-report-btn--csv" onClick={exportCSV} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <BarChart2 size={14}/> Exportar Excel / CSV
                 </button>
-                <button className="sl-report-btn sl-report-btn--pdf" onClick={() => window.print()}>
-                  🖨️ Exportar PDF
+                <button className="sl-report-btn sl-report-btn--pdf" onClick={() => window.print()} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Printer size={14}/> Exportar PDF
                 </button>
               </div>
 
@@ -968,7 +972,7 @@ function ReporteSalidas({ salidas, loading }) {
                   {statsPorTipo.filter(t => t.count > 0).map(t => (
                     <div key={t.val} className="sl-report-sum-card"
                       style={{ borderColor: t.border, background: t.bg }}>
-                      <span style={{ fontSize: 20 }}>{t.icon}</span>
+                      <t.Icon size={20}/>
                       <span className="sl-report-sum-card__num" style={{ color: t.color }}>{t.count}</span>
                       <span className="sl-report-sum-card__label">{t.label}</span>
                       <span className="sl-report-sum-card__sub">{t.uds} uds.</span>
@@ -985,7 +989,7 @@ function ReporteSalidas({ salidas, loading }) {
                     {topElementos.map((el, i) => (
                       <div key={i} className="sl-report-top-item">
                         <span className="sl-report-top-rank">#{i + 1}</span>
-                        <span style={{ fontSize: 18 }}>{el.tipo === "producto" ? "📦" : "🧺"}</span>
+                        <span style={{ display:"flex",alignItems:"center" }}>{el.tipo === "producto" ? <Package size={18}/> : <Archive size={18}/>}</span>
                         <div className="sl-report-top-info">
                           <div className="sl-report-top-name">{el.nombre}</div>
                           <div className="sl-report-top-meta">{el.count} salida{el.count !== 1 ? "s" : ""} · {el.total} uds.</div>
@@ -1017,12 +1021,12 @@ function ReporteSalidas({ salidas, loading }) {
                     </thead>
                     <tbody>
                       {filtradas.map((s, idx) => {
-                        const tc = TIPO_MAP[s.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋", label: s.tipo };
+                        const tc = TIPO_MAP[s.tipo] || { color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", Icon: ClipboardList, label: s.tipo };
                         return (
                           <tr key={s.id || idx} className="tbl-row">
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 15 }}>{s.entidadTipo === "producto" ? "📦" : "🧺"}</span>
+                                <span style={{ display:"flex",alignItems:"center" }}>{s.entidadTipo === "producto" ? <Package size={15}/> : <Archive size={15}/>}</span>
                                 <div>
                                   <div style={{ fontWeight: 700, fontSize: 13 }}>{s.entidadNombre}</div>
                                   <div style={{ fontSize: 11, color: "#9e9e9e" }}>{s.entidadCat}</div>
@@ -1031,8 +1035,8 @@ function ReporteSalidas({ salidas, loading }) {
                             </td>
                             <td>
                               <span className="sl-tipo-badge"
-                                style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>
-                                {tc.icon} {tc.label}
+                                style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}`, display:"flex",alignItems:"center",gap:4 }}>
+                                <tc.Icon size={12}/> {tc.label}
                               </span>
                             </td>
                             <td>
@@ -1166,9 +1170,9 @@ export default function GestionSalidas() {
   }, []);
 
   const TABS = [
-    { key: "historial", label: "📋 Historial" },
-    { key: "vencidos",  label: "⛔ Vencidos"  },
-    { key: "reporte",   label: "📊 Reporte"   },
+    { key: "historial", label: "Historial",  Icon: ClipboardList },
+    { key: "vencidos",  label: "Vencidos",   Icon: AlertTriangle },
+    { key: "reporte",   label: "Reporte",    Icon: BarChart2 },
   ];
 
   return (
@@ -1182,8 +1186,8 @@ export default function GestionSalidas() {
         {TABS.map(t => (
           <button key={t.key}
             className={`sl-tab${tab === t.key ? " active" : ""}`}
-            onClick={() => setTab(t.key)}>
-            {t.label}
+            onClick={() => setTab(t.key)} style={{display:"flex",alignItems:"center",gap:6}}>
+            <t.Icon size={14}/> {t.label}
           </button>
         ))}
       </div>
@@ -1216,7 +1220,7 @@ export default function GestionSalidas() {
 
       {pageToast && (
         <div className="sl-toast" style={{ background: pageToast.type === "error" ? "#c62828" : "#2e7d32" }}>
-          <span>{pageToast.type === "error" ? "❌" : "✅"}</span> {pageToast.msg}
+          {pageToast.type === "error" ? <XCircle size={14}/> : <CheckCircle2 size={14}/>} {pageToast.msg}
         </div>
       )}
     </div>

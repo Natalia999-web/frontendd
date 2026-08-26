@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X, Check } from "lucide-react";
 import { useNotificaciones, TIPO_ICONS, TIPO_COLORS } from "../context/NotificacionesContext";
 import "./notificaciones.css";
 
@@ -53,7 +54,7 @@ export default function AlertaBanner({ onVerTodas }) {
             </p>
             <p className="alerta-banner__sub">Revisa los insumos o lotes con problemas urgentes</p>
           </div>
-          <button className="alerta-banner__close" onClick={cerrar} data-tooltip="Cerrar alerta">✕</button>
+          <button className="alerta-banner__close" onClick={cerrar} data-tooltip="Cerrar alerta" style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Lista de alertas */}
@@ -72,7 +73,7 @@ export default function AlertaBanner({ onVerTodas }) {
                   onClick={() => marcarLeida(n.id)}
                   data-tooltip="Marcar como leída"
                 >
-                  ✓
+                  <Check size={13} />
                 </button>
               </div>
             );

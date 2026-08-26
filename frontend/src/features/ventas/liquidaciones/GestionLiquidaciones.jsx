@@ -242,8 +242,18 @@ export default function GestionLiquidaciones() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDomicilios({ porPagina: 500 });
-      setTodosDomic(data.domicilios || []);
+      const primera = await getDomicilios({ pagina: 1, porPagina: 100 });
+      const totalPaginas = Math.ceil(primera.total / 100);
+      let todos = primera.domicilios || [];
+      if (totalPaginas > 1) {
+        const resto = await Promise.all(
+          Array.from({ length: totalPaginas - 1 }, (_, i) =>
+            getDomicilios({ pagina: i + 2, porPagina: 100 })
+          )
+        );
+        resto.forEach((r) => { todos = todos.concat(r.domicilios || []); });
+      }
+      setTodosDomic(todos);
     } catch (err) {
       setError(err?.message || "Error al cargar domicilios");
     } finally {
