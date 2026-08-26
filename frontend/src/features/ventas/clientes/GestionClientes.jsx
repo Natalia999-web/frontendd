@@ -10,6 +10,7 @@ import CrearCliente from "./CrearCliente.jsx";
 import { ModalVerCliente, ModalEditarCliente } from "./EditarCliente.jsx";
 import ModalEliminarValidado from "../../../ModalEliminarValidado";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import { Search, X, User, Phone, Eye, PenLine, Trash2, Check } from "lucide-react";
 import "./clientes.css";
 
 const ITEMS_PER_PAGE = 5;
@@ -30,7 +31,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "success" ? "#2e7d32" : "#c62828" }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "success" ? "✓" : "✕"}</span>
+      <span style={{ fontSize: 15, display: "flex" }}>{toast.type === "success" ? <Check size={15} /> : <X size={15} />}</span>
       {toast.message}
     </div>
   );
@@ -167,7 +168,7 @@ export default function GestionClientes() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <Search size={16} className="search-icon" />
             <input type="text" className="search-input"
               placeholder="Buscar por nombre, correo, ciudad o documento…"
               value={search} onChange={e => setSearch(e.target.value)} />
@@ -206,7 +207,7 @@ export default function GestionClientes() {
           </div>
           {(hasFilter || search) && (
             <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterDesde(""); setFilterHasta(""); }}>
-              ✕ Limpiar
+              <X size={13} /> Limpiar
             </button>
           )}
 
@@ -234,7 +235,7 @@ export default function GestionClientes() {
                 {paginated.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">👤</div>
+                      <div className="empty-state__icon"><User size={40} /></div>
                       <p className="empty-state__text">
                         {filter !== "todos" || search ? "Sin clientes que coincidan." : "No hay clientes registrados."}
                       </p>
@@ -246,7 +247,7 @@ export default function GestionClientes() {
                     <td>
                       <div className="client-cell">
                         <div className="avatar-wrap">
-                          {c.fotoPreview ? <img src={c.fotoPreview} alt={c.nombre} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <span>👤</span>}
+                          {c.fotoPreview ? <img src={c.fotoPreview} alt={c.nombre} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <User size={20} />}
                         </div>
                         <div>
                           <div className="client-name">{c.nombre} {c.apellidos}</div>
@@ -255,15 +256,15 @@ export default function GestionClientes() {
                       </div>
                     </td>
                     <td><div className="doc-badge"><span className="doc-type">{c.tipoDocumento}</span><span className="doc-num">{c.cedula}</span></div></td>
-                    <td><span className="phone-cell"><span className="phone-icon">📞</span>{c.telefono}</span></td>
+                    <td><span className="phone-cell"><Phone size={13} className="phone-icon" />{c.telefono}</span></td>
                     <td><div className="location-city">{c.municipio}</div><div className="location-dept">{c.departamento}</div></td>
                     <td><Toggle value={c.estado} onChange={() => handleToggle(c)} /></td>
                     <td><span className="date-badge">{c.fechaCreacion}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   onClick={() => setModal({ mode:"view",   cliente:c })}>👁</button>
-                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ mode:"edit",   cliente:c })}>✎</button>
-                        <button className="act-btn act-btn--delete" onClick={() => handleDeleteClick(c)}>🗑️</button>
+                        <button className="act-btn act-btn--view"   onClick={() => setModal({ mode:"view",   cliente:c })}><Eye size={14} /></button>
+                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ mode:"edit",   cliente:c })}><PenLine size={14} /></button>
+                        <button className="act-btn act-btn--delete" onClick={() => handleDeleteClick(c)}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>

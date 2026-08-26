@@ -7,10 +7,10 @@ import ReturnList        from './components/ReturnList';
 import ReturnDetailModal from './components/ReturnDetailModal';
 import { getMisVentas }    from '../../../services/pedidosService';
 import { getMisDevoluciones } from '../../../services/devolucionesService';
-import { 
-  RefreshCw, Leaf, PackageSearch, Package, Calendar, 
-  MapPin, DollarSign, ChevronRight, ArrowRight, History, 
-  PackageMinus, AlertCircle, ShoppingBag, Clock
+import {
+  RefreshCw, Leaf, PackageSearch, Package, Calendar,
+  MapPin, DollarSign, ChevronRight, ArrowRight, History,
+  PackageMinus, AlertCircle, ShoppingBag, Clock, Check, X
 } from 'lucide-react';
 import '../../../styles/Client.css';
 
@@ -78,7 +78,7 @@ const ReturnsPage = () => {
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
               toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-500 text-white'
             }`}>
-              {toast.type === 'success' ? '✓' : '✕'}
+              {toast.type === 'success' ? <Check size={16} /> : <X size={16} />}
             </div>
             <p className="font-black text-xs uppercase tracking-widest">{toast.message}</p>
           </div>

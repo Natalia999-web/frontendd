@@ -3,6 +3,7 @@ import CrearDevolucion from "./CrearDevolucion.jsx";
 import { getDevoluciones, crearDevolucion, resolverDevolucion, getCreditoCliente } from "../../../services/devolucionesService.js";
 import { registrarSalida } from "../../../services/salidasService.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
+import { X, Check, AlertTriangle, BarChart2, Clock, CreditCard, Ban, Search, CornerUpLeft, Package, Eye, CheckCircle2, Image, Video, FileText, Paperclip, ClipboardList } from "lucide-react";
 import "./Devoluciones.css";
 
 function SkeletonRows({ cols = 8, rows = 5 }) {
@@ -34,7 +35,7 @@ function Toast({ toast }) {
   const bg = toast.type === "error" ? "#c62828" : toast.type === "warn" ? "#e65100" : "#2e7d32";
   return (
     <div className="toast" style={{ background: bg }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "error" ? "✕" : toast.type === "warn" ? "⚠" : "✓"}</span>
+      <span style={{ fontSize: 15, display: "flex" }}>{toast.type === "error" ? <X size={15} /> : toast.type === "warn" ? <AlertTriangle size={15} /> : <Check size={15} />}</span>
       {toast.message}
     </div>
   );
@@ -53,7 +54,7 @@ function EvidenciaVer({ evidencia }) {
         <>
           <img src={evidencia.base64} alt="evidencia" className="evidencia-ver__img" />
           <div className="evidencia-ver__footer">
-            <span className="evidencia-ver__icon">🖼️</span>
+            <Image size={14} className="evidencia-ver__icon" />
             <span className="evidencia-ver__name">{evidencia.nombre}</span>
           </div>
         </>
@@ -65,13 +66,13 @@ function EvidenciaVer({ evidencia }) {
             style={{ width: "100%", maxHeight: 200, display: "block", background: "#000" }}
           />
           <div className="evidencia-ver__footer">
-            <span className="evidencia-ver__icon">🎥</span>
+            <Video size={14} className="evidencia-ver__icon" />
             <span className="evidencia-ver__name">{evidencia.nombre}</span>
           </div>
         </>
       ) : (
         <div className="evidencia-ver__file">
-          <span className="evidencia-ver__file-icon">📄</span>
+          <FileText size={24} className="evidencia-ver__file-icon" />
           <div className="evidencia-ver__file-info">
             <div className="evidencia-ver__file-name">{evidencia.nombre}</div>
             <div className="evidencia-ver__file-sub">Archivo adjunto</div>
@@ -99,7 +100,7 @@ function ModalVerDevolucion({ dev, creditoCliente, onClose }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <EstadoBadge estado={dev.estado} />
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
           </div>
         </div>
 
@@ -144,7 +145,7 @@ function ModalVerDevolucion({ dev, creditoCliente, onClose }) {
 
               <p className="section-label">Motivo</p>
               <div className="info-box info-box--warn">
-                <span className="info-box__icon">📋</span>
+                <ClipboardList size={13} className="info-box__icon" />
                 <div className="info-box__text">
                   <span className="info-box__label">{dev.motivo}</span>
                   {dev.comentario && dev.comentario}
@@ -153,7 +154,7 @@ function ModalVerDevolucion({ dev, creditoCliente, onClose }) {
 
               {dev.estado === "Reembolsada" && (
                 <div className="credito-box" style={{ marginTop: 12 }}>
-                  <span className="credito-box__icon">💳</span>
+                  <CreditCard size={16} className="credito-box__icon" />
                   <div>
                     <div className="credito-box__label">Saldo a favor abonado</div>
                     <div className="credito-box__val">{fmt(dev.totalDevuelto)}</div>
@@ -166,7 +167,7 @@ function ModalVerDevolucion({ dev, creditoCliente, onClose }) {
 
               {dev.estado === "Rechazada" && dev.motivoRechazo && (
                 <div className="info-box info-box--danger" style={{ marginTop: 12 }}>
-                  <span className="info-box__icon">🚫</span>
+                  <Ban size={13} className="info-box__icon" />
                   <div className="info-box__text">
                     <span className="info-box__label">Motivo de rechazo</span>
                     {dev.motivoRechazo}
@@ -244,14 +245,14 @@ function ModalAprobar({ dev, onClose, onConfirm }) {
             ¿Aprobar la devolución <strong>{dev.numero}</strong> de <strong>{dev.cliente?.nombre}</strong>?
           </p>
           <div className="info-box info-box--success" style={{ marginTop: 12 }}>
-            <span className="info-box__icon">✅</span>
+            <CheckCircle2 size={13} className="info-box__icon" />
             <div className="info-box__text">
               <span className="info-box__label">Al aprobar</span>
               La devolución se marcará como aprobada y se realizará el reembolso automático al crédito del cliente.
             </div>
           </div>
           <div className="credito-box" style={{ marginTop: 12 }}>
-            <span className="credito-box__icon">💳</span>
+            <CreditCard size={16} className="credito-box__icon" />
             <div>
               <div className="credito-box__label">Monto a reembolsar</div>
               <div className="credito-box__val">{fmt(dev.totalDevuelto)}</div>
@@ -265,7 +266,7 @@ function ModalAprobar({ dev, onClose, onConfirm }) {
             disabled={done}
             onClick={() => { setDone(true); setTimeout(() => onConfirm(dev.id), 700); }}
           >
-            {done ? "Aprobando…" : "✅ Aprobar y Reembolsar"}
+            {done ? "Aprobando…" : <><CheckCircle2 size={14} /> Aprobar y Reembolsar</>}
           </button>
         </div>
       </div>
@@ -302,7 +303,7 @@ function ModalRechazar({ dev, onClose, onConfirm }) {
             ¿Rechazar la devolución <strong>{dev.numero}</strong>?
           </p>
           <div className="info-box info-box--danger" style={{ marginTop: 12 }}>
-            <span className="info-box__icon">⚠️</span>
+            <AlertTriangle size={13} className="info-box__icon" />
             <span className="info-box__text">El cliente recibirá una notificación en la aplicación informando el rechazo.</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
@@ -321,7 +322,7 @@ function ModalRechazar({ dev, onClose, onConfirm }) {
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Cancelar</button>
           <button className="btn-reject" disabled={done} onClick={handleConfirm}>
-            {done ? "Rechazando…" : "🚫 Rechazar"}
+            {done ? "Rechazando…" : <><Ban size={14} /> Rechazar</>}
           </button>
         </div>
       </div>
@@ -486,10 +487,10 @@ export default function GestionDevoluciones() {
         {/* Métricas */}
         <div className="metrics-row">
           {[
-            { val: "todos",       label: "Total",        count: counts.todos,       color: "#2e7d32", icon: "📊" },
-            { val: "Pendiente",   label: "Pendientes",   count: counts.Pendiente,   color: "#f9a825", icon: "⏳" },
-            { val: "Reembolsada", label: "Reembolsadas", count: counts.Reembolsada, color: "#2e7d32", icon: "💳" },
-            { val: "Rechazada",   label: "Rechazadas",   count: counts.Rechazada,   color: "#c62828", icon: "🚫" },
+            { val: "todos",       label: "Total",        count: counts.todos,       color: "#2e7d32", Icon: BarChart2 },
+            { val: "Pendiente",   label: "Pendientes",   count: counts.Pendiente,   color: "#f9a825", Icon: Clock },
+            { val: "Reembolsada", label: "Reembolsadas", count: counts.Reembolsada, color: "#2e7d32", Icon: CreditCard },
+            { val: "Rechazada",   label: "Rechazadas",   count: counts.Rechazada,   color: "#c62828", Icon: Ban },
           ].map((m) => (
             <button
               key={m.val}
@@ -497,7 +498,7 @@ export default function GestionDevoluciones() {
               onClick={() => toggleFilter(m.val)}
               style={{ borderColor: filterEstado === m.val ? m.color : "#e0e0e0" }}
             >
-              <div className="metric-card-btn__icon" style={{ background: m.color + "15", color: m.color }}>{m.icon}</div>
+              <div className="metric-card-btn__icon" style={{ background: m.color + "15", color: m.color }}><m.Icon size={16} /></div>
               <div className="metric-card-btn__info">
                 <span className="metric-card-btn__count">{m.count}</span>
                 <span className="metric-card-btn__label">{m.label}</span>
@@ -509,7 +510,7 @@ export default function GestionDevoluciones() {
         {/* Toolbar */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <Search size={16} className="search-icon" />
             <input
               type="text" className="search-input"
               placeholder="Buscar por número, cliente, pedido o motivo…"
@@ -561,7 +562,7 @@ export default function GestionDevoluciones() {
 
           {(hasFilter || search) && (
             <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}>
-              ✕ Limpiar
+              <X size={13} /> Limpiar
             </button>
           )}
 
@@ -592,7 +593,7 @@ export default function GestionDevoluciones() {
                 ) : paged.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">↩️</div>
+                      <div className="empty-state__icon"><CornerUpLeft size={40} /></div>
                       <p className="empty-state__text">
                         {hasFilter || search ? "Sin devoluciones que coincidan." : "No hay devoluciones registradas."}
                       </p>
@@ -607,7 +608,7 @@ export default function GestionDevoluciones() {
                     </td>
                     <td>
                       <div className="dev-num">{dev.numero}</div>
-                      <div className="dev-pedido">📦 {dev.numeroPedido}</div>
+                      <div className="dev-pedido" style={{ display:"flex",alignItems:"center",gap:4 }}><Package size={11} /> {dev.numeroPedido}</div>
                     </td>
                     <td>
                       <div className="client-name">{dev.cliente?.nombre || "—"}</div>
@@ -638,16 +639,16 @@ export default function GestionDevoluciones() {
                                 .then(s => setCreditoVer(s))
                                 .catch(() => {});
                             }
-                          }}>👁</button>
+                          }}><Eye size={14} /></button>
                         <button className="act-btn act-btn--approve" data-tooltip="Aprobar y reembolsar"
                           onClick={() => abrirAprobar(dev)}
                           style={{ opacity: dev.estado === "Pendiente" ? 1 : 0.35, cursor: dev.estado === "Pendiente" ? "pointer" : "default" }}>
-                          ✅
+                          <CheckCircle2 size={14} />
                         </button>
                         <button className="act-btn act-btn--reject" data-tooltip="Rechazar solicitud"
                           onClick={() => abrirRechazar(dev)}
                           style={{ opacity: dev.estado === "Pendiente" ? 1 : 0.35, cursor: dev.estado === "Pendiente" ? "pointer" : "default" }}>
-                          🚫
+                          <Ban size={14} />
                         </button>
                       </div>
                     </td>

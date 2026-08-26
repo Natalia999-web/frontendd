@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingCart, Plus, Heart } from 'lucide-react';
+import { ShoppingCart, Plus, Heart, Package } from 'lucide-react';
 
 interface ProductCardProps {
   product: {
@@ -29,7 +29,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-7xl">🍌</div>
+          <div className="w-full h-full flex items-center justify-center"><Package size={48} strokeWidth={1} className="text-gray-300" /></div>
         )}
 
         {/* Gradient Overlay on Hover */}
@@ -65,7 +65,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           )}
           {product.requiereProduccion && product.stock === 0 && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/90 text-white text-xs font-bold shadow-md">
-              🏭 Producción
+              <Package size={11} /> Producción
             </div>
           )}
         </div>

@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
     border: '#bbf7d0',
     bar: '#22c55e',
     label: 'Entregado',
-    desc: '¡Tu pedido llegó! Buen provecho 🎉',
+    desc: '¡Tu pedido llegó! Buen provecho.',
     step: 3,
   },
 };
