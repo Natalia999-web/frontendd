@@ -58,6 +58,8 @@ import LandingPage from "../pages/LandingPage";
 import SinAcceso from "../pages/SinAcceso";
 import ProtectedRoute from "../components/ProtectedRoute";
 import PrivilegioRoute from "../components/PrivilegioRoute";
+import RepartidorRoute from "../components/RepartidorRoute";
+import { esRolRepartidor, INICIO_REPARTIDOR } from "../utils/roles";
 import { initUsers } from "../services/userService";
 import { getUser } from "../services/authService";
 
@@ -66,6 +68,7 @@ initUsers();
 
 /* ─── HELPER ─── */
 const PR = ({ clave, el }) => <PrivilegioRoute clave={clave}>{el}</PrivilegioRoute>;
+const RR = ({ el }) => <RepartidorRoute>{el}</RepartidorRoute>;
 
 function CocinaRoute() {
   const user = getUser();
@@ -78,8 +81,8 @@ function CocinaRoute() {
 /* Redirige domiciliarios a su dashboard; el resto ve el Dashboard general */
 function DashboardIndex() {
   const user = getUser();
-  if (user?.rol === "Domiciliario") {
-    return <Navigate to="/admin/mi-dashboard" replace />;
+  if (esRolRepartidor(user?.rol)) {
+    return <Navigate to={INICIO_REPARTIDOR} replace />;
   }
   if (user?.rol?.toLowerCase() === "cocinero") {
     return <Navigate to="/admin/cocina" replace />;
@@ -127,13 +130,15 @@ const AppRouter = () => {
             <Route path="reportes"      element={<PR clave="Dashboard_ver"    el={<Reportes />} />} />
             <Route path="devoluciones"  element={<PR clave="Devoluciones_ver" el={<GestionDevoluciones />} />} />
             <Route path="domicilios"           element={<PR clave="Domicilios_ver"            el={<GestionDomicilios />} />} />
-            <Route path="mis-entregas"         element={<PR clave="Domicilios_cambiar_estado" el={<GestionDomiciliosRepartidor />} />} />
-            <Route path="mi-dashboard"         element={<PR clave="Domicilios_cambiar_estado" el={<DashboardDomiciliario />} />} />
-            <Route path="pedido-actual"        element={<PR clave="Domicilios_cambiar_estado" el={<PedidoActual />} />} />
-            <Route path="historial-entregas"   element={<PR clave="Domicilios_cambiar_estado" el={<HistorialEntregas />} />} />
-            <Route path="mis-ganancias"        element={<PR clave="Domicilios_cambiar_estado" el={<GananciasDomiciliario />} />} />
-            <Route path="mis-notificaciones"   element={<PR clave="Domicilios_cambiar_estado" el={<NotificacionesDomiciliario />} />} />
-            <Route path="mi-perfil-repartidor" element={<PR clave="Domicilios_cambiar_estado" el={<PerfilDomiciliario />} />} />
+            {/* Panel propio del repartidor: entra por rol, no por privilegio
+                asignado a mano (ver RepartidorRoute). */}
+            <Route path="mis-entregas"         element={<RR el={<GestionDomiciliosRepartidor />} />} />
+            <Route path="mi-dashboard"         element={<RR el={<DashboardDomiciliario />} />} />
+            <Route path="pedido-actual"        element={<RR el={<PedidoActual />} />} />
+            <Route path="historial-entregas"   element={<RR el={<HistorialEntregas />} />} />
+            <Route path="mis-ganancias"        element={<RR el={<GananciasDomiciliario />} />} />
+            <Route path="mis-notificaciones"   element={<RR el={<NotificacionesDomiciliario />} />} />
+            <Route path="mi-perfil-repartidor" element={<RR el={<PerfilDomiciliario />} />} />
 
             {/* Compras */}
             <Route path="categorias_insumos" element={<PR clave="CategoriaInsumos_ver" el={<CategoriaInsumos />} />} />

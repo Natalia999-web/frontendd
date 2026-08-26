@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { getUser, logout } from "../../services/authService";
+import { esRolRepartidor } from "../../utils/roles";
 import { usePrivilegios } from "../../context/PrivilegiosContext";
 import LogoutModal from "./LogoutModal";
 import "./Sidebar.css";
@@ -81,6 +82,25 @@ const adminMenuItems = [
   },
 ];
 
+/* El repartidor ve su panel y nada más: sin pedidos ajenos, sin los
+   domicilios de sus compañeros, sin liquidaciones. Las mismas rutas están en
+   adminMenuItems para cualquier otro rol que tenga el privilegio. */
+const repartidorMenuItems = [
+  {
+    section: "Mi Trabajo",
+    Icon: Truck,
+    items: [
+      { label: "Mis Entregas",   Icon: Navigation,      link: "/admin/mis-entregas" },
+      { label: "Pedido Actual",  Icon: Package,         link: "/admin/pedido-actual" },
+      { label: "Mi Dashboard",   Icon: LayoutDashboard, link: "/admin/mi-dashboard" },
+      { label: "Historial",      Icon: History,         link: "/admin/historial-entregas" },
+      { label: "Mis Ganancias",  Icon: Banknote,        link: "/admin/mis-ganancias" },
+      { label: "Notificaciones", Icon: Bell,            link: "/admin/mis-notificaciones" },
+      { label: "Mi Perfil",      Icon: UserCircle,      link: "/admin/mi-perfil-repartidor" },
+    ],
+  },
+];
+
 const clienteMenuItems = [
   {
     section: "Mi Cuenta",
@@ -102,6 +122,7 @@ export default function Sidebar({ isOpen, onToggle }) {
   const [openSections, setOpenSections] = useState({
     Dashboard: true,
     Ventas: true,
+    "Mi Trabajo": true,
     "Mi Cuenta": true,
   });
 
@@ -131,7 +152,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       const matches = expected.some(r => r.toLowerCase() === rol);
       if (!matches) return false;
     }
-    if (item.soloNoRepartidor && user?.rol === "Domiciliario") return false;
+    if (item.soloNoRepartidor && esRolRepartidor(user?.rol)) return false;
     if (item.soloAdmin && !isAdmin) return false;
     if (!item.privilegioKey && !item.clave) return true;
     if (loading) return false;
@@ -141,7 +162,10 @@ export default function Sidebar({ isOpen, onToggle }) {
     return hasPrivilegio(`${item.privilegioKey}_ver`);
   };
 
-  const menuItems = user?.tipo === "empleado" ? adminMenuItems : clienteMenuItems;
+  const menuItems =
+    user?.tipo !== "empleado"        ? clienteMenuItems
+    : esRolRepartidor(user?.rol)     ? repartidorMenuItems
+    : adminMenuItems;
 
   const toggle = (section) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
