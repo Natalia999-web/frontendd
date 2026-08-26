@@ -444,7 +444,7 @@ function HistorialSalidas({ salidas, loading, onAgregarClick, cargarSalidas }) {
     if (!salidaAAnular) return;
     try {
       await anularSalida(salidaAAnular.id);
-      showToast("Salida anulada — stock reintegrado ✔");
+      showToast("Salida anulada — stock reintegrado");
       await cargarSalidas();
     } catch (err) {
       showToast(err.message || "Error al anular", "error");
@@ -748,7 +748,7 @@ function Vencidos({ salidas, loading, cargarSalidas }) {
               <tr key={s.id || idx} className="tbl-row" style={{ opacity: s.anulada ? 0.5 : 1 }}>
                 <td>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 15 }}>{s.entidadTipo === "producto" ? "📦" : "🧺"}</span>
+                    <span style={{ display:"flex",alignItems:"center" }}>{s.entidadTipo === "producto" ? <Package size={15}/> : <Archive size={15}/>}</span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 13 }}>{s.entidadNombre}</div>
                       <div style={{ fontSize: 11, color: "#9e9e9e" }}>{s.entidadTipo}</div>
