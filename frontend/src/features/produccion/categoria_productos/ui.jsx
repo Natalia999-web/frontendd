@@ -1,3 +1,4 @@
+import { Check, X } from "lucide-react";
 import { C } from "./theme.js";
 
 export const Toggle = ({ value, onChange }) => (
@@ -69,7 +70,7 @@ export const Toast = ({ toast }) =>
         background: toast.type === "success" ? C.sageDark : C.red,
       }}
     >
-      <span className="toast-icon">{toast.type === "success" ? "✓" : "✕"}</span>
+      <span className="toast-icon">{toast.type === "success" ? <Check size={14} /> : <X size={14} />}</span>
       {toast.message}
     </div>
   ) : null;

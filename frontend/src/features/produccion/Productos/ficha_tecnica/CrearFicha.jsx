@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { X, Check } from "lucide-react";
 import { getCategorias } from "../../../../services/categoriasInsumosService.js";
 import { getInsumos } from "../../../../services/insumosService.js";
 import { getProductos } from "../../../../services/productosService.js";
@@ -24,7 +25,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
       .then(catData => {
         const cats = (catData.categorias || catData.items || [])
           .filter(c => c.Estado === 1 || c.estado === true)
-          .map(c => ({ id: c.ID_Categoria || c.id, nombre: c.Nombre_Categoria || c.Nombre || c.nombre, icon: c.Icono || c.icono || "📦" }));
+          .map(c => ({ id: c.ID_Categoria || c.id, nombre: c.Nombre_Categoria || c.Nombre || c.nombre, icon: c.Icono || c.icono || "" }));
         setCategoriasInsumosActivas(cats);
       })
       .catch(() => {});
@@ -169,9 +170,9 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
   };
 
   const TABS = [
-    { id: "insumos",       label: "🧪 Insumos" },
-    { id: "procedimiento", label: "📋 Procedimiento" },
-    { id: "observaciones", label: "📝 Observaciones" },
+    { id: "insumos",       label: "Insumos" },
+    { id: "procedimiento", label: "Procedimiento" },
+    { id: "observaciones", label: "Observaciones" },
   ];
 
   return (
@@ -183,12 +184,12 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
             <div className="ficha-modal__badge">Ficha Técnica</div>
             <h2 className="ficha-modal__title">Nueva Ficha Técnica</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="ficha-modal__top">
           <div style={{ fontSize: 12, color: "#616161", background: "#f9fdf9", borderRadius: 8, padding: "7px 12px", border: "1px solid #e8f5e9", marginBottom: 2 }}>
-            ℹ️ Esta ficha técnica describe los insumos necesarios para producir <strong>1 unidad</strong> del producto.
+            Esta ficha técnica describe los insumos necesarios para producir <strong>1 unidad</strong> del producto.
           </div>
           <div className="ficha-top-row">
             <div className="ficha-foto-upload" onClick={() => fotoRef.current.click()}>
@@ -214,7 +215,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                       getValue={p => p.id}
                       getLabel={p => p.nombre}
                       placeholder="— Selecciona un producto —"
-                      searchPlaceholder="🔍 Buscar producto…"
+                      searchPlaceholder="Buscar producto…"
                       className={`field-input${errors.producto ? " field-input--error" : ""}`}
                       error={!!errors.producto}
                       onChange={e => {
@@ -266,7 +267,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
           {/* ── Pantalla de confirmación ── */}
           {done && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 200, gap: 14, padding: "32px 20px", textAlign: "center" }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#e8f5e9", border: "2.5px solid #a5d6a7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, color: "#2e7d32" }}>✓</div>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#e8f5e9", border: "2.5px solid #a5d6a7", display: "flex", alignItems: "center", justifyContent: "center", color: "#2e7d32" }}><Check size={30} /></div>
               <div>
                 <p style={{ fontWeight: 800, fontSize: 17, color: "#2e7d32", margin: "0 0 6px", fontFamily: "'Nunito', sans-serif" }}>¡Ficha técnica lista!</p>
                 <p style={{ fontSize: 13, color: "#9e9e9e", margin: 0 }}>Volviendo al formulario del producto…</p>
@@ -291,7 +292,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                             getValue={c => c.id}
                             getLabel={c => `${c.icon || ""} ${c.nombre}`}
                             placeholder="— Categoría —"
-                            searchPlaceholder="🔍 Categoría…"
+                            searchPlaceholder="Categoría…"
                           />
                         </td>
                         <td>
@@ -303,7 +304,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                             getValue={i => i.id}
                             getLabel={i => i.nombre}
                             placeholder="— Insumo —"
-                            searchPlaceholder="🔍 Insumo…"
+                            searchPlaceholder="Insumo…"
                             disabled={!ins.idCategoria}
                             style={{ opacity: ins.idCategoria ? 1 : 0.45 }}
                           />
@@ -318,7 +319,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
                             {getUnidadOptions(ins.idInsumo, ins.idCategoria).map(u => <option key={u} value={u}>{u}</option>)}
                           </select>
                         </td>
-                        <td><button className="ficha-del-btn" onClick={() => delInsumo(ins.id)}>✕</button></td>
+                        <td><button className="ficha-del-btn" onClick={() => delInsumo(ins.id)}><X size={14} /></button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -370,7 +371,7 @@ export default function CrearFicha({ onClose, onSave, productoNombre = "", produ
           <div style={{ display: "flex", gap: 10 }}>
             {!done && <button className="btn-ghost" onClick={onClose}>Cancelar</button>}
             <button className="btn-save" onClick={handleSave} disabled={saving || done}>
-              {done ? "✓ Listo" : saving ? "Guardando…" : fromCreate ? "✓ Guardar ficha" : "Guardar"}
+              {done ? "Listo" : saving ? "Guardando…" : fromCreate ? "Guardar ficha" : "Guardar"}
             </button>
           </div>
         </div>

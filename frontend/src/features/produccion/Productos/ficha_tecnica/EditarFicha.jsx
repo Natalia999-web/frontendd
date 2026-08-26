@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { X, Info, Clock } from "lucide-react";
 import { getCategorias } from "../../../../services/categoriasInsumosService.js";
 import { getInsumos } from "../../../../services/insumosService.js";
 import SearchableSelect from "../../../../shared/components/SearchableSelect.jsx";
@@ -23,7 +24,7 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
       .then(catData => {
         const cats = (catData.categorias || catData.items || [])
           .filter(c => c.Estado === 1 || c.estado === true)
-          .map(c => ({ id: c.ID_Categoria || c.id, nombre: c.Nombre_Categoria || c.Nombre || c.nombre, icon: c.Icono || c.icono || "📦" }));
+          .map(c => ({ id: c.ID_Categoria || c.id, nombre: c.Nombre_Categoria || c.Nombre || c.nombre, icon: c.Icono || c.icono || "" }));
         setCategoriasInsumosActivas(cats);
       })
       .catch(() => {});
@@ -133,9 +134,9 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
   const pasos = (form.procedimiento || "").split("\n").filter(l => l.trim());
 
   const TABS = [
-    { id: "insumos",       label: "🧪 Insumos" },
-    { id: "procedimiento", label: "📋 Procedimiento" },
-    { id: "observaciones", label: "📝 Observaciones" },
+    { id: "insumos",       label: "Insumos" },
+    { id: "procedimiento", label: "Procedimiento" },
+    { id: "observaciones", label: "Observaciones" },
   ];
 
   return (
@@ -147,12 +148,12 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
             <div className="ficha-modal__badge">Ficha Técnica</div>
             <h2 className="ficha-modal__title">{isView ? form.producto || "Detalle" : "Editar Ficha Técnica"}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="ficha-modal__top">
           <div className="ficha-info-banner">
-            <span className="ficha-info-banner__icon">ℹ️</span>
+            <span className="ficha-info-banner__icon"><Info size={16} /></span>
             <span>Esta ficha técnica describe los insumos necesarios para producir <strong>1 unidad</strong> del producto.</span>
           </div>
 
@@ -175,7 +176,7 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                 {isView
                   ? <div className="ficha-date-display">
                       {form.vidaUtilCantidad
-                        ? <><span>🕐</span>{form.vidaUtilCantidad} {form.vidaUtilUnidad || "días"}</>
+                        ? <><Clock size={14} style={{ verticalAlign: "middle" }} /> {form.vidaUtilCantidad} {form.vidaUtilUnidad || "días"}</>
                         : <span style={{ color: "#9e9e9e" }}>Sin vencimiento</span>}
                     </div>
                   : <div style={{ display: "flex", gap: 8 }}>
@@ -232,7 +233,7 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                                 getValue={c => c.id}
                                 getLabel={c => `${c.icon || ""} ${c.nombre}`}
                                 placeholder="— Categoría —"
-                                searchPlaceholder="🔍 Categoría…"
+                                searchPlaceholder="Categoría…"
                               />
                           }
                         </td>
@@ -247,7 +248,7 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                                 getValue={i => i.id}
                                 getLabel={i => i.nombre}
                                 placeholder="— Insumo —"
-                                searchPlaceholder="🔍 Insumo…"
+                                searchPlaceholder="Insumo…"
                                 disabled={!ins.idCategoria}
                                 style={{ opacity: ins.idCategoria ? 1 : 0.45 }}
                               />
@@ -269,7 +270,7 @@ export default function EditarFicha({ ficha, mode = "edit", onClose, onSave, pro
                               </select>
                           }
                         </td>
-                        {!isView && <td><button className="ficha-del-btn" onClick={() => delInsumo(ins.id)}>✕</button></td>}
+                        {!isView && <td><button className="ficha-del-btn" onClick={() => delInsumo(ins.id)}><X size={14} /></button></td>}
                       </tr>
                     ))}
                   </tbody>

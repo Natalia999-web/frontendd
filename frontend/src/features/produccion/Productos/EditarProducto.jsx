@@ -604,7 +604,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                   )}
                   {form.archivosNuevos.length > 0 && (
                     <span style={{ color: "#1565c0" }}>
-                      ➕ {form.archivosNuevos.length} imagen{form.archivosNuevos.length !== 1 ? "es" : ""} a subir
+                      {form.archivosNuevos.length} imagen{form.archivosNuevos.length !== 1 ? "es" : ""} a subir
                     </span>
                   )}
                 </div>

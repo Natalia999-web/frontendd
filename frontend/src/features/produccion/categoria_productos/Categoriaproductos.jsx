@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { X, AlertTriangle, Trash2, Leaf, Eye, Pencil } from "lucide-react";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import { Toast, ModalOverlay } from "./ui.jsx";
 import CrearCategoria from "./CrearCategoria.jsx";
@@ -20,7 +21,7 @@ function adaptCat(c) {
     id: c.ID_Categoria,
     nombre: c.Nombre_Categoria,
     descripcion: c.Descripcion ?? "",
-    icon: c.Icono ?? "📦",
+    icon: c.Icono ?? "",
     estado: c.Estado === 1,
     fecha: fmtFecha(c.Fecha_creacion || c.Fecha_Creacion),
     totalProductos: c.total_productos ?? 0,
@@ -75,7 +76,7 @@ function VerCategoria({ category, onClose }) {
           <p className="modal-header__eyebrow">Categorías de Producto</p>
           <h2 className="modal-header__title">Detalle de Categoría</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}>✕</button>
+        <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
       </div>
       <div className="modal-body">
         <div
@@ -161,7 +162,7 @@ function ModalDesactivarCategoria({ cat, count, onClose, onConfirm }) {
   return (
     <ModalOverlay onClose={onClose}>
       <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-        <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100", fontSize: 24 }}>⚠️</div>
+        <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100" }}><AlertTriangle size={24} /></div>
         <h3 className="delete-title">Desactivar categoría</h3>
         <p className="delete-body">
           La categoría <strong>"{cat.nombre}"</strong> tiene {count} producto{count > 1 ? "s" : ""} asociado{count > 1 ? "s" : ""}.
@@ -364,7 +365,7 @@ export default function CategoriaProductos() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"></span>
             <input
               type="text"
               className="search-input"
@@ -395,8 +396,8 @@ export default function CategoriaProductos() {
             )}
           </div>
           {(filter !== "todos" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -425,7 +426,7 @@ export default function CategoriaProductos() {
                   <tr>
                     <td colSpan={6}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🍌</div>
+                        <div className="empty-state__icon"><Leaf size={40} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                         <p className="empty-state__text">Sin resultados</p>
                       </div>
                     </td>
@@ -456,17 +457,17 @@ export default function CategoriaProductos() {
                           className="act-btn act-btn--view"
                           data-tooltip="Ver categoría"
                           onClick={() => setModal({ type: "ver", category: cat })}
-                        >👁</button>
+                        ><Eye size={16} /></button>
                         <button
                           className="act-btn act-btn--edit"
                           data-tooltip="Editar categoría"
                           onClick={() => setModal({ type: "editar", category: cat })}
-                        >✎</button>
+                        ><Pencil size={16} /></button>
                         <button
                           className="act-btn act-btn--delete"
                           data-tooltip="Eliminar categoría"
                           onClick={() => setModal({ type: "eliminar", category: cat })}
-                        >🗑️</button>
+                        ><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

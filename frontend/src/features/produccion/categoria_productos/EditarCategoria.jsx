@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { soloLetras, tieneLetras } from "../../../utils/inputFilters";
 import { ModalOverlay } from "./ui.jsx";
 import EmojiPicker from "../../../shared/components/EmojiPicker";
@@ -29,7 +30,7 @@ export default function EditarCategoria({ category, onClose, onSave, existingCat
   const [form, setForm] = useState({
     nombre: category?.nombre ?? "",
     descripcion: category?.descripcion ?? "",
-    icon: category?.icon ?? "📦",
+    icon: category?.icon ?? "",
     estado: category?.estado ?? true,
   });
   const [errors, setErrors] = useState({});
@@ -96,7 +97,7 @@ export default function EditarCategoria({ category, onClose, onSave, existingCat
           <p className="modal-header__eyebrow">Categorías</p>
           <h2 className="modal-header__title">Editar categoría</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}>✕</button>
+        <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
       </div>
 
       <div className="modal-body">
