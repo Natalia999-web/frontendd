@@ -61,6 +61,11 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
     # Datos de la venta: total, metodo_pago y productos
     total       = float(venta.Total) if venta and venta.Total else 0.0
     metodo_pago = venta.Metodo_Pago or "" if venta else ""
+    # Pago mixto: lo que hay que cobrar en mano no es el total.
+    monto_efectivo = (
+        float(venta.Monto_Efectivo)
+        if venta and venta.Monto_Efectivo is not None else None
+    )
     productos   = []
     if venta:
         items = db.query(VentaXProducto).filter(
@@ -104,6 +109,7 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         "Departamento_entrega": dom.Departamento_entrega,
         "total":                total,
         "metodo_pago":          metodo_pago,
+        "monto_efectivo":       monto_efectivo,
         "comprobante_pago":     venta.Comprobante_Pago if venta else None,
         "estado_pago":          venta.Estado_Pago if venta else None,
         "productos":            productos,
@@ -268,6 +274,10 @@ def obtener_domicilios(
 
         total_v    = float(venta.Total) if venta and venta.Total else 0.0
         metodo     = venta.Metodo_Pago or "" if venta else ""
+        monto_efec = (
+            float(venta.Monto_Efectivo)
+            if venta and venta.Monto_Efectivo is not None else None
+        )
 
         prods = []
         if venta:
@@ -301,6 +311,7 @@ def obtener_domicilios(
             "Departamento_entrega": dom.Departamento_entrega,
             "total":                total_v,
             "metodo_pago":          metodo,
+            "monto_efectivo":       monto_efec,
             # El listado se había quedado sin estado_pago mientras el detalle sí
             # lo devolvía: la tabla de Gestión de domicilios lo leía como
             # "sin cobrar" aunque el cobro estuviera registrado, así que no
@@ -650,10 +661,11 @@ def registrar_pago_efectivo(
         raise HTTPException(status_code=404, detail="Venta asociada no encontrada")
 
     _metodo = (venta.Metodo_Pago or "").strip().lower()
-    if "efectivo" not in _metodo and "contra entrega" not in _metodo:
+    _pago_mixto = "mixto" in _metodo
+    if "efectivo" not in _metodo and "contra entrega" not in _metodo and not _pago_mixto:
         raise HTTPException(
             status_code=400,
-            detail="Este endpoint solo aplica a pedidos con método de pago Efectivo o Contra entrega",
+            detail="Este endpoint solo aplica a pedidos con método de pago Efectivo, Contra entrega o Mixto",
         )
 
     estado_pago_actual = (getattr(venta, "Estado_Pago", None) or "pendiente").strip()
@@ -666,11 +678,16 @@ def registrar_pago_efectivo(
     if datos.recibido:
         if datos.monto is None:
             raise HTTPException(status_code=422, detail="El monto es obligatorio cuando recibido=true")
-        total_venta = float(venta.Total or 0)
-        if round(datos.monto, 2) != round(total_venta, 2):
+        # En un pedido mixto solo se cobra en mano la parte en efectivo; el
+        # resto ya entró por transferencia al hacer el pedido.
+        esperado = float(
+            venta.Monto_Efectivo if _pago_mixto and venta.Monto_Efectivo is not None
+            else (venta.Total or 0)
+        )
+        if round(datos.monto, 2) != round(esperado, 2):
             raise HTTPException(
                 status_code=400,
-                detail=f"El monto recibido ({datos.monto}) no coincide con el total del pedido ({total_venta})",
+                detail=f"El monto recibido ({datos.monto}) no coincide con lo que hay que cobrar ({esperado})",
             )
         venta.Estado_Pago = "efectivo_recibido"
         audit_value = f"monto:{datos.monto}"

@@ -124,13 +124,27 @@ export const ESTADO_PAGO_LABEL = {
   no_recibido:           { label: "Cobro no recibido",    dot: "#c62828", bg: "#ffebee" },
 };
 
+/**
+ * Pago mixto: el pedido se reparte entre efectivo y transferencia. Lleva las
+ * dos cargas a la vez —comprobante por lo transferido, cobro en mano por lo
+ * demás—, así que las dos preguntas de abajo le dicen que sí.
+ */
+export const esPagoMixto = (metodo) => /mixto/i.test(metodo || "");
+
 /** True si el método de pago es transferencia (o equivalente digital). */
 export const esPagoTransferencia = (metodo) =>
-  /transf|nequi|daviplata|bancol|qr/i.test(metodo || "");
+  /transf|nequi|daviplata|bancol|qr/i.test(metodo || "") || esPagoMixto(metodo);
 
 /** True si el método de pago es efectivo / contra entrega. */
 export const esPagoEfectivo = (metodo) =>
-  /efectiv|contra|cash/i.test(metodo || "");
+  /efectiv|contra|cash/i.test(metodo || "") || esPagoMixto(metodo);
+
+/**
+ * Cuánto hay que cobrar en mano. En un pedido mixto no es el total: la parte
+ * transferida ya entró al hacer el pedido.
+ */
+export const montoACobrar = (dom) =>
+  (dom?.monto_efectivo ?? null) !== null ? Number(dom.monto_efectivo) : Number(dom?.total || 0);
 
 /**
  * ¿Este domicilio todavía tiene plata por cobrar en mano?
@@ -156,7 +170,12 @@ export const bloqueoEntrega = (dom) => {
   if (!pagoOk) {
     return "Falta registrar el cobro de este pedido antes de marcarlo como entregado.";
   }
-  if (esPagoTransferencia(dom.metodo_pago) && !dom.comprobante_pago) {
+  // En un mixto el comprobante solo hace falta si de verdad hubo una
+  // transferencia: con el reparto en 100% efectivo no hay nada que adjuntar.
+  const hayTransferencia = esPagoMixto(dom.metodo_pago)
+    ? Number(dom.total || 0) - montoACobrar(dom) > 0
+    : esPagoTransferencia(dom.metodo_pago);
+  if (hayTransferencia && !dom.comprobante_pago) {
     return "El pago es por transferencia y no tiene comprobante adjunto.";
   }
   return null;

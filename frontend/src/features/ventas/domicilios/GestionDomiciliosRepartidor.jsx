@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getDomicilios, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
 import { getUser } from "../../../services/authService.js";
 import { fmtFechaHora as fmtFecha } from "../../../utils/dateUtils.js";
-import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, cobroEfectivoPendiente, esDomicilioActivo, transicionesDom } from "./estadosDomicilio";
+import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, cobroEfectivoPendiente, esDomicilioActivo, esPagoMixto, montoACobrar, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
 import {
   Search, RefreshCw, Truck, Package, CheckCircle2, XCircle, Clock,
@@ -136,7 +136,14 @@ function CobroEfectivoModal({ domicilio, saving, entregarDespues, onClose, onCon
           background: "#e8f5e9", borderRadius: 10, padding: "12px 14px", marginBottom: 16,
         }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: "#66806a" }}>Total a cobrar</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: "#2e7d32" }}>{fmt(domicilio.total)}</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: "#2e7d32" }}>{fmt(montoACobrar(domicilio))}</div>
+          {/* En un pedido mixto solo se cobra en mano una parte: el resto ya
+              entró por transferencia al hacer el pedido. */}
+          {esPagoMixto(domicilio.metodo_pago) && (
+            <div style={{ fontSize: 11.5, color: "#66806a", marginTop: 4 }}>
+              Parte en efectivo de un pedido de {fmt(domicilio.total)} — el resto ya se transfirió.
+            </div>
+          )}
         </div>
 
         <p style={{ margin: "0 0 10px", fontSize: 13.5, color: "#616161" }}>
@@ -452,7 +459,7 @@ export default function GestionDomiciliosRepartidor() {
     try {
       await registrarPagoEfectivo(dom.id, {
         recibido,
-        monto: recibido ? dom.total : null,
+        monto: recibido ? montoACobrar(dom) : null,
         motivo: recibido ? null : motivo,
       });
       if (entregarDespues) {
@@ -461,8 +468,8 @@ export default function GestionDomiciliosRepartidor() {
       setCobrando(null);
       showToast(
         !recibido               ? "Se registró que no se pudo cobrar"
-        : entregarDespues       ? `Cobro de ${fmt(dom.total)} registrado y entrega cerrada`
-        :                         `Cobro de ${fmt(dom.total)} registrado`
+        : entregarDespues       ? `Cobro de ${fmt(montoACobrar(dom))} registrado y entrega cerrada`
+        :                         `Cobro de ${fmt(montoACobrar(dom))} registrado`
       );
       await cargar();
     } catch (e) {

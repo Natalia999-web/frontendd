@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getUser } from "../../../services/authService";
 import { getDomicilios, getDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService";
-import { ESTADO_DOMICILIO, cobroEfectivoPendiente, esDomicilioActivo, transicionesDom } from "./estadosDomicilio";
+import { ESTADO_DOMICILIO, cobroEfectivoPendiente, esDomicilioActivo, esPagoMixto, montoACobrar, transicionesDom } from "./estadosDomicilio";
 import "./Domicilios.css";
 import {
   Package, CheckCircle2, Truck, XCircle, MapPin, CreditCard,
@@ -69,7 +69,7 @@ function EstadoPagoBadge({ estadoPago }) {
 
 function CobrarEfectivoModal({ pedido, entregarDespues, onClose, onConfirm }) {
   const [recibido, setRecibido] = useState(true);
-  const [monto,    setMonto]    = useState(String(pedido.total || ""));
+  const [monto,    setMonto]    = useState(String(montoACobrar(pedido) || ""));
   const [motivo,   setMotivo]   = useState("");
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState(null);
@@ -104,7 +104,13 @@ function CobrarEfectivoModal({ pedido, entregarDespues, onClose, onConfirm }) {
 
         <div style={{ marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: "#f8f8f8", fontSize: 13 }}>
           <div style={{ fontWeight: 600 }}>{pedido.cliente?.nombre || "Cliente"}</div>
-          <div style={{ color: "#2e7d32", fontWeight: 800, fontSize: 16 }}>{fmt(pedido.total)}</div>
+          <div style={{ color: "#2e7d32", fontWeight: 800, fontSize: 16 }}>{fmt(montoACobrar(pedido))}</div>
+          {/* Pago mixto: en mano solo va una parte, el resto ya se transfirió. */}
+          {esPagoMixto(pedido.metodo_pago) && (
+            <div style={{ color: "#757575", fontSize: 11.5, marginTop: 2 }}>
+              Parte en efectivo de un pedido de {fmt(pedido.total)}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -425,7 +431,7 @@ export default function PedidoActual() {
                   COBRO EN EFECTIVO
                 </div>
                 <p style={{ margin: "0 0 14px", fontSize: 13, color: "#757575" }}>
-                  Este pedido se paga en mano. Registra <strong>{fmt(pedido.total)}</strong> apenas
+                  Este pedido se paga en mano. Registra <strong>{fmt(montoACobrar(pedido))}</strong> apenas
                   lo recibas, aunque todavía no cierres la entrega.
                 </p>
                 <button

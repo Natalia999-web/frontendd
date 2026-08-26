@@ -43,6 +43,28 @@ def _es_transferencia(metodo: str | None) -> bool:
     return "transfer" in (metodo or "").strip().lower()
 
 
+def _es_mixto(metodo: str | None) -> bool:
+    """Pedido repartido entre efectivo y transferencia.
+
+    Lleva las dos cargas: comprobante por la parte transferida (se paga al
+    hacer el pedido) y cobro en mano por la parte en efectivo (se recoge al
+    entregar). Las reglas de abajo lo tratan como los dos a la vez.
+    """
+    return "mixto" in (metodo or "").strip().lower()
+
+
+def _partir_pago_mixto(total: Decimal, porcentaje_efectivo) -> tuple[Decimal, Decimal]:
+    """Reparte el total entre efectivo y transferencia.
+
+    El cliente propone la proporción; el monto sale del total REAL calculado
+    aquí, y el redondeo se le carga a la transferencia para que las dos partes
+    sumen exactamente el total y no quede un peso suelto.
+    """
+    pct = max(0, min(100, int(porcentaje_efectivo or 0)))
+    efectivo = (total * Decimal(pct) / Decimal(100)).quantize(Decimal("0.01"))
+    return efectivo, total - efectivo
+
+
 def _evaluar_lineas_pedido(db: Session, productos_input) -> tuple[list[dict], Decimal]:
     """Valida los productos contra el stock REAL y calcula el subtotal.
 
@@ -201,6 +223,8 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
         "Estado":             venta.Estado,
         "estado_label":       _label_estado(db, venta.Estado) if venta.Estado else None,
         "Metodo_Pago":            venta.Metodo_Pago,
+        "monto_efectivo":         getattr(venta, "Monto_Efectivo", None),
+        "monto_transferencia":    getattr(venta, "Monto_Transferencia", None),
         "Fecha_Venta":            venta.Fecha_Venta,
         "Fecha_pedido":           venta.Fecha_pedido,
         "Fecha_entrega":          getattr(venta, "Fecha_entrega", None),
@@ -461,6 +485,8 @@ def _batch_ventas(ventas: list, db: Session) -> list:
             "Estado":             venta.Estado,
             "estado_label":       _label_estado(db, venta.Estado) if venta.Estado else None,
             "Metodo_Pago":            venta.Metodo_Pago,
+            "monto_efectivo":         getattr(venta, "Monto_Efectivo", None),
+            "monto_transferencia":    getattr(venta, "Monto_Transferencia", None),
             "Fecha_Venta":            venta.Fecha_Venta,
             "Fecha_pedido":           venta.Fecha_pedido,
             "Fecha_entrega":          getattr(venta, "Fecha_entrega", None),
@@ -663,9 +689,11 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     ESTADO_PENDIENTE = 1
 
     _metodo_lower = (datos.Metodo_Pago or "").strip().lower()
+    # Mixto también llega con comprobante: es el de la parte transferida.
+    _lleva_transferencia = "transfer" in _metodo_lower or "mixto" in _metodo_lower
     _estado_pago_inicial = (
         "pendiente_validacion"
-        if "transfer" in _metodo_lower and datos.comprobante_pago
+        if _lleva_transferencia and datos.comprobante_pago
         else "pendiente"
     )
 
@@ -735,6 +763,13 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     costo_domicilio = COSTO_DOMICILIO if datos.domicilio else Decimal("0")
     nueva_venta.Total += costo_domicilio
 
+    # Pago mixto: el reparto se hace sobre el total ya cerrado (con domicilio,
+    # descuentos y saldo a favor aplicados), no sobre lo que declaró el cliente.
+    if _es_mixto(datos.Metodo_Pago):
+        nueva_venta.Monto_Efectivo, nueva_venta.Monto_Transferencia = _partir_pago_mixto(
+            nueva_venta.Total, datos.pago_efectivo_porcentaje
+        )
+
     # ── Pedido por encima del stock: anticipo obligatorio del 50% ──────────────
     # TODO lo que se evalúa aquí sale de la BD (stock real, precios reales, crédito
     # realmente descontado). El request del cliente no puede declarar que ya pagó.
@@ -765,7 +800,8 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         tiene_soporte = (
             anticipo_declarado
             or bool(comprobante_anticipo)
-            or (_es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido))
+            or ((_es_transferencia(datos.Metodo_Pago) or _es_mixto(datos.Metodo_Pago))
+                and bool(comprobante_pedido))
         )
 
         # El pedido creado por el personal en el mostrador se cobra en el acto:
@@ -996,7 +1032,11 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
     # poder entregarse.
     _metodo = (venta.Metodo_Pago or "").strip().lower()
     _soporte_pago = venta.Comprobante_Pago or getattr(venta, "Anticipo_Comprobante_Url", None)
-    if nuevo_estado == EstadoPedido.ENTREGADO and "transfer" in _metodo and not _soporte_pago:
+    _hay_transferencia = (
+        "transfer" in _metodo
+        or ("mixto" in _metodo and float(venta.Monto_Transferencia or 0) > 0)
+    )
+    if nuevo_estado == EstadoPedido.ENTREGADO and _hay_transferencia and not _soporte_pago:
         raise HTTPException(
             status_code=400,
             detail="Se requiere comprobante de pago para marcar el pedido como entregado",

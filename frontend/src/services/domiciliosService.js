@@ -24,6 +24,8 @@ const adaptDomicilio = (d) => {
     fecha_entrega_real: d.Fecha_entrega       || null,
     total:              d.total               || 0,
     metodo_pago:        d.metodo_pago         || "",
+    // Pago mixto: lo que hay que cobrar en mano (null en el resto de pedidos).
+    monto_efectivo:     d.monto_efectivo ?? null,
     comprobante_pago:   d.comprobante_pago    || null,
     productos:          d.productos           || [],
     estado_pago:        d.estado_pago        || null,

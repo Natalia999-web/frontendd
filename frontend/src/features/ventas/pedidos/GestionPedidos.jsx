@@ -184,6 +184,8 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
     { url: pedido.pago_final_comprobante_url,                     titulo: "Comprobante del saldo adjuntado." },
   ].filter((c, i, todos) => c.url && todos.findIndex(o => o.url === c.url) === i);
   const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
+  // Pago mixto: el pedido se reparte entre las dos formas.
+  const esMixto = /mixto/i.test(pedido.metodo_pago || "");
   const epInicial = pedido.estado_pago;
   const [tab, setTab] = useState(
     esTransferencia || epInicial === "pendiente_validacion" || epInicial === "comprobante_rechazado"
@@ -485,8 +487,24 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         </div>
                         <div className="ver-ped-field">
                           <span className="ver-ped-field__label">Método de pago</span>
-                          <span className="ver-ped-field__value">{esTransferencia ? "🏦 Transferencia" : "💵 Efectivo"}</span>
+                          <span className="ver-ped-field__value">
+                            {esMixto ? "⚖️ Mixto" : esTransferencia ? "🏦 Transferencia" : "💵 Efectivo"}
+                          </span>
                         </div>
+                        {/* Con pago mixto importa el reparto: una parte llegó
+                            transferida y la otra se cobra en mano. */}
+                        {esMixto && pedido.monto_transferencia != null && (
+                          <>
+                            <div className="ver-ped-field">
+                              <span className="ver-ped-field__label">Por transferencia</span>
+                              <span className="ver-ped-field__value">{fmt(Number(pedido.monto_transferencia))}</span>
+                            </div>
+                            <div className="ver-ped-field">
+                              <span className="ver-ped-field__label">En efectivo</span>
+                              <span className="ver-ped-field__value">{fmt(Number(pedido.monto_efectivo || 0))}</span>
+                            </div>
+                          </>
+                        )}
                         {modalidad && (
                           <div className="ver-ped-field">
                             <span className="ver-ped-field__label">Modalidad</span>
@@ -1728,6 +1746,7 @@ export default function GestionPedidos() {
         Fecha_entrega_esperada: formData.fecha_entrega || null,
         // El formulario ofrecia aplicar el saldo a favor del cliente, pero el
         // dato se perdia aqui al armar el request: el saldo nunca se descontaba.
+        pago_efectivo_porcentaje: formData.pago_efectivo_porcentaje ?? null,
         usar_credito:     formData.usar_credito  || false,
         credito_monto:    formData.credito_monto ?? null,
         creado_por_admin: true,
