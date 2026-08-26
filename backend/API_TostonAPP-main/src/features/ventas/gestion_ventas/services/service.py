@@ -1060,6 +1060,33 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
     if nuevo_estado == EstadoPedido.ENTREGADO and tiene_domicilio:
         _descontar_stock_venta(db, id_venta)
 
+    # Al entregar un pedido SIN domicilio (recoger en tienda): retirar las
+    # unidades producidas por OPs completadas. Cuando una OP finaliza, agrega
+    # `Cantidad_Preorden` al stock general. Esas unidades se dan al cliente
+    # aquí, así que hay que descontarlas. Solo aplica si la OP realmente completó.
+    if nuevo_estado == EstadoPedido.ENTREGADO and not tiene_domicilio:
+        for _it in db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all():
+            _preorden = _it.Cantidad_Preorden or 0
+            if not _preorden:
+                continue
+            _op_ok = db.query(OrdenProduccion).filter(
+                OrdenProduccion.ID_Venta    == id_venta,
+                OrdenProduccion.ID_Producto == _it.ID_Producto,
+                OrdenProduccion.Estado      == 11,  # COMPLETADA
+            ).first()
+            if not _op_ok:
+                continue
+            _prod_op = (
+                db.query(Producto)
+                .filter(Producto.ID_Producto == _it.ID_Producto)
+                .with_for_update()
+                .first()
+            )
+            if _prod_op:
+                _prod_op.Stock = max(0, (_prod_op.Stock or 0) - _preorden)
+                _actualizar_estado_producto(_prod_op)
+                notificar_stock_producto(db, _prod_op)
+
     # Al cancelar: restaurar stock si ya fue descontado
     # - pickup: stock se descuenta en CONFIRMADO; se restaura desde confirmado/preparando/listo
     # - domicilio: stock se descuenta en ENTREGADO; no aplica al cancelar (nunca llegó)
