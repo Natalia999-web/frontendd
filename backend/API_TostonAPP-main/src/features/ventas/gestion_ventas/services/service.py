@@ -1077,7 +1077,13 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
                     .first()
                 )
                 if producto:
-                    producto.Stock = (producto.Stock or 0) + (item.Cantidad or 0)
+                    # Para producción solo se reservó la porción en stock (Cantidad - Cantidad_Preorden);
+                    # el déficit nunca se tomó de aquí, sino que va a la OP.
+                    if getattr(producto, "Requiere_Produccion", 0):
+                        a_restaurar = (item.Cantidad or 0) - (item.Cantidad_Preorden or 0)
+                    else:
+                        a_restaurar = item.Cantidad or 0
+                    producto.Stock = (producto.Stock or 0) + a_restaurar
                     _actualizar_estado_producto(producto)
                     notificar_stock_producto(db, producto)
 
