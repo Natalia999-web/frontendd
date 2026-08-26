@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertCircle, Package, Bike, Store, Banknote, Building2, CreditCard, Calendar, PenLine, ClipboardList, Phone, Mail, User, MapPin, ShoppingCart, Truck, Paperclip, Camera, Search } from "lucide-react";
+import { X, Check, AlertCircle, AlertTriangle, CheckCircle2, Package, Bike, Store, Banknote, Building2, CreditCard, Calendar, PenLine, ClipboardList, Phone, Mail, User, MapPin, ShoppingCart, Truck, Paperclip, Camera, Search, Gift } from "lucide-react";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
@@ -22,11 +22,11 @@ const CUENTA_TRANSFERENCIA = {
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦", "Mixto ⚖️"];
+const METODOS_PAGO = ["Efectivo", "Transferencia", "Mixto"];
 
 /** El pedido lleva una transferencia real: hace falta el comprobante. */
 const llevaTransferencia = (metodo) =>
-  metodo === "Transferencia 🏦" || metodo === "Mixto ⚖️";
+  metodo === "Transferencia" || metodo === "Mixto";
 
 const EMPTY_FORM = {
   idCliente:            "",
@@ -89,8 +89,8 @@ function ClienteSelect({ value, clientes, onChange, error }) {
         />
         {query && (
           <button type="button" onClick={() => setQuery("")}
-            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
-            ✕
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", padding: 0, lineHeight: 1, display:"flex", alignItems:"center" }}>
+            <X size={14} />
           </button>
         )}
       </div>
@@ -239,7 +239,7 @@ function ProductoItem({ item, onChange, onRemove }) {
 
       <div className="producto-item__total">{fmt(item.precio * item.cantidad)}</div>
 
-      <button className="producto-item__remove" onClick={onRemove}>✕</button>
+      <button className="producto-item__remove" onClick={onRemove} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={14} /></button>
     </div>
   );
 }
@@ -384,7 +384,7 @@ export default function CrearPedido({ onClose, onSave }) {
         }
         // Un mixto tiene que tener las dos partes: si una queda en cero, lo
         // que corresponde es el otro método a secas.
-        if (form.metodo_pago === "Mixto ⚖️") {
+        if (form.metodo_pago === "Mixto") {
           const enEfectivo = Number(efectivoMonto) || 0;
           if (enEfectivo <= 0) {
             e.pago_mixto = "Escribe cuánto se paga en efectivo";
@@ -396,9 +396,9 @@ export default function CrearPedido({ onClose, onSave }) {
         const queEs = pagarTodo ? "el pago" : "el anticipo";
         if (!form.anticipo_metodo)
           e.anticipo_metodo = `Selecciona el método de pago de ${queEs}`;
-        if (form.anticipo_metodo === "Efectivo 💵" && !form.anticipo_efectivo)
+        if (form.anticipo_metodo === "Efectivo" && !form.anticipo_efectivo)
           e.anticipo_efectivo = `Debes confirmar que ${queEs} fue recibido en efectivo`;
-        if (form.anticipo_metodo === "Transferencia 🏦" && !form.anticipo_comp_preview)
+        if (form.anticipo_metodo === "Transferencia" && !form.anticipo_comp_preview)
           e.anticipo_comprobante = `Debes adjuntar el comprobante de ${queEs}`;
       }
     }
@@ -458,14 +458,14 @@ export default function CrearPedido({ onClose, onSave }) {
       metodo_pago:       metodoPedido,
       // Solo se mira cuando el método es Mixto: cuánto se cobra en efectivo.
       // El backend lo recorta contra el total real.
-      pago_efectivo_monto: metodoPedido === "Mixto ⚖️" ? (Number(efectivoMonto) || 0) : null,
+      pago_efectivo_monto: metodoPedido === "Mixto" ? (Number(efectivoMonto) || 0) : null,
       comprobante:            comprobanteUrl,
       requiere_anticipo:      requiereAnticipo,
       anticipo_monto:         montoAnticipo,
       anticipo_metodo_pago:   requiereAnticipo ? metodoPedido : null,
       anticipo_comprobante_url: anticipoUrl,
       anticipo_registrado:    requiereAnticipo && (
-        form.anticipo_metodo === "Efectivo 💵" ? form.anticipo_efectivo : !!anticipoUrl
+        form.anticipo_metodo === "Efectivo" ? form.anticipo_efectivo : !!anticipoUrl
       ),
       domicilio:         form.domicilio,
       direccion_entrega: form.domicilio ? form.direccion_entrega : null,
@@ -542,7 +542,7 @@ export default function CrearPedido({ onClose, onSave }) {
             <p className="modal-header__eyebrow">Pedidos</p>
             <h2 className="modal-header__title">Nuevo pedido</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Steps */}
@@ -590,13 +590,13 @@ export default function CrearPedido({ onClose, onSave }) {
               {clienteSeleccionado && (
                 <div className="info-box info-box--success" style={{ marginTop: 24, padding: "16px", borderRadius: "12px" }}>
                   <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>👤</div>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}><User size={24} style={{color:"#2e7d32"}} /></div>
                     <div className="info-box__text" style={{ flex: 1 }}>
                       <span className="info-box__label" style={{ fontSize: 16, fontWeight: 700 }}>{clienteSeleccionado.nombre} {clienteSeleccionado.apellidos}</span>
                       <div style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
-                        <span>📞 {clienteSeleccionado.telefono}</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Phone size={13} />{clienteSeleccionado.telefono}</span>
                         <span style={{ margin: "0 8px", opacity: 0.3 }}>|</span>
-                        <span>✉️ {clienteSeleccionado.correo}</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Mail size={13} />{clienteSeleccionado.correo}</span>
                       </div>
                     </div>
                     {creditoCliente > 0 && (
@@ -636,7 +636,7 @@ export default function CrearPedido({ onClose, onSave }) {
               <div className="productos-list" style={{ marginTop: 0, maxHeight: 260, overflowY: "auto", padding: "5px 0" }}>
                 {form.productosItems.length === 0 ? (
                   <div style={{ padding: "40px 20px", textAlign: "center", color: "#bbb", fontSize: 14 }}>
-                    <div style={{ fontSize: 32, marginBottom: 10 }}>🛒</div>
+                    <ShoppingCart size={32} strokeWidth={1} style={{color:"#bdbdbd",marginBottom:10}} />
                     No has agregado productos todavía
                   </div>
                 ) : (
@@ -658,7 +658,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 </div>
                 {costoEnvio > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#666", marginBottom: 6 }}>
-                    <span>🛵 Costo de domicilio</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Bike size={14} />Costo de domicilio</span>
                     <span style={{ fontWeight: 600, color: "#333" }}>{fmt(costoEnvio)}</span>
                   </div>
                 )}
@@ -679,8 +679,8 @@ export default function CrearPedido({ onClose, onSave }) {
                 <label className="field-label">¿Cómo se entregará el pedido?</label>
                 <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                   {[
-                    { val: false, label: "🏪 Recoger en Tienda", icon: "🏪" },
-                    { val: true,  label: "🛵 Domicilio Local",  icon: "🛵" },
+                    { val: false, label: "Recoger en Tienda", Icon: Store },
+                    { val: true,  label: "Domicilio Local",   Icon: Bike  },
                   ].map(opt => (
                     <button
                       key={String(opt.val)}
@@ -696,7 +696,7 @@ export default function CrearPedido({ onClose, onSave }) {
                         fontWeight:  form.domicilio === opt.val ? 700 : 500,
                       }}
                     >
-                      <span style={{ fontSize: 24 }}>{opt.icon}</span>
+                      <opt.Icon size={24} />
                       <span style={{ fontSize: 13 }}>{opt.label}</span>
                     </button>
                   ))}
@@ -712,12 +712,12 @@ export default function CrearPedido({ onClose, onSave }) {
                     const tiene = !!clienteSeleccionado?.telefono;
                     return valido ? (
                       <div style={{ padding: "10px 14px", background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, color: "#1b5e20", fontSize: 13, fontWeight: 600, marginBottom: 14, display: "flex", gap: 8, alignItems: "center" }}>
-                        <span>✅</span>
+                        <CheckCircle2 size={14} />
                         <span>Teléfono del cliente: <strong>{clienteSeleccionado.telefono}</strong></span>
                       </div>
                     ) : (
-                      <div style={{ padding: "10px 14px", background: "#fff3e0", border: "1px solid #ffcc80", borderRadius: 10, color: "#e65100", fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-                        ⚠️ {tiene
+                      <div style={{ padding: "10px 14px", background: "#fff3e0", border: "1px solid #ffcc80", borderRadius: 10, color: "#e65100", fontSize: 13, fontWeight: 600, marginBottom: 14, display:"flex", alignItems:"flex-start", gap:6 }}>
+                        <AlertTriangle size={14} style={{flexShrink:0,marginTop:1}} /> {tiene
                           ? `El teléfono registrado (${clienteSeleccionado.telefono}) no tiene 10 dígitos. El cliente debe actualizarlo antes de solicitar un domicilio.`
                           : "Este cliente no tiene teléfono registrado. Es obligatorio para pedidos con domicilio."}
                       </div>
@@ -750,7 +750,7 @@ export default function CrearPedido({ onClose, onSave }) {
                         getValue={o => o.value}
                         getLabel={o => o.label}
                         placeholder="— Valle de Aburrá —"
-                        searchPlaceholder="🔍 Buscar municipio…"
+                        searchPlaceholder="Buscar municipio…"
                         className={`field-select${errors.municipio ? " error" : ""}`}
                       />
                     </div>
@@ -816,7 +816,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 {errors.metodo_pago && <span className="field-error" style={{ marginTop: 8 }}>{errors.metodo_pago}</span>}
 
                 {/* Reparto entre las dos formas de pago */}
-                {form.metodo_pago === "Mixto ⚖️" && (
+                {form.metodo_pago === "Mixto" && (
                   <div style={{ marginTop: 14, background: "#fafafa", border: "1px solid #eee", borderRadius: 12, padding: "14px 16px" }}>
                     <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666", fontWeight: 600 }}>
                       Una parte se transfiere y la otra se cobra en efectivo al entregar
@@ -859,13 +859,13 @@ export default function CrearPedido({ onClose, onSave }) {
                     {form.comprobantePreview ? (
                       <div className="comprobante-preview-container" style={{ position: "relative", width: "100%", height: 180, borderRadius: 10, overflow: "hidden", background: "#000" }}>
                         <img src={form.comprobantePreview} alt="Comprobante" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                        <button className="comprobante-remove-btn" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer" }} onClick={() => setForm(f => ({ ...f, comprobante: null, comprobantePreview: null }))}>✕</button>
+                        <button className="comprobante-remove-btn" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display:"flex",alignItems:"center",justifyContent:"center" }} onClick={() => setForm(f => ({ ...f, comprobante: null, comprobantePreview: null }))}><X size={14} /></button>
                       </div>
                     ) : (
                       <label className={`comprobante-dropzone${errors.comprobante ? " error" : ""}`} style={{ height: 140, background: "rgba(255,255,255,0.7)" }}>
                         <input type="file" accept="image/*" onChange={handleFile} hidden />
                         <div style={{ textAlign: "center" }}>
-                          <span style={{ fontSize: 32 }}>📸</span>
+                          <Camera size={32} style={{color:"#1565c0"}} />
                           <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "#1565c0" }}>Subir imagen del comprobante</p>
                           <p style={{ margin: "2px 0 0", fontSize: 11, color: "#7faade" }}>Presiona para abrir la cámara o galería</p>
                         </div>
@@ -881,7 +881,7 @@ export default function CrearPedido({ onClose, onSave }) {
               {requiereAnticipo && (
                 <div className="fade-in" style={{ marginTop: 24, background: "#fff8e1", border: "1.5px solid #f9a825", borderRadius: 14, padding: 20 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
-                    <span style={{ fontSize: 24 }}>💰</span>
+                    <Banknote size={24} style={{color:"#f57f17",flexShrink:0}} />
                     <div>
                       <p style={{ margin: 0, fontWeight: 800, color: "#f57f17", fontSize: 15 }}>Anticipo requerido</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#795548" }}>
@@ -919,7 +919,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     {pagarTodo ? "Método de pago" : "Método de pago del anticipo"} <span className="required">*</span>
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
-                    {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                    {["Efectivo", "Transferencia"].map(m => (
                       <button
                         key={m}
                         onClick={() => { setForm(f => ({ ...f, anticipo_metodo: m, anticipo_efectivo: false, anticipo_comprobante: null, anticipo_comp_preview: null })); setErrors(e => ({ ...e, anticipo_metodo: "", anticipo_efectivo: "", anticipo_comprobante: "" })); }}
@@ -938,7 +938,7 @@ export default function CrearPedido({ onClose, onSave }) {
                   </div>
                   {errors.anticipo_metodo && <span className="field-error">{errors.anticipo_metodo}</span>}
 
-                  {form.anticipo_metodo === "Efectivo 💵" && (
+                  {form.anticipo_metodo === "Efectivo" && (
                     <div className="fade-in" style={{ marginTop: 14 }}>
                       <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: "#fff", padding: "12px 16px", borderRadius: 10, border: `2px solid ${form.anticipo_efectivo ? "#2e7d32" : "#e0e0e0"}` }}>
                         <input
@@ -955,21 +955,21 @@ export default function CrearPedido({ onClose, onSave }) {
                     </div>
                   )}
 
-                  {form.anticipo_metodo === "Transferencia 🏦" && (
+                  {form.anticipo_metodo === "Transferencia" && (
                     <div className="fade-in" style={{ marginTop: 14 }}>
-                      <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 10, padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#1565c0" }}>
-                        📋 Transfiere <strong>{fmt(montoAnticipo)}</strong> a <strong>{CUENTA_TRANSFERENCIA.banco}</strong> — {CUENTA_TRANSFERENCIA.tipo} <strong>{CUENTA_TRANSFERENCIA.numero}</strong> a nombre de {CUENTA_TRANSFERENCIA.titular}
+                      <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 10, padding: "10px 14px", marginBottom: 10, fontSize: 12, color: "#1565c0", display:"flex", alignItems:"flex-start", gap:6 }}>
+                        <ClipboardList size={13} style={{flexShrink:0,marginTop:1}} /> Transfiere <strong>{fmt(montoAnticipo)}</strong> a <strong>{CUENTA_TRANSFERENCIA.banco}</strong> — {CUENTA_TRANSFERENCIA.tipo} <strong>{CUENTA_TRANSFERENCIA.numero}</strong> a nombre de {CUENTA_TRANSFERENCIA.titular}
                       </div>
                       {form.anticipo_comp_preview ? (
                         <div style={{ position: "relative", width: "100%", height: 140, borderRadius: 10, overflow: "hidden", background: "#000" }}>
                           <img src={form.anticipo_comp_preview} alt="Comprobante anticipo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                          <button style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", fontSize: 12 }} onClick={() => setForm(f => ({ ...f, anticipo_comprobante: null, anticipo_comp_preview: null }))}>✕</button>
+                          <button style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", display:"flex",alignItems:"center",justifyContent:"center" }} onClick={() => setForm(f => ({ ...f, anticipo_comprobante: null, anticipo_comp_preview: null }))}><X size={13} /></button>
                         </div>
                       ) : (
                         <label className={`comprobante-dropzone${errors.anticipo_comprobante ? " error" : ""}`} style={{ height: 110, background: "rgba(255,255,255,0.7)" }}>
                           <input type="file" accept="image/*" onChange={handleAnticipo} hidden />
                           <div style={{ textAlign: "center" }}>
-                            <span style={{ fontSize: 26 }}>📎</span>
+                            <Paperclip size={26} style={{color:"#1565c0"}} />
                             <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante {pagarTodo ? "del pago" : "del anticipo"}</p>
                             <p style={{ margin: "2px 0 0", fontSize: 10, color: "#7faade" }}>Imagen o PDF</p>
                           </div>
@@ -985,7 +985,7 @@ export default function CrearPedido({ onClose, onSave }) {
               {creditoCliente > 0 && (
                 <div className="fade-in" style={{ marginTop: 24, background: "#e8f5e9", border: "1.5px solid #a5d6a7", borderRadius: 14, padding: 20 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
-                    <span style={{ fontSize: 24 }}>🎁</span>
+                    <Gift size={24} style={{color:"#1b5e20",flexShrink:0}} />
                     <div>
                       <p style={{ margin: 0, fontWeight: 800, color: "#1b5e20", fontSize: 15 }}>Saldo a favor del cliente</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#388e3c" }}>
@@ -1054,19 +1054,19 @@ export default function CrearPedido({ onClose, onSave }) {
                 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15 }}>
                   <div className="resumen-card">
-                    <p className="resumen-card__title">👤 Cliente</p>
+                    <p className="resumen-card__title" style={{display:"flex",alignItems:"center",gap:5}}><User size={13} /> Cliente</p>
                     <p className="resumen-card__val"><strong>{clienteSeleccionado.nombre}</strong></p>
                     <p className="resumen-card__sub">{clienteSeleccionado.telefono}</p>
                   </div>
                   <div className="resumen-card">
-                    <p className="resumen-card__title">📍 Entrega</p>
+                    <p className="resumen-card__title" style={{display:"flex",alignItems:"center",gap:5}}><MapPin size={13} /> Entrega</p>
                     <p className="resumen-card__val"><strong>{form.domicilio ? "Domicilio" : "En Tienda"}</strong></p>
                     <p className="resumen-card__sub" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {form.domicilio ? form.direccion_entrega : "Recoger en local"}
                     </p>
                     {form.domicilio && form.fecha_entrega && (
-                      <p className="resumen-card__sub">
-                        📅 {new Date(form.fecha_entrega + "T00:00:00").toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                      <p className="resumen-card__sub" style={{display:"flex",alignItems:"center",gap:4}}>
+                        <Calendar size={12} />{new Date(form.fecha_entrega + "T00:00:00").toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
                       </p>
                     )}
                   </div>
@@ -1074,7 +1074,7 @@ export default function CrearPedido({ onClose, onSave }) {
 
                 <div className="resumen-card" style={{ padding: "0" }}>
                   <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#fcfcfc", borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                    <p className="resumen-card__title" style={{ margin: 0 }}>🛒 Detalle de productos ({form.productosItems.length})</p>
+                    <p className="resumen-card__title" style={{ margin: 0, display:"flex",alignItems:"center",gap:5 }}><ShoppingCart size={13} /> Detalle de productos ({form.productosItems.length})</p>
                   </div>
                   <div style={{ maxHeight: 120, overflowY: "auto", padding: "10px 16px" }}>
                     {form.productosItems.map(p => (
@@ -1099,13 +1099,13 @@ export default function CrearPedido({ onClose, onSave }) {
                   )}
                   {costoEnvio > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-                      <span>🛵 Domicilio</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Bike size={12} />Domicilio</span>
                       <span>+{fmt(costoEnvio)}</span>
                     </div>
                   )}
                   {usarCredito && creditoAplicar > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-                      <span>🎁 Saldo a favor</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Gift size={12} />Saldo a favor</span>
                       <span>-{fmt(creditoAplicar)}</span>
                     </div>
                   )}
@@ -1136,12 +1136,12 @@ export default function CrearPedido({ onClose, onSave }) {
                   )}
 
                   <div style={{ marginTop: 10, fontSize: 11, background: "rgba(0,0,0,0.15)", padding: "6px 10px", borderRadius: "6px", textAlign: "center" }}>
-                    💳 Pago vía: <strong>{metodoPedido || "—"}</strong>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5}}><CreditCard size={12} />Pago vía: <strong>{metodoPedido || "—"}</strong></span>
                   </div>
                   {requiereAnticipo && (
                     <div style={{ marginTop: 10, background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "10px 12px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                        <span>💰 {pagarTodo ? "Total pagado ahora" : "Anticipo 50% registrado"}</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Banknote size={12} />{pagarTodo ? "Total pagado ahora" : "Anticipo 50% registrado"}</span>
                         <span style={{ fontWeight: 700 }}>{fmt(montoAnticipo)}</span>
                       </div>
                       {!pagarTodo && (
@@ -1153,8 +1153,8 @@ export default function CrearPedido({ onClose, onSave }) {
                       {!pagarTodo && (
                         <div style={{ marginTop: 6, fontSize: 10, opacity: 0.85, textAlign: "center" }}>
                           Anticipo vía {form.anticipo_metodo}
-                          {form.anticipo_metodo === "Efectivo 💵" && form.anticipo_efectivo ? " ✓ Confirmado" : ""}
-                          {form.anticipo_metodo === "Transferencia 🏦" && form.anticipo_comp_preview ? " ✓ Comprobante adjunto" : ""}
+                          {form.anticipo_metodo === "Efectivo" && form.anticipo_efectivo ? " ✓ Confirmado" : ""}
+                          {form.anticipo_metodo === "Transferencia" && form.anticipo_comp_preview ? " ✓ Comprobante adjunto" : ""}
                         </div>
                       )}
                     </div>
@@ -1163,7 +1163,7 @@ export default function CrearPedido({ onClose, onSave }) {
 
                 {hayProductosSinStock && form.productosItems.some(p => p.requiereProduccion) && (
                   <div style={{ padding: "12px", background: "#e8eaf6", border: "1px solid #9fa8da", borderRadius: "10px", display: "flex", gap: 10, alignItems: "center" }}>
-                    <span style={{ fontSize: 20 }}>🏭</span>
+                    <Building2 size={20} style={{color:"#283593",flexShrink:0}} />
                     <p style={{ margin: 0, fontSize: 12, color: "#283593", lineHeight: 1.4 }}>
                       <strong>Producción:</strong> el pedido nacerá en <strong>Confirmado</strong> y se creará la Orden de Producción automáticamente con la fecha elegida.
                     </p>
@@ -1179,7 +1179,7 @@ export default function CrearPedido({ onClose, onSave }) {
         <div className="modal-footer" style={{ padding: "20px 30px", borderTop: "1px solid #f0f0f0", flexDirection: "column", gap: 12 }}>
           {saveError && step === 5 && (
             <div style={{ width: "100%", padding: "10px 14px", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: "10px", color: "#c62828", fontSize: 13, fontWeight: 600, display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <AlertTriangle size={14} style={{ flexShrink: 0 }} />
               <span>{saveError}</span>
             </div>
           )}
