@@ -839,6 +839,24 @@ const PedidosClientePage = () => {
                       </p>
                     </div>
                   </div>
+                  {/* Desglose efectivo / transferencia para pago mixto */}
+                  {(selectedPedido.metodo_pago || '').toLowerCase() === 'mixto' &&
+                    (selectedPedido.monto_efectivo != null || selectedPedido.monto_transferencia != null) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '8px 12px' }}>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: 4 }}><Banknote size={10} /> Efectivo</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
+                          {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.monto_efectivo ?? 0)}
+                        </p>
+                      </div>
+                      <div style={{ background: '#f0f7ff', borderRadius: 8, padding: '8px 12px' }}>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: '#9e9e9e', letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={10} /> Transferencia</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#1565c0', margin: 0 }}>
+                          {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(selectedPedido.monto_transferencia ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Estado del pago (anticipo / completo) */}
                   {(selectedPedido.anticipo_registrado || selectedPedido.pago_final_registrado || selectedPedido.sobre_stock || selectedPedido.requiere_anticipo) && (() => {

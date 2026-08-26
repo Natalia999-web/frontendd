@@ -6,8 +6,9 @@ const fmtFechaLarga = (str) => {
   return new Date(str).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items, subtotal, costoEntrega, descuento, total, anticipo = 0, pagoFinalRegistrado = false }) {
+function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items, subtotal, costoEntrega, descuento, total, anticipo = 0, pagoFinalRegistrado = false, montoEfectivo = null, montoTransferencia = null }) {
   const saldoPendiente = pagoFinalRegistrado ? 0 : Math.max(0, total - anticipo);
+  const esMixto = (metodoPago || '').toLowerCase() === 'mixto';
   const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
@@ -198,6 +199,16 @@ function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items,
         <span class="lbl">${anticipo > 0 ? 'Total del pedido' : 'Total pagado'}</span>
         <span class="val">${COP(total)}</span>
       </div>
+      ${esMixto && (montoEfectivo != null || montoTransferencia != null) ? `
+      <div class="t-div"></div>
+      <div class="t-row" style="font-size:13px">
+        <span class="lbl" style="color:#555">💵 Efectivo</span>
+        <span class="val" style="color:#2e7d32;font-size:14px">${COP(montoEfectivo ?? 0)}</span>
+      </div>
+      <div class="t-row" style="font-size:13px;margin-top:4px">
+        <span class="lbl" style="color:#555">🏦 Transferencia</span>
+        <span class="val" style="color:#1565c0;font-size:14px">${COP(montoTransferencia ?? 0)}</span>
+      </div>` : ''}
       ${anticipo > 0 ? `
       <div class="t-div"></div>
       <div class="t-row anticipo-row">
@@ -268,6 +279,8 @@ export function descargarFacturaPedido(pedido, usuario) {
     total,
     anticipo:            anticipoMonto,
     pagoFinalRegistrado,
+    montoEfectivo:      pedido.monto_efectivo      ?? null,
+    montoTransferencia: pedido.monto_transferencia ?? null,
   });
 
   abrirFactura(html);

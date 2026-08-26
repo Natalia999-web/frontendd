@@ -548,6 +548,18 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           <span className="ver-ped-field__label">Método de pago</span>
                           <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}>{esMixto ? <><Scale size={14} /> Mixto</> : esTransferencia ? <><Building2 size={14} /> Transferencia</> : <><Banknote size={14} /> Efectivo</>}</span>
                         </div>
+                        {esMixto && pedido.monto_efectivo != null && (
+                          <div className="ver-ped-field">
+                            <span className="ver-ped-field__label">Efectivo</span>
+                            <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}><Banknote size={14} />{fmt(pedido.monto_efectivo)}</span>
+                          </div>
+                        )}
+                        {esMixto && pedido.monto_transferencia != null && (
+                          <div className="ver-ped-field">
+                            <span className="ver-ped-field__label">Transferencia</span>
+                            <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}><Building2 size={14} />{fmt(pedido.monto_transferencia)}</span>
+                          </div>
+                        )}
                         {modalidad && (
                           <div className="ver-ped-field">
                             <span className="ver-ped-field__label">Modalidad</span>
