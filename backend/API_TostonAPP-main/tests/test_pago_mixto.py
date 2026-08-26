@@ -1,7 +1,8 @@
 """Pago mixto: una parte en efectivo y otra por transferencia.
 
-El cliente propone la proporción; los montos los calcula el servidor sobre el
-total real. Lo que se cobra en mano al entregar es solo la parte en efectivo.
+El cliente dice cuánta plata pone en efectivo; el servidor la recorta contra
+el total real y manda el resto a transferencia. Lo que se cobra en mano al
+entregar es solo esa parte.
 """
 import sys
 import unittest
@@ -36,46 +37,52 @@ class EsMixtoTests(unittest.TestCase):
 
 class PartirPagoMixtoTests(unittest.TestCase):
 
+    def test_el_monto_que_pide_el_cliente_se_respeta(self):
+        """El caso que motivó el cambio: $3.500 sueltos de un pedido de $22.500."""
+        efectivo, transferencia = _partir_pago_mixto(Decimal("22500"), Decimal("3500"))
+        self.assertEqual(efectivo, Decimal("3500.00"))
+        self.assertEqual(transferencia, Decimal("19000.00"))
+
     def test_mitad_y_mitad(self):
-        efectivo, transferencia = _partir_pago_mixto(Decimal("100000"), 50)
+        efectivo, transferencia = _partir_pago_mixto(Decimal("100000"), Decimal("50000"))
         self.assertEqual(efectivo, Decimal("50000.00"))
         self.assertEqual(transferencia, Decimal("50000.00"))
 
-    def test_diez_y_noventa(self):
-        efectivo, transferencia = _partir_pago_mixto(Decimal("100000"), 10)
-        self.assertEqual(efectivo, Decimal("10000.00"))
-        self.assertEqual(transferencia, Decimal("90000.00"))
-
     def test_las_dos_partes_siempre_suman_el_total(self):
-        """El redondeo se le carga a la transferencia: no queda un peso suelto."""
-        for total in ["33333.33", "77777", "1", "0.05", "199999.99"]:
-            for pct in [0, 5, 33, 50, 66, 95, 100]:
-                with self.subTest(total=total, pct=pct):
+        for total in ["33333.33", "77777", "1", "0.05", "199999.99", "22500"]:
+            for pedido in ["0", "1", "3500", "0.01", "12345.67", "99999999"]:
+                with self.subTest(total=total, pedido=pedido):
                     t = Decimal(total)
-                    efectivo, transferencia = _partir_pago_mixto(t, pct)
+                    efectivo, transferencia = _partir_pago_mixto(t, Decimal(pedido))
                     self.assertEqual(efectivo + transferencia, t)
                     self.assertGreaterEqual(efectivo, Decimal("0"))
                     self.assertGreaterEqual(transferencia, Decimal("0"))
 
-    def test_todo_en_efectivo(self):
-        efectivo, transferencia = _partir_pago_mixto(Decimal("80000"), 100)
-        self.assertEqual(efectivo, Decimal("80000.00"))
+    def test_no_se_puede_poner_en_efectivo_mas_de_lo_que_vale(self):
+        """Se recorta al total: el pedido no puede quedar pagado de más."""
+        efectivo, transferencia = _partir_pago_mixto(Decimal("50000"), Decimal("90000"))
+        self.assertEqual(efectivo, Decimal("50000.00"))
         self.assertEqual(transferencia, Decimal("0.00"))
 
-    def test_todo_por_transferencia(self):
-        efectivo, transferencia = _partir_pago_mixto(Decimal("80000"), 0)
+    def test_un_monto_negativo_se_trata_como_cero(self):
+        efectivo, transferencia = _partir_pago_mixto(Decimal("50000"), Decimal("-4000"))
         self.assertEqual(efectivo, Decimal("0.00"))
-        self.assertEqual(transferencia, Decimal("80000"))
+        self.assertEqual(transferencia, Decimal("50000.00"))
 
-    def test_un_porcentaje_fuera_de_rango_se_recorta(self):
-        """Nadie se lleva más de lo que hay ni pone montos negativos."""
-        self.assertEqual(_partir_pago_mixto(Decimal("50000"), 999)[0], Decimal("50000.00"))
-        self.assertEqual(_partir_pago_mixto(Decimal("50000"), -40)[0], Decimal("0.00"))
-
-    def test_sin_porcentaje_no_reparte_nada_al_efectivo(self):
+    def test_sin_monto_no_va_nada_en_efectivo(self):
         efectivo, transferencia = _partir_pago_mixto(Decimal("50000"), None)
         self.assertEqual(efectivo, Decimal("0.00"))
-        self.assertEqual(transferencia, Decimal("50000"))
+        self.assertEqual(transferencia, Decimal("50000.00"))
+
+    def test_acepta_el_monto_como_texto_o_float(self):
+        """Del request llega como venga; no debe romperse por el tipo."""
+        self.assertEqual(_partir_pago_mixto(Decimal("22500"), "3500")[0], Decimal("3500.00"))
+        self.assertEqual(_partir_pago_mixto(Decimal("22500"), 3500.0)[0], Decimal("3500.00"))
+
+    def test_los_centavos_no_se_pierden(self):
+        efectivo, transferencia = _partir_pago_mixto(Decimal("22500.75"), Decimal("3500.25"))
+        self.assertEqual(efectivo, Decimal("3500.25"))
+        self.assertEqual(transferencia, Decimal("19000.50"))
 
 
 if __name__ == "__main__":

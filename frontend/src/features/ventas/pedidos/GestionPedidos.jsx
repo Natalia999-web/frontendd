@@ -1746,7 +1746,7 @@ export default function GestionPedidos() {
         Fecha_entrega_esperada: formData.fecha_entrega || null,
         // El formulario ofrecia aplicar el saldo a favor del cliente, pero el
         // dato se perdia aqui al armar el request: el saldo nunca se descontaba.
-        pago_efectivo_porcentaje: formData.pago_efectivo_porcentaje ?? null,
+        pago_efectivo_monto: formData.pago_efectivo_monto ?? null,
         usar_credito:     formData.usar_credito  || false,
         credito_monto:    formData.credito_monto ?? null,
         creado_por_admin: true,

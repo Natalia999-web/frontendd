@@ -98,10 +98,10 @@ export async function crearPedidoCliente({
       Cantidad:    Number(item.cantidad),
     })),
     Metodo_Pago:            metodoPagoApi(paymentMethod),
-    // Solo lo mira el backend cuando el método es Mixto: es la proporción que
-    // pide el cliente, no el monto — ese lo calcula el servidor sobre el total.
-    pago_efectivo_porcentaje: paymentMethod === 'mixto'
-      ? (saldoAFavor?.efectivoPct ?? 50)
+    // Solo lo mira el backend cuando el método es Mixto: cuánta plata pone el
+    // cliente en efectivo. Allá se recorta contra el total real.
+    pago_efectivo_monto: paymentMethod === 'mixto'
+      ? (saldoAFavor?.efectivoMonto ?? 0)
       : null,
     A_Nombre_De:            onBehalfOf || null,
     usar_credito:           !!saldoAFavor?.usar,

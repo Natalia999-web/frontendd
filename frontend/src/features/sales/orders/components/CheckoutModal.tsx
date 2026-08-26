@@ -6,7 +6,7 @@ import { getMiCredito } from '../../../../services/pedidosService';
 import { apiFetch } from '../../../../utils/api';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
 import SaldoSlider from '../../../../shared/components/SaldoSlider';
-import SplitPagoSlider from '../../../../shared/components/SplitPagoSlider';
+import SplitPagoMonto from '../../../../shared/components/SplitPagoMonto';
 import './CheckoutModal.css';
 
 // Datos de la cuenta bancaria — actualiza en GestionPedidos.jsx también
@@ -35,7 +35,7 @@ interface CheckoutModalProps {
     observaciones?: string;
     tieneDomicilio?: boolean;
   } | null;
-  onConfirm: (paymentMethod: string, onBehalfOf: string, comprobante?: File | null, saldoAFavor?: { usar: boolean; monto: number; efectivoPct?: number }, deliveryInfo?: { tieneDomicilio: boolean; address: string; municipio: string; departamento: string; date: string; time: string; observaciones: string }, anticipoData?: { requiere: boolean; metodo: string; efectivo: boolean; comprobante: File | null; monto: number; saldo: number; pagarTodo?: boolean; creditoCubreAnticipo?: boolean }) => void;
+  onConfirm: (paymentMethod: string, onBehalfOf: string, comprobante?: File | null, saldoAFavor?: { usar: boolean; monto: number; efectivoMonto?: number }, deliveryInfo?: { tieneDomicilio: boolean; address: string; municipio: string; departamento: string; date: string; time: string; observaciones: string }, anticipoData?: { requiere: boolean; metodo: string; efectivo: boolean; comprobante: File | null; monto: number; saldo: number; pagarTodo?: boolean; creditoCubreAnticipo?: boolean }) => void;
 }
 
 const COSTO_DOMICILIO = 5000;
@@ -86,9 +86,10 @@ const SaldoAFavorPicker: React.FC<{
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDetails, onConfirm }) => {
   const [paymentMethod,      setPaymentMethod]      = useState('digital');
-  // Pago mixto: qué parte va en efectivo. La transferencia se paga ahora con
-  // comprobante y el efectivo se entrega al recibir el pedido.
-  const [efectivoPct,        setEfectivoPct]        = useState(50);
+  // Pago mixto: cuánta plata va en efectivo, en pesos. La transferencia se
+  // paga ahora con comprobante y el efectivo se entrega al recibir el pedido.
+  const [efectivoMonto,      setEfectivoMonto]      = useState<number | ''>('');
+  const [mixtoError,         setMixtoError]         = useState('');
   const [onBehalfOf,         setOnBehalfOf]         = useState('');
   const [comprobante,        setComprobante]        = useState<File | null>(null);
   const [comprobanteError,   setComprobanteError]   = useState('');
@@ -164,6 +165,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     setAnticipoError('');
     setUsarCredito(false);
     setCreditoPct(100);
+    setEfectivoMonto('');
+    setMixtoError('');
   }, [isOpen]);
 
   if (!isOpen || !orderDetails) return null;
@@ -218,10 +221,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     // Pagando por transferencia el comprobante es obligatorio: sin él, el pedido
     // se creaba igual y quedaba sin soporte de pago, sin avisar a nadie.
     // (Con anticipo el comprobante que cuenta es el del anticipo, validado abajo.)
-    // El mixto lleva una transferencia de verdad, así que también pide el
-    // comprobante — salvo que el reparto la haya dejado en cero.
-    const llevaTransferencia =
-      paymentMethod === 'digital' || (paymentMethod === 'mixto' && efectivoPct < 100);
+    // Un mixto tiene que tener las dos partes: si una queda en cero, lo que
+    // el cliente quiere es el otro método a secas.
+    if (paymentMethod === 'mixto' && !requiereAnticipo) {
+      const enEfectivo = Number(efectivoMonto) || 0;
+      if (enEfectivo <= 0) {
+        setMixtoError('Escribe cuánto vas a pagar en efectivo.');
+        return;
+      }
+      if (enEfectivo >= totalFinal) {
+        setMixtoError(`El efectivo debe ser menor que ${COP(totalFinal)}. Si vas a pagar todo en efectivo, elige ese método.`);
+        return;
+      }
+      setMixtoError('');
+    }
+
+    // El mixto lleva una transferencia de verdad: también pide el comprobante.
+    const llevaTransferencia = paymentMethod === 'digital' || paymentMethod === 'mixto';
     if (llevaTransferencia && !requiereAnticipo && !comprobante) {
       setComprobanteError('Adjunta el comprobante de la transferencia.');
       return;
@@ -259,7 +275,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
       ? (creditoCubreAnticipo ? 'efectivo' : anticipoMetodo || 'efectivo')
       : paymentMethod;
 
-    onConfirm(metodoPedido, onBehalfOf, comprobante, { usar: usarCredito, monto: creditoAplicar, efectivoPct }, {
+    onConfirm(metodoPedido, onBehalfOf, comprobante, { usar: usarCredito, monto: creditoAplicar, efectivoMonto: Number(efectivoMonto) || 0 }, {
       tieneDomicilio, address, municipio, departamento: orderDetails.departamento || 'Antioquia', date, time, observaciones,
     }, requiereAnticipo ? {
       requiere: true,
@@ -502,18 +518,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
             {/* Reparto entre las dos formas de pago */}
             {paymentMethod === 'mixto' && (
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                <p className="text-[10px] font-bold text-gray-500 mb-1">
+                <p className="text-[10px] font-bold text-gray-500 mb-2">
                   Pagas una parte ahora por transferencia y el resto en efectivo al recibir
                 </p>
-                <SplitPagoSlider
+                <SplitPagoMonto
                   total={totalFinal}
-                  porcentajeEfectivo={efectivoPct}
-                  onPorcentaje={setEfectivoPct}
+                  montoEfectivo={efectivoMonto}
+                  onMonto={(v: number | '') => { setEfectivoMonto(v); setMixtoError(''); }}
+                  error={mixtoError}
                 />
               </div>
             )}
 
-            {(paymentMethod === 'digital' || (paymentMethod === 'mixto' && efectivoPct < 100)) && (
+            {(paymentMethod === 'digital' || paymentMethod === 'mixto') && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">
@@ -527,8 +544,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 </div>
                 {paymentMethod === 'mixto' && (
                   <p className="text-[10px] font-bold text-blue-700 bg-blue-50 rounded-xl px-3 py-2">
-                    Transfiere {COP(totalFinal - Math.round((totalFinal * efectivoPct) / 100))} y
-                    ten listos {COP(Math.round((totalFinal * efectivoPct) / 100))} en efectivo para la entrega.
+                    Transfiere {COP(totalFinal - (Number(efectivoMonto) || 0))} y
+                    ten listos {COP(Number(efectivoMonto) || 0)} en efectivo para la entrega.
                   </p>
                 )}
                 <div className="relative group">
@@ -714,15 +731,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 <span>Domicilio</span><span>+{COP(COSTO_DOMICILIO)}</span>
               </div>
             )}
-            {paymentMethod === 'mixto' && !requiereAnticipo && (
+            {paymentMethod === 'mixto' && !requiereAnticipo && Number(efectivoMonto) > 0 && (
               <>
                 <div className="flex justify-between text-[11px] font-bold text-gray-500">
                   <span>En efectivo al recibir</span>
-                  <span>{COP(Math.round((totalFinal * efectivoPct) / 100))}</span>
+                  <span>{COP(Number(efectivoMonto))}</span>
                 </div>
                 <div className="flex justify-between text-[11px] font-bold text-gray-500">
                   <span>Por transferencia</span>
-                  <span>{COP(totalFinal - Math.round((totalFinal * efectivoPct) / 100))}</span>
+                  <span>{COP(totalFinal - Number(efectivoMonto))}</span>
                 </div>
               </>
             )}

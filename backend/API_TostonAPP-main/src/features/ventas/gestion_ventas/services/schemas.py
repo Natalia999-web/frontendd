@@ -24,10 +24,11 @@ class DomicilioVentaInput(BaseModel):
 class VentaCreate(BaseModel):
     ID_Usuario:             int
     Metodo_Pago:            str                              # "Efectivo", "Transferencia", "Contra entrega", "Mixto"
-    # Solo con Metodo_Pago = "Mixto": qué parte del pedido va en efectivo.
-    # Es una proporción propuesta; los montos los recalcula el backend sobre el
-    # total real para que el cliente no pueda declarar lo que le convenga.
-    pago_efectivo_porcentaje: Optional[int]      = None
+    # Solo con Metodo_Pago = "Mixto": cuánto del pedido se paga en efectivo.
+    # En pesos, no en porcentaje: el cliente pone la plata que tiene encima
+    # ("$3.500 de $22.500"), que casi nunca cae en un porcentaje redondo.
+    # El backend lo recorta al total real; el resto va por transferencia.
+    pago_efectivo_monto:      Optional[Decimal]  = None
     A_Nombre_De:            Optional[str]       = None
     productos:              list[ProductoVentaInput]
     codigo_descuento:       Optional[str]       = None

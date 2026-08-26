@@ -53,15 +53,16 @@ def _es_mixto(metodo: str | None) -> bool:
     return "mixto" in (metodo or "").strip().lower()
 
 
-def _partir_pago_mixto(total: Decimal, porcentaje_efectivo) -> tuple[Decimal, Decimal]:
+def _partir_pago_mixto(total: Decimal, monto_efectivo) -> tuple[Decimal, Decimal]:
     """Reparte el total entre efectivo y transferencia.
 
-    El cliente propone la proporción; el monto sale del total REAL calculado
-    aquí, y el redondeo se le carga a la transferencia para que las dos partes
-    sumen exactamente el total y no quede un peso suelto.
+    El cliente dice cuánta plata va a poner en efectivo —la que tiene encima,
+    que casi nunca es un porcentaje redondo— y el resto se transfiere. El monto
+    se recorta contra el total REAL calculado aquí: nadie puede declarar que
+    paga en efectivo más de lo que vale el pedido, ni un monto negativo.
     """
-    pct = max(0, min(100, int(porcentaje_efectivo or 0)))
-    efectivo = (total * Decimal(pct) / Decimal(100)).quantize(Decimal("0.01"))
+    pedido = Decimal(str(monto_efectivo or 0))
+    efectivo = max(Decimal("0"), min(pedido, total)).quantize(Decimal("0.01"))
     return efectivo, total - efectivo
 
 
@@ -767,7 +768,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     # descuentos y saldo a favor aplicados), no sobre lo que declaró el cliente.
     if _es_mixto(datos.Metodo_Pago):
         nueva_venta.Monto_Efectivo, nueva_venta.Monto_Transferencia = _partir_pago_mixto(
-            nueva_venta.Total, datos.pago_efectivo_porcentaje
+            nueva_venta.Total, datos.pago_efectivo_monto
         )
 
     # ── Pedido por encima del stock: anticipo obligatorio del 50% ──────────────
