@@ -1153,8 +1153,8 @@ export default function CrearPedido({ onClose, onSave }) {
                       {!pagarTodo && (
                         <div style={{ marginTop: 6, fontSize: 10, opacity: 0.85, textAlign: "center" }}>
                           Anticipo vía {form.anticipo_metodo}
-                          {form.anticipo_metodo === "Efectivo" && form.anticipo_efectivo ? " ✓ Confirmado" : ""}
-                          {form.anticipo_metodo === "Transferencia" && form.anticipo_comp_preview ? " ✓ Comprobante adjunto" : ""}
+                          {form.anticipo_metodo === "Efectivo" && form.anticipo_efectivo ? " — Confirmado" : ""}
+                          {form.anticipo_metodo === "Transferencia" && form.anticipo_comp_preview ? " — Comprobante adjunto" : ""}
                         </div>
                       )}
                     </div>
