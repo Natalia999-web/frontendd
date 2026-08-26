@@ -9,6 +9,7 @@
 //   5. Llamar onSave() para que GestionProductos recargue
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef } from "react";
+import { Check, X, AlertTriangle, Trash2 } from "lucide-react";
 import { tieneLetras } from "../../../utils/inputFilters";
 import CharCount from "../../../shared/components/CharCount";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
@@ -42,7 +43,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -288,7 +289,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
           <p className="modal-header__eyebrow">Productos</p>
           <h2 className="modal-header__title">Editar producto</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}>✕</button>
+        <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
       </div>
 
       {/* Steps */}
@@ -306,9 +307,10 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
               padding: "10px 14px", borderRadius: 9,
               background: "#ffebee", border: "1px solid #ef9a9a",
               color: "#c62828", fontSize: 13, fontWeight: 600, marginBottom: 14,
+              display: "flex", alignItems: "center", gap: 6,
             }}
           >
-            ⚠️ {errors.general}
+            <AlertTriangle size={13} style={{ flexShrink: 0 }} /> {errors.general}
           </div>
         )}
 
@@ -343,9 +345,9 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                 value={form.idCategoria}
                 onChange={e => set("idCategoria", e.target.value)}
                 getValue={c => c.ID_Categoria}
-                getLabel={c => `${c.Icono ?? "📦"} ${c.Nombre_Categoria}`}
+                getLabel={c => c.Icono ? `${c.Icono} ${c.Nombre_Categoria}` : c.Nombre_Categoria}
                 placeholder="— Seleccionar —"
-                searchPlaceholder="🔍 Buscar categoría…"
+                searchPlaceholder="Buscar categoría…"
                 className={`field-input${errors.idCategoria ? " field-input--error" : ""}`}
               />
               {errors.idCategoria && (
@@ -424,7 +426,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                 }}
               >
                 <p style={{ fontSize: 13, color: "#424242", margin: 0, fontWeight: 600 }}>
-                  💰 Información de costos
+                  Información de costos
                 </p>
                 <div
                   style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}
@@ -448,7 +450,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                   <p
                     style={{ fontSize: 11, color: "#e65100", marginTop: 8, marginBottom: 0 }}
                   >
-                    ⚠️ El precio actual es menor al costo de producción.
+                    El precio actual es menor al costo de producción.
                   </p>
                 )}
               </div>
@@ -566,7 +568,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                           fontSize: 10, cursor: "pointer", color: "#c62828",
                         }}
                       >
-                        ✕
+                        <X size={10} />
                       </button>
                     </div>
                   );
@@ -596,8 +598,8 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
                   }}
                 >
                   {form.imagenesABorrar.length > 0 && (
-                    <span style={{ color: "#c62828", marginRight: 8 }}>
-                      🗑 {form.imagenesABorrar.length} imagen{form.imagenesABorrar.length !== 1 ? "es" : ""} a eliminar
+                    <span style={{ color: "#c62828", marginRight: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <Trash2 size={13} /> {form.imagenesABorrar.length} imagen{form.imagenesABorrar.length !== 1 ? "es" : ""} a eliminar
                     </span>
                   )}
                   {form.archivosNuevos.length > 0 && (
@@ -634,7 +636,7 @@ export default function EditarProducto({ product, categorias = [], onClose, onSa
           <button className="btn-save" onClick={handleSave} disabled={saving}>
             {saving ? (
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span className="spinner">⏳</span> Guardando…
+                <span className="spinner" /> Guardando…
               </span>
             ) : (
               "Guardar cambios"

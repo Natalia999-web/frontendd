@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Search, X, AlertTriangle, Package, ClipboardList, Check, Eye, PenLine, Trash2, RefreshCw, Building2, FolderOpen, ShoppingCart } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import DateRangeFilter from "../../../shared/components/DateRangeFilter";
@@ -89,7 +90,7 @@ function Toast({ toast }) {
       boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
       display: "flex", alignItems: "center", gap: 8,
     }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "error" ? "✕" : toast.type === "warn" ? "⚠️" : "✓"}</span>
+      <span style={{ fontSize: 15, display: "flex", alignItems: "center" }}>{toast.type === "error" ? <X size={15} /> : toast.type === "warn" ? <AlertTriangle size={13} /> : <Check size={14} />}</span>
       {toast.message}
     </div>
   );
@@ -218,14 +219,14 @@ function ModalDetallesOrden({ orden, onClose }) {
           </div>
           {costoConProblemas && (
             <div style={{ background: "#fff3e0", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#e65100", display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>Algunos insumos no tienen precio de compra registrado o tienen unidades incompatibles. El costo puede estar incompleto — revisa el detalle de insumos.</span>
             </div>
           )}
 
           {/* Producto */}
           <div className="field-input field-input--disabled" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>📦</span>
+            <Package size={18} />
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#9e9e9e", textTransform: "uppercase", letterSpacing: 1 }}>Producto</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
@@ -249,7 +250,7 @@ function ModalDetallesOrden({ orden, onClose }) {
           {(orden.idFicha || orden.nombreInsumo) && (
             <div style={{ display: "grid", gap: 10 }}>
               <div className="field-input field-input--disabled" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 18 }}>{orden.idFicha ? "🗂️" : "📦"}</span>
+                {orden.idFicha ? <FolderOpen size={18} /> : <Package size={18} />}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "#9e9e9e", textTransform: "uppercase", letterSpacing: 1 }}>
                     {orden.idFicha ? "Insumos de ficha técnica" : "Insumo"}
@@ -327,7 +328,7 @@ function ModalDetallesOrden({ orden, onClose }) {
                                     </td>
                                     <td style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>
                                       {detalleItem?.error ? (
-                                        <span title={detalleItem.error} style={{ color: "#e65100", cursor: "help", fontSize: 12 }}>⚠️ S/P</span>
+                                        <span title={detalleItem.error} style={{ color: "#e65100", cursor: "help", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 3 }}><AlertTriangle size={12} /> S/P</span>
                                       ) : costoItem != null ? (
                                         <span style={{ fontWeight: 700, color: "#616161" }}>{fmt(costoItem)}</span>
                                       ) : (
@@ -389,7 +390,7 @@ function ModalDetallesOrden({ orden, onClose }) {
 
         {orden.idFicha && (
           <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>📋</span>
+            <ClipboardList size={20} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#2e7d32", marginBottom: 2 }}>Ficha técnica disponible</div>
               <div style={{ fontSize: 12, color: "#388e3c" }}>Consulta los insumos, cantidades y procedimiento detallado del producto.</div>
@@ -516,7 +517,7 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
             <p className="modal-header__eyebrow">Producción</p>
             <h2 className="modal-header__title">Cambiar Estado</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
         </div>
 
         <div className="modal-body">
@@ -558,7 +559,7 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 12, padding: "14px", textAlign: "center" }}>
-                <div style={{ fontSize: 26, marginBottom: 6 }}>⚠️</div>
+                <div style={{ marginBottom: 6, display: "flex", justifyContent: "center" }}><AlertTriangle size={26} style={{ color: "#f9a825" }} /></div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#6d4c00", marginBottom: 4 }}>¿Confirmar cambio de estado?</div>
                 <div style={{ fontSize: 12, color: "#9a6400" }}>Esta acción actualizará el flujo de producción.</div>
               </div>
@@ -616,8 +617,8 @@ function ModalCambiarEstado({ orden, onClose, onConfirm, saving }) {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#2e7d32", fontWeight: 600 }}>
-                      ✓ Todos los insumos tienen stock suficiente
+                    <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#2e7d32", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Check size={14} /> Todos los insumos tienen stock suficiente
                     </div>
                   )
                 ) : null
@@ -695,7 +696,7 @@ function ModalErrorEstado({ mensaje, orden, onClose }) {
             background: "#ffebee", border: "1px solid #ef9a9a",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 24, margin: "0 auto 14px",
-          }}>⚠️</div>
+          }}><AlertTriangle size={24} style={{ color: "#c62828" }} /></div>
           <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>
             {titulo}
           </h3>
@@ -709,7 +710,7 @@ function ModalErrorEstado({ mensaje, orden, onClose }) {
               display: "flex", alignItems: "center", gap: 10,
               textAlign: "left", marginBottom: 8,
             }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>📋</span>
+              <ClipboardList size={20} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32", marginBottom: 2 }}>
                   Producto: {orden.nombreProducto}
@@ -738,7 +739,7 @@ function ModalErrorEstado({ mensaje, orden, onClose }) {
               display: "flex", alignItems: "center", gap: 10,
               textAlign: "left", marginBottom: 8,
             }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>🛒</span>
+              <ShoppingCart size={20} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e65100", marginBottom: 2 }}>
                   ¿Faltan materias primas?
@@ -796,7 +797,7 @@ function ModalEliminarOrden({ orden, onClose, onConfirm }) {
             background: "#ffebee", border: "1px solid #ef9a9a",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 24, margin: "0 auto 14px",
-          }}>🗑️</div>
+          }}><Trash2 size={24} style={{ color: "#c62828" }} /></div>
           <h3 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, color: "#1a1a1a" }}>Eliminar orden</h3>
           <p style={{ margin: "0 0 4px", fontSize: 14, color: "#616161" }}>
             ¿Estás seguro de que deseas eliminar la orden <strong>#{orden.id}</strong>?
@@ -942,7 +943,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
             <p className="modal-header__eyebrow">Producción</p>
             <h2 className="modal-header__title">{orden ? `Editar Orden #${orden.id}` : "Nueva Orden"}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -956,7 +957,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               getValue={p => p.id}
               getLabel={p => p.nombre}
               placeholder="Seleccione un producto…"
-              searchPlaceholder="🔍 Buscar producto…"
+              searchPlaceholder="Buscar producto…"
               error={!!errors.idProducto}
             />
             {errors.idProducto && <span className="field-error">{errors.idProducto}</span>}
@@ -1077,7 +1078,7 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
               background: "#ffebee", border: "1.5px solid #ef9a9a",
               borderRadius: 10, padding: "12px 14px",
             }}>
-              <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#c62828", marginBottom: 2 }}>
                   Error al guardar
@@ -1246,7 +1247,7 @@ export default function GestionOrdenesProduccion() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input
               type="text"
               className="search-input"
@@ -1294,8 +1295,8 @@ export default function GestionOrdenesProduccion() {
           </div>
 
           {(filterEstado !== "todos" || filterDesde || filterHasta || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -1325,7 +1326,7 @@ export default function GestionOrdenesProduccion() {
                   <tr>
                     <td colSpan={7}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🏭</div>
+                        <div className="empty-state__icon"><Building2 size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                         <p className="empty-state__text">
                           {search || filterEstado !== "todos" ? "Sin órdenes que coincidan." : "No hay órdenes registradas."}
                         </p>
@@ -1357,10 +1358,10 @@ export default function GestionOrdenesProduccion() {
                     <td><EstadoBadge estado={orden.estado} /></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   data-tooltip="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}>👁</button>
-                        <button className="act-btn act-btn--edit"   data-tooltip="Editar"         onClick={() => setModal({ type: "form",     orden })}>✎</button>
-                        <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })} disabled={actionSaving}>🔄</button>
-                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}>🗑️</button>
+                        <button className="act-btn act-btn--view"   data-tooltip="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}><Eye size={15} /></button>
+                        <button className="act-btn act-btn--edit"   data-tooltip="Editar"         onClick={() => setModal({ type: "form",     orden })}><PenLine size={15} /></button>
+                        <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })} disabled={actionSaving}><RefreshCw size={15} /></button>
+                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}><Trash2 size={15} /></button>
                       </div>
                     </td>
                   </tr>

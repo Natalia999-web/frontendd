@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, Package, Utensils, CornerUpLeft, Zap, Scale } from "lucide-react";
 
 /**
  * SalidaModal — Modal unificado de salidas para Productos e Insumos
@@ -15,10 +16,10 @@ import { useState } from "react";
  */
 
 const TIPOS = [
-  { val: "daño",       label: "Dañado",      icon: "💥", color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
-  { val: "ajuste",     label: "Ajuste",      icon: "⚖️", color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
-  { val: "consumo",    label: "Consumo",     icon: "🍽️", color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8" },
-  { val: "devolución", label: "Devolución",  icon: "↩️", color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
+  { val: "daño",       label: "Dañado",      Icon: Zap,           color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
+  { val: "ajuste",     label: "Ajuste",      Icon: Scale,         color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
+  { val: "consumo",    label: "Consumo",     Icon: Utensils,      color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8" },
+  { val: "devolución", label: "Devolución",  Icon: CornerUpLeft,  color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
 ];
 
 export default function SalidaModal({ entidad, tipo, stockActual, unidadLabel = "uds.", onClose, onConfirm }) {
@@ -67,14 +68,14 @@ export default function SalidaModal({ entidad, tipo, stockActual, unidadLabel = 
             <p className="modal-header__eyebrow">{tipo === "producto" ? "Productos" : "Insumos"}</p>
             <h2 className="modal-header__title">Registrar salida</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
         </div>
 
         <div className="modal-body" style={{ overflow: "visible" }}>
 
           {/* Entidad */}
           <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f9fdf9", border: "1px solid #c8e6c9", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{tipo === "producto" ? "📦" : "🧺"}</span>
+            <span style={{ display: "flex", alignItems: "center" }}>{tipo === "producto" ? <Package size={20} /> : <Package size={20} />}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{entidad.nombre}</div>
               <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 1 }}>
@@ -99,7 +100,7 @@ export default function SalidaModal({ entidad, tipo, stockActual, unidadLabel = 
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                     transition: "all 0.15s",
                   }}>
-                  <span style={{ fontSize: 18 }}>{t.icon}</span>{t.label}
+                  <t.Icon size={18} />{t.label}
                 </button>
               ))}
             </div>

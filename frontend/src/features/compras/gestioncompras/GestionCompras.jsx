@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Search, X, Check, CheckCircle2, Ban, Package, Building2, CreditCard, FileText, Banknote, Eye, PenLine, Trash2, ShoppingCart, Clock } from "lucide-react";
 import { getCompras, crearCompra as apiCrearCompra, editarCompra, completarCompra, anularCompra } from "../../../services/comprasService.js";
 import { getProveedores } from "../../../services/proveedoresService.js";
 import CrearCompra from "./CrearCompra.jsx";
@@ -13,10 +14,10 @@ const COP = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
 const METODOS_LABEL = {
-  efectivo:      { label: "Efectivo",      icon: "💵", bg: "#e8f5e9", color: "#2e7d32", border: "#c8e6c9" },
-  transferencia: { label: "Transferencia", icon: "🏦", bg: "#e3f2fd", color: "#1565c0", border: "#90caf9" },
-  crédito:       { label: "Crédito",       icon: "💳", bg: "#f3e5f5", color: "#6a1b9a", border: "#ce93d8" },
-  cheque:        { label: "Cheque",        icon: "📄", bg: "#fff8e1", color: "#f57f17", border: "#ffe082" },
+  efectivo:      { label: "Efectivo",      Icon: Banknote,    bg: "#e8f5e9", color: "#2e7d32", border: "#c8e6c9" },
+  transferencia: { label: "Transferencia", Icon: Building2,   bg: "#e3f2fd", color: "#1565c0", border: "#90caf9" },
+  crédito:       { label: "Crédito",       Icon: CreditCard,  bg: "#f3e5f5", color: "#6a1b9a", border: "#ce93d8" },
+  cheque:        { label: "Cheque",        Icon: FileText,    bg: "#fff8e1", color: "#f57f17", border: "#ffe082" },
 };
 
 /* ── Toast ────────────────────────────────────────────────── */
@@ -24,7 +25,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "success" ? "#2e7d32" : "#c62828" }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "success" ? "✓" : "✕"}</span>
+      <span style={{ fontSize: 15, display: "flex", alignItems: "center" }}>{toast.type === "success" ? <Check size={14} /> : <X size={14} />}</span>
       {toast.message}
     </div>
   );
@@ -221,7 +222,7 @@ export default function GestionCompras() {
         {/* TOOLBAR */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input
               type="text"
               className="search-input"
@@ -313,8 +314,8 @@ export default function GestionCompras() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterProv("todos"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterProv("todos"); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -351,7 +352,7 @@ export default function GestionCompras() {
                   <tr>
                     <td colSpan={7}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🛒</div>
+                        <div className="empty-state__icon"><ShoppingCart size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                         <p className="empty-state__text">
                           {hasFilter || search ? "Sin compras que coincidan." : "Sin compras registradas"}
                         </p>
@@ -376,7 +377,7 @@ export default function GestionCompras() {
                       {/* Proveedor */}
                       <td>
                         <div className="prov-cell">
-                          <div className="prov-avatar">🏭</div>
+                          <div className="prov-avatar" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><Building2 size={18} /></div>
                           <div>
                             <div className="prov-name">{c.proveedor || prov?.Responsable || prov?.responsable || "—"}</div>
                             <div className="prov-id">{prov?.Ciudad || prov?.ciudad || ""}</div>
@@ -394,7 +395,7 @@ export default function GestionCompras() {
                           border:     `1px solid ${metodo?.border || "#e0e0e0"}`,
                           whiteSpace: "nowrap",
                         }}>
-                          {metodo?.icon} {metodo?.label || c.metodoPago}
+                          {metodo?.Icon && <metodo.Icon size={14} style={{ flexShrink: 0 }} />} {metodo?.label || c.metodoPago}
                         </span>
                       </td>
 
@@ -406,16 +407,16 @@ export default function GestionCompras() {
                       {/* Estado */}
                       <td>
                         <span className={`estado-chip estado-chip--${c.estado}`}>
-                          {c.estado === "pendiente"  && "⏳ Pendiente"}
-                          {c.estado === "completada" && "✅ Completada"}
-                          {c.estado === "anulada"    && "🚫 Anulada"}
+                          {c.estado === "pendiente"  && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Clock size={13} /> Pendiente</span>}
+                          {c.estado === "completada" && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={13} /> Completada</span>}
+                          {c.estado === "anulada"    && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Ban size={13} /> Anulada</span>}
                         </span>
                       </td>
 
                       {/* Fecha llegada */}
                       <td>
                         {c.fecha_llegada
-                          ? <span className="date-badge">📦 {fmtFecha(c.fecha_llegada)}</span>
+                          ? <span className="date-badge" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Package size={13} /> {fmtFecha(c.fecha_llegada)}</span>
                           : <span style={{ fontSize: 11, color: "#bdbdbd", fontWeight: 600 }}>Pendiente</span>
                         }
                       </td>
@@ -427,27 +428,27 @@ export default function GestionCompras() {
                             className="act-btn act-btn--view"
                             data-tooltip="Ver detalle de compra"
                             onClick={() => setModal({ mode: "view", compra: c })}
-                          >👁</button>
+                          ><Eye size={15} /></button>
 
                           {c.estado === "pendiente" && (
                             <button
                               className="act-btn act-btn--success"
                               data-tooltip="Registrar llegada de mercancía"
                               onClick={() => handleCompletarRapido(c.id)}
-                            >✅</button>
+                            ><CheckCircle2 size={15} /></button>
                           )}
                           <button
                             className="act-btn act-btn--edit"
                             data-tooltip="Editar compra"
                             onClick={() => setModal({ mode: "edit", compra: c })}
-                          >✎</button>
+                          ><PenLine size={15} /></button>
 
                           {c.estado !== "anulada" && (
                             <button
                               className="act-btn act-btn--delete"
                               data-tooltip="Anular compra"
                               onClick={() => setModal({ mode: "anular", compra: c })}
-                            >🚫</button>
+                            ><Ban size={15} /></button>
                           )}
                         </div>
                       </td>
