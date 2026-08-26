@@ -515,7 +515,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               </div>
               <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método de pago del anticipo <span style={{ color: "#e53935" }}>*</span></p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                {["Efectivo", "Transferencia"].map(m => (
                   <button key={m} type="button" onClick={() => { setApMetodo(m); setApEfectivo(false); setApErrors({}); }}
                     style={{ padding: "10px 8px", borderRadius: 10, border: `2px solid ${apMetodo === m ? "#f57c00" : "#e0e0e0"}`, background: apMetodo === m ? "#fff3e0" : "#fff", color: apMetodo === m ? "#e65100" : "#888", fontWeight: apMetodo === m ? 700 : 500, fontSize: 12, cursor: "pointer" }}>
                     {m}
@@ -532,7 +532,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               )}
               {apMetodo === "Transferencia" && (
                 <p style={{ fontSize: 11, color: "#666", background: "#f5f5f5", padding: "8px 10px", borderRadius: 6, marginBottom: 8 }}>
-                  Sube el comprobante usando el botón 📎 de la tabla después de guardar.
+                  Sube el comprobante usando el botón de la tabla después de guardar.
                 </p>
               )}
               {(apErrors.metodo || apErrors.efectivo) && (
@@ -577,7 +577,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
 
               <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, color: "#555" }}>Método <span style={{ color: "#e53935" }}>*</span></p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                {["Efectivo 💵", "Transferencia 🏦"].map(m => (
+                {["Efectivo", "Transferencia"].map(m => (
                   <button key={m} type="button"
                     onClick={() => { setPfMetodo(m); setPfEfectivo(false); setPfArchivo(null); setPfPreview(null); setPfErrors({}); }}
                     style={{ padding: "10px 8px", borderRadius: 8, border: `2px solid ${pfMetodo === m ? "#f9a825" : "#e0e0e0"}`, background: pfMetodo === m ? "#fff8e1" : "#fff", color: pfMetodo === m ? "#e65100" : "#888", fontWeight: pfMetodo === m ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
@@ -943,7 +943,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                       getValue={o => o.value}
                       getLabel={o => o.label}
                       placeholder="— Valle de Aburrá —"
-                      searchPlaceholder="🔍 Buscar municipio…"
+                      searchPlaceholder="Buscar municipio…"
                       className={`field-select${errors.municipio ? " error" : ""}`}
                     />
                     {errors.municipio && <span className="field-error">{errors.municipio}</span>}
