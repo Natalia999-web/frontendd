@@ -72,8 +72,8 @@ export async function crearPedidoCliente({
 
   const entrega = resolverEntrega(deliveryInfo, orderDetails);
 
-  // Comprobante del pedido: solo aplica pagando por transferencia.
-  const comprobanteUrl = paymentMethod === 'digital' && comprobante
+  // Comprobante del pedido: aplica cuando hay transferencia (pure o mixto).
+  const comprobanteUrl = (paymentMethod === 'digital' || paymentMethod === 'mixto') && comprobante
     ? await subirComprobante(comprobante, 'el comprobante')
     : null;
 
