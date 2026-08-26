@@ -369,13 +369,6 @@ export default function CrearProveedor({ onClose, onSave }) {
               </div>
 
               <p className="section-label">Ubicación</p>
-              <FieldText
-                label="Dirección (opcional)"
-                value={form.direccion}
-                onChange={v => set("direccion", v)}
-                error={errors.direccion}
-                placeholder="Ej: Cra 5 #12-34"
-              />
               <LocationSelects
                 departamento={form.departamento}
                 ciudad={form.ciudad}
@@ -383,6 +376,13 @@ export default function CrearProveedor({ onClose, onSave }) {
                 onCiudad={v => set("ciudad", v)}
                 errDepto={errors.departamento}
                 errCiudad={errors.ciudad}
+              />
+              <FieldText
+                label="Dirección (opcional)"
+                value={form.direccion}
+                onChange={v => set("direccion", v)}
+                error={errors.direccion}
+                placeholder="Ej: Cra 5 #12-34"
               />
             </>
           )}
