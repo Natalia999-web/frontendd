@@ -6,7 +6,8 @@ const fmtFechaLarga = (str) => {
   return new Date(str).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items, subtotal, costoEntrega, descuento, total }) {
+function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items, subtotal, costoEntrega, descuento, total, anticipo = 0, pagoFinalRegistrado = false }) {
+  const saldoPendiente = pagoFinalRegistrado ? 0 : Math.max(0, total - anticipo);
   const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
@@ -82,6 +83,13 @@ function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items,
     .t-total{padding-top:14px}
     .t-total .lbl{font-size:15px;font-weight:900;color:#1a1a1a;text-transform:uppercase;letter-spacing:.5px}
     .t-total .val{font-size:26px;font-weight:900;color:#2e7d32}
+    .t-row.anticipo-row .lbl{color:#2e7d32;font-weight:700}
+    .t-row.anticipo-row .val{color:#2e7d32}
+    .t-row.saldo-row{padding:10px 0}
+    .t-row.saldo-pending .lbl{font-size:14px;font-weight:900;color:#e65100;text-transform:uppercase;letter-spacing:.4px}
+    .t-row.saldo-pending .val{font-size:22px;font-weight:900;color:#e65100}
+    .t-row.saldo-paid .lbl{font-size:14px;font-weight:900;color:#2e7d32;text-transform:uppercase;letter-spacing:.4px}
+    .t-row.saldo-paid .val{font-size:18px;font-weight:900;color:#2e7d32}
 
     /* FOOTER */
     .footer{background:linear-gradient(135deg,#1b5e20,#2e7d32);padding:32px 52px;text-align:center;margin-top:40px}
@@ -187,9 +195,19 @@ function buildHTML({ numero, fecha, estado, cliente, entrega, metodoPago, items,
       </div>` : ''}
       <div class="t-div"></div>
       <div class="t-row t-total">
-        <span class="lbl">Total pagado</span>
+        <span class="lbl">${anticipo > 0 ? 'Total del pedido' : 'Total pagado'}</span>
         <span class="val">${COP(total)}</span>
       </div>
+      ${anticipo > 0 ? `
+      <div class="t-div"></div>
+      <div class="t-row anticipo-row">
+        <span class="lbl">- Anticipo recibido</span>
+        <span class="val">-${COP(anticipo)}</span>
+      </div>
+      <div class="t-row saldo-row ${saldoPendiente > 0 ? 'saldo-pending' : 'saldo-paid'}">
+        <span class="lbl">${saldoPendiente > 0 ? 'Saldo pendiente al entregar' : 'Saldo — PAGADO'}</span>
+        <span class="val">${COP(saldoPendiente)}</span>
+      </div>` : ''}
     </div>
 
     <button class="print-btn" onclick="window.print()">🖨️ &nbsp;Guardar como PDF / Imprimir</button>
@@ -225,6 +243,12 @@ export function descargarFacturaPedido(pedido, usuario) {
   const subtotal = items.reduce((s, p) => s + p.precio * p.cantidad, 0);
   const costo    = pedido.domicilio ? 5000 : 0;
   const desc     = pedido.descuento || 0;
+  const total    = pedido.total ?? (subtotal + costo - desc);
+
+  const anticipoMonto = pedido.anticipo_registrado
+    ? Number(pedido.anticipo_monto ?? 0)
+    : 0;
+  const pagoFinalRegistrado = !!pedido.pago_final_registrado;
 
   const html = buildHTML({
     numero:       pedido.numero,
@@ -241,7 +265,9 @@ export function descargarFacturaPedido(pedido, usuario) {
     subtotal,
     costoEntrega: costo,
     descuento:    desc,
-    total:        subtotal + costo - desc,
+    total,
+    anticipo:            anticipoMonto,
+    pagoFinalRegistrado,
   });
 
   abrirFactura(html);
