@@ -22,6 +22,9 @@ const adaptPedido = (p) => {
     numero:           p.Numero_Pedido     || p.numero_pedido   || p.numero || `V-${p.ID_Venta || p.id}`,
     estado,
     metodo_pago:      p.Metodo_Pago       || p.metodo_pago     || "",
+    // Pago mixto: cuánto va de cada forma (null en el resto de pedidos).
+    monto_efectivo:      p.monto_efectivo      ?? null,
+    monto_transferencia: p.monto_transferencia ?? null,
     domicilio:        !!(p.tiene_domicilio ?? p.Domicilio ?? p.domicilio),
     id_domicilio:     p.ID_Domicilio || null,
     direccion_entrega: p.direccion_entrega    || "",

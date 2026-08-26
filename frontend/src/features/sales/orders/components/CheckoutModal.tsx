@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Banknote, User, MapPin, ShoppingBag, CheckCircle2, Sparkles, ShieldCheck, UploadCloud, ChevronRight, Gift, Truck, Phone, Save } from 'lucide-react';
+import { X, CreditCard, Banknote, Scale, User, MapPin, ShoppingBag, CheckCircle2, Sparkles, ShieldCheck, UploadCloud, ChevronRight, Gift, Truck, Phone, Save } from 'lucide-react';
 import { CartItem } from '../services/cartService';
 import { getUser } from '../../../../services/authService';
 import { getMiCredito } from '../../../../services/pedidosService';
 import { apiFetch } from '../../../../utils/api';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
 import SaldoSlider from '../../../../shared/components/SaldoSlider';
+import SplitPagoMonto from '../../../../shared/components/SplitPagoMonto';
 import './CheckoutModal.css';
 
 // Datos de la cuenta bancaria — actualiza en GestionPedidos.jsx también
@@ -34,7 +35,7 @@ interface CheckoutModalProps {
     observaciones?: string;
     tieneDomicilio?: boolean;
   } | null;
-  onConfirm: (paymentMethod: string, onBehalfOf: string, comprobante?: File | null, saldoAFavor?: { usar: boolean; monto: number }, deliveryInfo?: { tieneDomicilio: boolean; address: string; municipio: string; departamento: string; date: string; time: string; observaciones: string }, anticipoData?: { requiere: boolean; metodo: string; efectivo: boolean; comprobante: File | null; monto: number; saldo: number; pagarTodo?: boolean; creditoCubreAnticipo?: boolean }) => void;
+  onConfirm: (paymentMethod: string, onBehalfOf: string, comprobante?: File | null, saldoAFavor?: { usar: boolean; monto: number; efectivoMonto?: number }, deliveryInfo?: { tieneDomicilio: boolean; address: string; municipio: string; departamento: string; date: string; time: string; observaciones: string }, anticipoData?: { requiere: boolean; metodo: string; efectivo: boolean; comprobante: File | null; monto: number; saldo: number; pagarTodo?: boolean; creditoCubreAnticipo?: boolean }) => void;
 }
 
 const COSTO_DOMICILIO = 5000;
@@ -85,6 +86,10 @@ const SaldoAFavorPicker: React.FC<{
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDetails, onConfirm }) => {
   const [paymentMethod,      setPaymentMethod]      = useState('digital');
+  // Pago mixto: cuánta plata va en efectivo, en pesos. La transferencia se
+  // paga ahora con comprobante y el efectivo se entrega al recibir el pedido.
+  const [efectivoMonto,      setEfectivoMonto]      = useState<number | ''>('');
+  const [mixtoError,         setMixtoError]         = useState('');
   const [onBehalfOf,         setOnBehalfOf]         = useState('');
   const [comprobante,        setComprobante]        = useState<File | null>(null);
   const [comprobanteError,   setComprobanteError]   = useState('');
@@ -160,6 +165,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     setAnticipoError('');
     setUsarCredito(false);
     setCreditoPct(100);
+    setEfectivoMonto('');
+    setMixtoError('');
   }, [isOpen]);
 
   if (!isOpen || !orderDetails) return null;
@@ -214,7 +221,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     // Pagando por transferencia el comprobante es obligatorio: sin él, el pedido
     // se creaba igual y quedaba sin soporte de pago, sin avisar a nadie.
     // (Con anticipo el comprobante que cuenta es el del anticipo, validado abajo.)
-    if (paymentMethod === 'digital' && !requiereAnticipo && !comprobante) {
+    // Un mixto tiene que tener las dos partes: si una queda en cero, lo que
+    // el cliente quiere es el otro método a secas.
+    if (paymentMethod === 'mixto' && !requiereAnticipo) {
+      const enEfectivo = Number(efectivoMonto) || 0;
+      if (enEfectivo <= 0) {
+        setMixtoError('Escribe cuánto vas a pagar en efectivo.');
+        return;
+      }
+      if (enEfectivo >= totalFinal) {
+        setMixtoError(`El efectivo debe ser menor que ${COP(totalFinal)}. Si vas a pagar todo en efectivo, elige ese método.`);
+        return;
+      }
+      setMixtoError('');
+    }
+
+    // El mixto lleva una transferencia de verdad: también pide el comprobante.
+    const llevaTransferencia = paymentMethod === 'digital' || paymentMethod === 'mixto';
+    if (llevaTransferencia && !requiereAnticipo && !comprobante) {
       setComprobanteError('Adjunta el comprobante de la transferencia.');
       return;
     }
@@ -251,7 +275,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
       ? (creditoCubreAnticipo ? 'efectivo' : anticipoMetodo || 'efectivo')
       : paymentMethod;
 
-    onConfirm(metodoPedido, onBehalfOf, comprobante, { usar: usarCredito, monto: creditoAplicar }, {
+    onConfirm(metodoPedido, onBehalfOf, comprobante, { usar: usarCredito, monto: creditoAplicar, efectivoMonto: Number(efectivoMonto) || 0 }, {
       tieneDomicilio, address, municipio, departamento: orderDetails.departamento || 'Antioquia', date, time, observaciones,
     }, requiereAnticipo ? {
       requiere: true,
@@ -477,20 +501,36 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
               Método de pago del pedido
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'digital',  icon: <CreditCard size={14} />, label: 'Transferencia' },
                 { id: 'efectivo', icon: <Banknote size={14} />,   label: 'Efectivo' },
+                { id: 'mixto',    icon: <Scale size={14} />,      label: 'Mixto' },
               ].map(m => (
                 <button key={m.id} onClick={() => setPaymentMethod(m.id)}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all text-xs font-black ${paymentMethod === m.id ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200'}`}>
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all text-[11px] font-black ${paymentMethod === m.id ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200'}`}>
                   <div className={`p-1.5 rounded-lg ${paymentMethod === m.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{m.icon}</div>
                   {m.label}
                 </button>
               ))}
             </div>
 
-            {paymentMethod === 'digital' && (
+            {/* Reparto entre las dos formas de pago */}
+            {paymentMethod === 'mixto' && (
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-500 mb-2">
+                  Pagas una parte ahora por transferencia y el resto en efectivo al recibir
+                </p>
+                <SplitPagoMonto
+                  total={totalFinal}
+                  montoEfectivo={efectivoMonto}
+                  onMonto={(v: number | '') => { setEfectivoMonto(v); setMixtoError(''); }}
+                  error={mixtoError}
+                />
+              </div>
+            )}
+
+            {(paymentMethod === 'digital' || paymentMethod === 'mixto') && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">
@@ -502,6 +542,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                     ))}
                   </div>
                 </div>
+                {paymentMethod === 'mixto' && (
+                  <p className="text-[10px] font-bold text-blue-700 bg-blue-50 rounded-xl px-3 py-2">
+                    Transfiere {COP(totalFinal - (Number(efectivoMonto) || 0))} y
+                    ten listos {COP(Number(efectivoMonto) || 0)} en efectivo para la entrega.
+                  </p>
+                )}
                 <div className="relative group">
                   <input type="file" accept="image/*"
                     onChange={e => { setComprobante(e.target.files?.[0] || null); setComprobanteError(''); }}
@@ -684,6 +730,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               <div className="flex justify-between text-xs font-bold text-purple-700">
                 <span>Domicilio</span><span>+{COP(COSTO_DOMICILIO)}</span>
               </div>
+            )}
+            {paymentMethod === 'mixto' && !requiereAnticipo && Number(efectivoMonto) > 0 && (
+              <>
+                <div className="flex justify-between text-[11px] font-bold text-gray-500">
+                  <span>En efectivo al recibir</span>
+                  <span>{COP(Number(efectivoMonto))}</span>
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-gray-500">
+                  <span>Por transferencia</span>
+                  <span>{COP(totalFinal - Number(efectivoMonto))}</span>
+                </div>
+              </>
             )}
             {usarCredito && creditoAplicar > 0 && (
               <div className="flex justify-between text-xs font-bold text-green-700">

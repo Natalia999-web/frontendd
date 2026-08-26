@@ -1,13 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   Barra del saldo a favor
+   Barra de porcentaje
 
    El control nativo se ve distinto en cada navegador y en Windows sale con
    un pulgar cuadrado. Aquí se dibuja completo: riel redondeado, relleno
    verde hasta donde va la barra y un pulgar circular que crece al tocarlo.
    El porcentaje entra por la variable --pct que pone el componente.
+   La usan el saldo a favor y el reparto del pago mixto.
    ═══════════════════════════════════════════════════════════════════════ */
 
-.saldo-slider {
+.barra-pct {
   --pct: 100%;
   --verde:       #2e7d32;
   --verde-claro: #66bb6a;
@@ -15,12 +16,12 @@
 }
 
 /* ── Burbuja que sigue al pulgar ─────────────────────────────────────── */
-.saldo-slider__pista {
+.barra-pct__pista {
   position: relative;
   padding-top: 32px;
 }
 
-.saldo-slider__burbuja {
+.barra-pct__burbuja {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
@@ -37,7 +38,7 @@
   pointer-events: none;
 }
 
-.saldo-slider__burbuja::after {
+.barra-pct__burbuja::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -48,7 +49,7 @@
 }
 
 /* ── Riel y pulgar ───────────────────────────────────────────────────── */
-.saldo-slider__input {
+.barra-pct__input {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -58,7 +59,7 @@
   cursor: pointer;
 }
 
-.saldo-slider__input::-webkit-slider-runnable-track {
+.barra-pct__input::-webkit-slider-runnable-track {
   height: 10px;
   border-radius: 999px;
   background-color: var(--riel);
@@ -68,7 +69,7 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.saldo-slider__input::-webkit-slider-thumb {
+.barra-pct__input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 24px;
@@ -81,37 +82,37 @@
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.saldo-slider__input:hover::-webkit-slider-thumb {
+.barra-pct__input:hover::-webkit-slider-thumb {
   transform: scale(1.12);
 }
 
-.saldo-slider__input:active::-webkit-slider-thumb {
+.barra-pct__input:active::-webkit-slider-thumb {
   transform: scale(1.2);
   box-shadow: 0 0 0 8px rgba(46, 125, 50, 0.14);
 }
 
-.saldo-slider__input:focus-visible {
+.barra-pct__input:focus-visible {
   outline: none;
 }
 
-.saldo-slider__input:focus-visible::-webkit-slider-thumb {
+.barra-pct__input:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 8px rgba(46, 125, 50, 0.22);
 }
 
 /* Firefox pinta el relleno solo, sin gradiente sobre el riel */
-.saldo-slider__input::-moz-range-track {
+.barra-pct__input::-moz-range-track {
   height: 10px;
   border-radius: 999px;
   background: var(--riel);
 }
 
-.saldo-slider__input::-moz-range-progress {
+.barra-pct__input::-moz-range-progress {
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--verde-claro), var(--verde));
 }
 
-.saldo-slider__input::-moz-range-thumb {
+.barra-pct__input::-moz-range-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -121,13 +122,13 @@
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.saldo-slider__input:active::-moz-range-thumb {
+.barra-pct__input:active::-moz-range-thumb {
   transform: scale(1.2);
   box-shadow: 0 0 0 8px rgba(46, 125, 50, 0.14);
 }
 
 /* ── Extremos y resto ────────────────────────────────────────────────── */
-.saldo-slider__topes {
+.barra-pct__topes {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -137,18 +138,18 @@
   color: #b0bdb2;
 }
 
-.saldo-slider__resto {
+.barra-pct__resto {
   color: #5d6f61;
 }
 
 /* ── Atajos ──────────────────────────────────────────────────────────── */
-.saldo-slider__atajos {
+.barra-pct__atajos {
   display: flex;
   gap: 6px;
   margin-top: 10px;
 }
 
-.saldo-slider__atajo {
+.barra-pct__atajo {
   flex: 1;
   padding: 5px 0;
   border-radius: 999px;
@@ -162,12 +163,12 @@
   transition: all 0.14s ease;
 }
 
-.saldo-slider__atajo:hover {
+.barra-pct__atajo:hover {
   border-color: var(--verde-claro);
   color: var(--verde);
 }
 
-.saldo-slider__atajo--activo {
+.barra-pct__atajo--activo {
   background: linear-gradient(135deg, var(--verde-claro), var(--verde));
   border-color: var(--verde);
   color: #fff;

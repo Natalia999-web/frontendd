@@ -73,6 +73,9 @@ def migrate_db():
             "ALTER TABLE Compras ADD COLUMN Otros_Costos DECIMAL(30,2) NULL",
             """INSERT IGNORE INTO Permisos (ID_Permiso, Permiso, Descripcion)
                VALUES (60, 'ver_landing_page', 'Ver la landing page desde el panel')""",
+            # Pago mixto: cuánto del pedido va en efectivo y cuánto por transferencia
+            "ALTER TABLE Ventas ADD COLUMN Monto_Efectivo DECIMAL(30,2) NULL",
+            "ALTER TABLE Ventas ADD COLUMN Monto_Transferencia DECIMAL(30,2) NULL",
             """CREATE TABLE IF NOT EXISTS Lote_Producto (
                 ID_Lote_Producto    INT AUTO_INCREMENT PRIMARY KEY,
                 ID_Orden_Produccion INT,

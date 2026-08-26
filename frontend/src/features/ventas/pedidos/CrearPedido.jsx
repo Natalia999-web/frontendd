@@ -6,6 +6,7 @@ import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import SaldoSlider from "../../../shared/components/SaldoSlider";
+import SplitPagoMonto from "../../../shared/components/SplitPagoMonto";
 import { getCreditoCliente } from "../../../services/devolucionesService.js";
 import "./Pedidos.css";
 
@@ -21,7 +22,11 @@ const CUENTA_TRANSFERENCIA = {
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
+const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦", "Mixto ⚖️"];
+
+/** El pedido lleva una transferencia real: hace falta el comprobante. */
+const llevaTransferencia = (metodo) =>
+  metodo === "Transferencia 🏦" || metodo === "Mixto ⚖️";
 
 const EMPTY_FORM = {
   idCliente:            "",
@@ -283,6 +288,9 @@ export default function CrearPedido({ onClose, onSave }) {
   const [usarCredito,    setUsarCredito]    = useState(false);
   // Que parte del saldo a favor se aplica. Arranca entero, que es lo normal.
   const [creditoPct,     setCreditoPct]     = useState(100);
+  // Pago mixto: cuánta plata cobra el local en efectivo. El resto va
+  // transferido. En pesos, porque el cliente paga con lo que tiene encima.
+  const [efectivoMonto,  setEfectivoMonto]  = useState("");
 
   useEffect(() => {
     getUsuarios({ porPagina: 100 }).then(u => setClientes(u.filter(x => x.tipo === "cliente"))).catch(() => {});
@@ -371,8 +379,18 @@ export default function CrearPedido({ onClose, onSave }) {
       // el selector del pedido no se muestra y no hay nada que validar arriba.
       if (!requiereAnticipo) {
         if (!form.metodo_pago) e.metodo_pago = "Selecciona un método de pago";
-        if (form.metodo_pago === "Transferencia 🏦" && !form.comprobantePreview) {
+        if (llevaTransferencia(form.metodo_pago) && !form.comprobantePreview) {
           e.comprobante = "Es obligatorio adjuntar el comprobante de transferencia";
+        }
+        // Un mixto tiene que tener las dos partes: si una queda en cero, lo
+        // que corresponde es el otro método a secas.
+        if (form.metodo_pago === "Mixto ⚖️") {
+          const enEfectivo = Number(efectivoMonto) || 0;
+          if (enEfectivo <= 0) {
+            e.pago_mixto = "Escribe cuánto se paga en efectivo";
+          } else if (enEfectivo >= totalFinal) {
+            e.pago_mixto = `El efectivo debe ser menor que ${fmt(totalFinal)}. Para cobrar todo en efectivo, elige ese método.`;
+          }
         }
       } else {
         const queEs = pagarTodo ? "el pago" : "el anticipo";
@@ -438,6 +456,9 @@ export default function CrearPedido({ onClose, onSave }) {
       },
       productosItems:    form.productosItems,
       metodo_pago:       metodoPedido,
+      // Solo se mira cuando el método es Mixto: cuánto se cobra en efectivo.
+      // El backend lo recorta contra el total real.
+      pago_efectivo_monto: metodoPedido === "Mixto ⚖️" ? (Number(efectivoMonto) || 0) : null,
       comprobante:            comprobanteUrl,
       requiere_anticipo:      requiereAnticipo,
       anticipo_monto:         montoAnticipo,
@@ -773,7 +794,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 <label className="field-label">
                   Método de pago del pedido <span className="required">*</span>
                 </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 8 }}>
                   {METODOS_PAGO.map(m => (
                     <button
                       key={m}
@@ -793,10 +814,25 @@ export default function CrearPedido({ onClose, onSave }) {
                   ))}
                 </div>
                 {errors.metodo_pago && <span className="field-error" style={{ marginTop: 8 }}>{errors.metodo_pago}</span>}
+
+                {/* Reparto entre las dos formas de pago */}
+                {form.metodo_pago === "Mixto ⚖️" && (
+                  <div style={{ marginTop: 14, background: "#fafafa", border: "1px solid #eee", borderRadius: 12, padding: "14px 16px" }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666", fontWeight: 600 }}>
+                      Una parte se transfiere y la otra se cobra en efectivo al entregar
+                    </p>
+                    <SplitPagoMonto
+                      total={totalFinal}
+                      montoEfectivo={efectivoMonto}
+                      onMonto={setEfectivoMonto}
+                      error={errors.pago_mixto}
+                    />
+                  </div>
+                )}
               </div>
               )}
 
-              {!requiereAnticipo && form.metodo_pago === "Transferencia 🏦" && (
+              {!requiereAnticipo && llevaTransferencia(form.metodo_pago) && (
                 <div className="fade-in" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
 
                   {/* Datos de la cuenta */}

@@ -33,7 +33,10 @@ export const resolverEntrega = (deliveryInfo, orderDetails) => ({
 });
 
 /** Método de pago tal como lo guarda la API, sin emojis ni variantes. */
-const metodoPagoApi = (metodo) => (metodo === 'digital' ? 'Transferencia' : 'Efectivo');
+const metodoPagoApi = (metodo) =>
+  metodo === 'digital' ? 'Transferencia'
+  : metodo === 'mixto' ? 'Mixto'
+  : 'Efectivo';
 
 /** Método del anticipo: el checkout usa 'digital' | 'efectivo' | 'credito'. */
 const metodoAnticipoApi = (metodo) =>
@@ -95,6 +98,11 @@ export async function crearPedidoCliente({
       Cantidad:    Number(item.cantidad),
     })),
     Metodo_Pago:            metodoPagoApi(paymentMethod),
+    // Solo lo mira el backend cuando el método es Mixto: cuánta plata pone el
+    // cliente en efectivo. Allá se recorta contra el total real.
+    pago_efectivo_monto: paymentMethod === 'mixto'
+      ? (saldoAFavor?.efectivoMonto ?? 0)
+      : null,
     A_Nombre_De:            onBehalfOf || null,
     usar_credito:           !!saldoAFavor?.usar,
     // Cuanto de ese saldo se aplica. El backend lo toma como tope: si el

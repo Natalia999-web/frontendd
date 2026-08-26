@@ -397,6 +397,12 @@ class Venta(Base):
     Pago_Final_Metodo_Pago   = Column(String(30),                        nullable=True)
     Pago_Final_Comprobante_Url = Column(String(500),                     nullable=True)
     Pago_Final_Fecha         = Column(DateTime,                          nullable=True)
+    # Pago mixto (Metodo_Pago = "Mixto"): el pedido se reparte entre las dos
+    # formas. La transferencia se paga al hacer el pedido y lleva comprobante;
+    # el efectivo se cobra en mano al entregar. Los dos montos los calcula el
+    # backend sobre el total real, el cliente solo propone la proporción.
+    Monto_Efectivo           = Column(Numeric(30, 2),                    nullable=True)
+    Monto_Transferencia      = Column(Numeric(30, 2),                    nullable=True)
     Estado_Pago              = Column(String(30),   default="pendiente", nullable=True)
     Fecha_Rechazada          = Column(DateTime,                          nullable=True)
     # Guardado al crear la venta: True si algún producto de producción no tenía stock suficiente.

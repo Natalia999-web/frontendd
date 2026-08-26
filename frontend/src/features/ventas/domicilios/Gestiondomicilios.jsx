@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import {
   Search, Bike, Package, CheckCircle2, XCircle, Clock,
   MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
-  Banknote, Building2, Eye, Globe, Zap, PenLine, FileText,
+  Banknote, Building2, Scale, Eye, Globe, Zap, PenLine, FileText,
   Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
   Utensils,
 } from "lucide-react";
@@ -16,7 +16,7 @@ import DateRangeFilter from "../../../shared/components/DateRangeFilter";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, ESTADO_PAGO_LABEL, FILTRO_ESTADOS_DOM,
-  bloqueoEntrega, cobroEfectivoPendiente, esDomicilioActivo, esPagoEfectivo, esPagoTransferencia,
+  bloqueoEntrega, cobroEfectivoPendiente, esDomicilioActivo, esPagoEfectivo, esPagoMixto, esPagoTransferencia,
   puedeReasignarse,
   transicionesDom,
 } from "./estadosDomicilio";
@@ -51,13 +51,15 @@ const FILTER_OPTIONS = FILTRO_ESTADOS_DOM;
 function MetodoPagoChip({ metodo }) {
   const texto = (metodo || "").trim();
   if (!texto) return <span style={{ fontSize: 11, color: "#bdbdbd" }}>—</span>;
-  const efectivo = esPagoEfectivo(texto);
-  const transfer = esPagoTransferencia(texto);
-  const cfg = efectivo
-    ? { label: "Efectivo",      icon: <Banknote size={11} />, dot: "#2e7d32", bg: "#e8f5e9" }
-    : transfer
-      ? { label: "Transferencia", icon: <Building2 size={11} />, dot: "#1565c0", bg: "#e3f2fd" }
-      : { label: texto,          icon: <CreditCard size={11} />, dot: "#616161", bg: "#f5f5f5" };
+  // El mixto se pregunta primero: es efectivo Y transferencia a la vez, así
+  // que las dos preguntas de abajo le dirían que sí.
+  const cfg = esPagoMixto(texto)
+    ? { label: "Mixto",         icon: <Scale size={11} />,      dot: "#6a1b9a", bg: "#f3e5f5" }
+    : esPagoEfectivo(texto)
+      ? { label: "Efectivo",      icon: <Banknote size={11} />,   dot: "#2e7d32", bg: "#e8f5e9" }
+      : esPagoTransferencia(texto)
+        ? { label: "Transferencia", icon: <Building2 size={11} />, dot: "#1565c0", bg: "#e3f2fd" }
+        : { label: texto,           icon: <CreditCard size={11} />, dot: "#616161", bg: "#f5f5f5" };
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
