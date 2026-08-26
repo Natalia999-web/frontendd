@@ -829,6 +829,13 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         nueva_venta.Sobre_Stock        = 1
         nueva_venta.Anticipo_Requerido = anticipo_requerido
         nueva_venta.Anticipo_Pagado    = anticipo_pagado
+        # Cuando el flujo de anticipo explícito no se activa (solo ítems de
+        # producción sobre stock) pero el cliente sí aportó respaldo de pago,
+        # registrar igual para que el panel muestre el monto correcto.
+        if not datos.requiere_anticipo and tiene_soporte:
+            nueva_venta.Anticipo_Registrado = 1
+            nueva_venta.Anticipo_Monto      = anticipo_requerido
+            nueva_venta.Estado_Pago         = "anticipo_pagado"
 
         detalle_preorden = ", ".join(
             f"{l['nombre']}: {l['cantidad']} pedidas / {l['stock']} en stock"

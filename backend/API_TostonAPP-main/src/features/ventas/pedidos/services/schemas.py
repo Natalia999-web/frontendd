@@ -18,6 +18,9 @@ class PedidoResponse(BaseModel):
     Estado:               Optional[int]     = None
     estado_label:         Optional[str]     = None
     Metodo_Pago:          Optional[str]     = None
+    # Pago mixto: cuánto se paga de cada forma (null si no es mixto)
+    monto_efectivo:       Optional[Decimal] = None
+    monto_transferencia:  Optional[Decimal] = None
     Fecha_pedido:           Optional[datetime] = None
     Fecha_entrega_esperada: Optional[datetime] = None
     productos:              list               = []
