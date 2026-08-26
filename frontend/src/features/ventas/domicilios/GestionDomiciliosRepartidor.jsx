@@ -6,7 +6,7 @@ import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, cobroEfectivoPendiente, esDomicili
 import "./Domicilios.css";
 import {
   Search, RefreshCw, Truck, Package, CheckCircle2, XCircle, Clock,
-  MapPin, MessageSquare, X, Phone, Banknote,
+  MapPin, MessageSquare, X, Check, Phone, Banknote,
 } from "lucide-react";
 
 const fmt = (n) =>
@@ -61,7 +61,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span className="toast-icon">{toast.type === "error" ? "✕" : "✓"}</span>
+      <span className="toast-icon" style={{display:"flex"}}>{toast.type === "error" ? <X size={15} /> : <Check size={15} />}</span>
       {toast.message}
     </div>
   );

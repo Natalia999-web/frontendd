@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
-import { Mail, Phone, MapPin, Camera, Save, X, CreditCard, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Mail, Phone, MapPin, Camera, Save, X, CreditCard, Lock, Eye, EyeOff, KeyRound, Clock, User, AlertTriangle } from 'lucide-react';
 import { apiFetch } from '../../../../utils/api';
 import { soloDigitos, esUbicacionValida } from '../../../../utils/inputFilters';
 
@@ -212,7 +212,7 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
 
   if (loadingPerfil) return (
     <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--gray-400)', fontFamily: 'var(--font-body)' }}>
-      <div style={{ fontSize: 28, marginBottom: 8 }}>⌛</div>
+      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Clock size={28} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>
       <p style={{ fontWeight: 600 }}>Cargando datos del perfil…</p>
     </div>
   );
@@ -235,7 +235,7 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
           >
             {form.fotoPerfil
               ? <img src={form.fotoPerfil} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : '👤'
+              : <User size={36} strokeWidth={1} style={{color:"#bdbdbd"}} />
             }
           </div>
           <button type="button" onClick={() => fileRef.current?.click()} style={{
@@ -300,8 +300,8 @@ const ProfileForm = ({ user, onSave, onCancel }) => {
             {errors.tipo_documento && (
               <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--accent-red)' }}>{errors.tipo_documento}</p>
             )}
-            <p style={{ margin: '6px 0 0', fontSize: 11, color: '#f57f17', fontWeight: 600 }}>
-              ⚠️ Solo puedes establecerlo una vez. Verifica bien antes de guardar.
+            <p style={{ margin: '6px 0 0', fontSize: 11, color: '#f57f17', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <AlertTriangle size={11} /> Solo puedes establecerlo una vez. Verifica bien antes de guardar.
             </p>
           </>
         )}

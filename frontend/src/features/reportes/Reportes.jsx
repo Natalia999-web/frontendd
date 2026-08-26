@@ -7,7 +7,7 @@ import { getDashboard } from "../../services/dashboardService.js";
 import { getHistorialPedidos } from "../../services/pedidosService.js";
 import { getDevoluciones } from "../../services/devolucionesService.js";
 import "./Reportes.css";
-import { AlertTriangle, Banknote, Package, Users, Target } from "lucide-react";
+import { AlertTriangle, Banknote, Package, Users, Target, CheckCircle2, XCircle, BarChart2, CornerUpLeft } from "lucide-react";
 
 /* ── Constantes ─────────────────────────────────────────── */
 const fmt = (n) =>
@@ -388,30 +388,30 @@ export default function Reportes() {
                 label: "Tasa de entrega",
                 value: ventas.length > 0 ? `${((ventasEntregadas.length / ventas.length) * 100).toFixed(1)}%` : "—",
                 desc: `${ventasEntregadas.length} de ${ventas.length} pedidos`,
-                icon: "✅", color: "#2e7d32", bg: "#e8f5e9",
+                Icon: CheckCircle2, color: "#2e7d32", bg: "#e8f5e9",
               },
               {
                 label: "Tasa de cancelación",
                 value: ventas.length > 0 ? `${((ventasCanceladas.length / ventas.length) * 100).toFixed(1)}%` : "—",
                 desc: `${ventasCanceladas.length} de ${ventas.length} pedidos`,
-                icon: "❌", color: "#c62828", bg: "#ffebee",
+                Icon: XCircle, color: "#c62828", bg: "#ffebee",
               },
               {
                 label: "Ingreso promedio / venta",
                 value: fmt(ticketPromedio),
                 desc: "Sobre ventas entregadas",
-                icon: "📊", color: "#1565c0", bg: "#e3f2fd",
+                Icon: BarChart2, color: "#1565c0", bg: "#e3f2fd",
               },
               {
                 label: "Total devoluciones",
                 value: devoluciones.length,
                 desc: "Registradas históricamente",
-                icon: "↩️", color: "#e65100", bg: "#fff3e0",
+                Icon: CornerUpLeft, color: "#e65100", bg: "#fff3e0",
               },
             ].map((ind) => (
               <div key={ind.label} className="rep-ind-card" style={{ border: `1.5px solid ${ind.bg}` }}>
-                <div style={{ width: 36, height: 36, borderRadius: 9, background: ind.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, marginBottom: 10 }}>
-                  {ind.icon}
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: ind.bg, color: ind.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                  <ind.Icon size={16} />
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: ind.color }}>{loading ? "—" : ind.value}</div>
                 <div style={{ fontSize: 11, color: "#9e9e9e", marginTop: 3, fontWeight: 700 }}>{ind.label}</div>

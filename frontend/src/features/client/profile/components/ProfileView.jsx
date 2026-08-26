@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Mail, Phone, MapPin, CreditCard,
-  Building2, Map, ShieldCheck, Edit2, LogOut
+  Building2, Map, ShieldCheck, Edit2, LogOut, User
 } from 'lucide-react';
 import { clearSession } from '../../../../utils/api';
 import LogoutModal from '../../../../shared/components/LogoutModal';
@@ -66,7 +66,7 @@ const ProfileView = ({ user, totalPedidos, onEdit }) => {
         }}>
           {user.fotoPerfil
             ? <img src={user.fotoPerfil} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : '👤'
+            : <User size={36} strokeWidth={1} style={{color:"#bdbdbd"}} />
           }
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>

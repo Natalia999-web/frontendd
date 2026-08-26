@@ -433,7 +433,7 @@ const ProfilePage = () => {
                 {[
                   { label: 'Miembro desde',        value: perfilMostrar.fechaCreacion ? new Date(perfilMostrar.fechaCreacion).getFullYear() : '—' },
                   { label: 'Pedidos realizados',   value: pedidos.length || '—' },
-                  { label: '🎁 Saldo a favor', value: credito > 0 ? COP(credito) : 'Sin saldo a favor', highlight: credito > 0 },
+                  { label: 'Saldo a favor', value: credito > 0 ? COP(credito) : 'Sin saldo a favor', highlight: credito > 0 },
                 ].map(item => (
                   <div key={item.label} style={{
                     display: 'flex', justifyContent: 'space-between',
@@ -492,7 +492,7 @@ const ProfilePage = () => {
                   background: 'var(--gray-50)', borderRadius: 12,
                   border: '1.5px dashed var(--gray-300)',
                 }}>
-                  <div style={{ fontSize: 36, marginBottom: 10 }}>🛒</div>
+                  <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}><ShoppingCart size={36} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>
                   <p style={{
                     margin: 0, fontWeight: 700, fontSize: 14,
                     color: 'var(--gray-700)', fontFamily: 'var(--font-body)',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AlertTriangle, Info, X, User, MapPin, ShieldCheck, Banknote, Check, Calendar, Package, CheckCircle2, XCircle, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Info, X, User, MapPin, ShieldCheck, Banknote, Check, Calendar, Package, CheckCircle2, XCircle, Search, Trash2, RefreshCw } from "lucide-react";
 import { getPedidos } from "../../../services/pedidosService.js";
 import { Avatar } from "./CrearUsuario.jsx";
 import { Ic } from "./usuariosIcons.jsx";
@@ -292,7 +292,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                       {[
                         { label: "Total pedidos", value: pedidosCliente.length, Icon: Package },
                         { label: "Entregados",    value: pedidosCliente.filter(p => p.estado === "Entregado").length,  Icon: CheckCircle2 },
-                        { label: "En curso",      value: pedidosCliente.filter(p => !["Entregado","Cancelado"].includes(p.estado)).length, icon: "🔄" },
+                        { label: "En curso",      value: pedidosCliente.filter(p => !["Entregado","Cancelado"].includes(p.estado)).length, Icon: RefreshCw },
                         { label: "Cancelados",    value: pedidosCliente.filter(p => p.estado === "Cancelado").length,  Icon: XCircle },
                       ].map(stat => (
                         <div key={stat.label} style={{

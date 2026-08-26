@@ -324,7 +324,7 @@ const OrdersPage = () => {
                     Departamento: saveAddressPrompt.departamento,
                   });
                   setSaveAddressPrompt(null);
-                  showToast('Dirección guardada como predeterminada ✓');
+                  showToast('Dirección guardada como predeterminada');
                 } catch {
                   setSaveAddressPrompt(null);
                 }

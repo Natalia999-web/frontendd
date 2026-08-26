@@ -5,7 +5,7 @@ import { ESTADO_DOMICILIO, cobroEfectivoPendiente, esDomicilioActivo, esPagoMixt
 import "./Domicilios.css";
 import {
   Package, CheckCircle2, Truck, XCircle, MapPin, CreditCard,
-  Clock, X, Navigation, Map, Banknote,
+  Clock, X, Check, Navigation, Map, Banknote,
 } from "lucide-react";
 
 const fmt = (n) =>
@@ -195,7 +195,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span className="toast-icon">{toast.type === "error" ? "✕" : "✓"}</span>
+      <span className="toast-icon" style={{display:"flex"}}>{toast.type === "error" ? <X size={15} /> : <Check size={15} />}</span>
       {toast.message}
     </div>
   );

@@ -238,7 +238,7 @@ function ModalAprobar({ dev, onClose, onConfirm }) {
             <p className="modal-header__eyebrow">APROBAR</p>
             <h2 className="modal-header__title">Aprobar devolución</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="modal-body">
           <p style={{ margin: 0, fontSize: 13, color: "#616161" }}>
@@ -296,7 +296,7 @@ function ModalRechazar({ dev, onClose, onConfirm }) {
             <p className="modal-header__eyebrow">RECHAZAR</p>
             <h2 className="modal-header__title modal-header__title--red">Rechazar devolución</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="modal-body">
           <p style={{ margin: 0, fontSize: 13, color: "#616161" }}>

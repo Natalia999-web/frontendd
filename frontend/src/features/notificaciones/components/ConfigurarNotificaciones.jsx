@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, Settings, Save } from "lucide-react";
 import { useNotificaciones } from "../context/NotificacionesContext";
 
 /* ══════════════════════════════════════════════════════════
@@ -37,7 +37,7 @@ export default function ConfigurarNotificaciones({ insumos = [], onClose }) {
         <div className="modal-header">
           <div>
             <p className="modal-header__eyebrow">CONFIGURACIÓN</p>
-            <h2 className="modal-header__title">⚙️ Notificaciones automáticas</h2>
+            <h2 className="modal-header__title" style={{display:"flex",alignItems:"center",gap:6}}><Settings size={16} /> Notificaciones automáticas</h2>
           </div>
           <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
@@ -112,7 +112,7 @@ export default function ConfigurarNotificaciones({ insumos = [], onClose }) {
           )}
           <button className="btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn-save" onClick={handleGuardar}>
-            💾 Guardar configuración
+            <Save size={14} /> Guardar configuración
           </button>
         </div>
       </div>

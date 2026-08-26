@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Lock } from "lucide-react";
+import { X, Lock, Users } from "lucide-react";
 import { createPortal } from "react-dom";
 import { soloLetras } from "../../../utils/inputFilters";
 import "./Roles.css";
@@ -147,7 +147,7 @@ export default function EditarRol({ rol, mode = "edit", onClose, onSave }) {
                 background: (rol.totalUsuarios ?? 0) > 0 ? "#e8f5e9" : "#fafafa",
                 border: `1px solid ${(rol.totalUsuarios ?? 0) > 0 ? "#c8e6c9" : "#e0e0e0"}`,
               }}>
-                <span style={{ fontSize: 18 }}>👥</span>
+                <Users size={18} />
                 <span style={{
                   fontSize: 15, fontWeight: 700,
                   color: (rol.totalUsuarios ?? 0) > 0 ? "#2e7d32" : "#9e9e9e",

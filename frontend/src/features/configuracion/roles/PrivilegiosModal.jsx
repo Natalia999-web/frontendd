@@ -16,7 +16,7 @@
  */
 
 import { useState } from "react";
-import { X, AlertTriangle, Check, Lock, Eye, Plus, PenLine, Trash2, Ban, Upload, Search, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { X, AlertTriangle, Check, Lock, Eye, Plus, PenLine, Trash2, Ban, Upload, Search, RefreshCw, CheckCircle2, XCircle, Globe, Settings, Shield, Users, Package, FolderOpen, Truck, ClipboardList, Factory, Banknote, CreditCard, ShoppingCart, CornerUpLeft, Bike, Receipt, BarChart2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 // ── Catálogo completo de acciones posibles ──────────────────────────────────
@@ -39,50 +39,50 @@ const STD = ["ver", "crear", "editar", "eliminar", "cambiar_estado"];
 const GRUPOS_MODULOS = [
     {
     grupo: "Sitio web",
-    icon: "🌐",
+    Icon: Globe,
     modulos: [
-      { key: "LandingPage",       label: "Landing Page",      icon: "🌐", acciones: ["ver", "editar"] },
+      { key: "LandingPage",       label: "Landing Page",      Icon: Globe,        acciones: ["ver", "editar"] },
     ],
   },
   {
     grupo: "Configuración",
-    icon: "⚙️",
+    Icon: Settings,
     modulos: [
-      { key: "Dashboard",       label: "Dashboard",       icon: "📊", acciones: ["ver"] },
-      { key: "Roles",           label: "Roles",           icon: "🛡️", acciones: STD },
-      { key: "Usuarios",        label: "Usuarios",        icon: "👥", acciones: STD },
-      { key: "GestionSalidas",  label: "Gestión Salidas", icon: "📤", acciones: ["ver", "crear", "editar", "eliminar"] },
+      { key: "Dashboard",       label: "Dashboard",       Icon: BarChart2,     acciones: ["ver"] },
+      { key: "Roles",           label: "Roles",           Icon: Shield,        acciones: STD },
+      { key: "Usuarios",        label: "Usuarios",        Icon: Users,         acciones: STD },
+      { key: "GestionSalidas",  label: "Gestión Salidas", Icon: Upload,        acciones: ["ver", "crear", "editar", "eliminar"] },
     ],
   },
   {
     grupo: "Compras",
-    icon: "📦",
+    Icon: Package,
     modulos: [
-      { key: "CategoriaInsumos", label: "Cat. Insumos",  icon: "📂", acciones: STD },
-      { key: "Insumos",          label: "Insumos",       icon: "🧪", acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado", "generar_salida"] },
-      { key: "Proveedores",      label: "Proveedores",   icon: "🚚", acciones: STD },
+      { key: "CategoriaInsumos", label: "Cat. Insumos",  Icon: FolderOpen,    acciones: STD },
+      { key: "Insumos",          label: "Insumos",       Icon: Package,       acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado", "generar_salida"] },
+      { key: "Proveedores",      label: "Proveedores",   Icon: Truck,         acciones: STD },
       // FIX: "cambiar estado" (con espacio) → "cambiar_estado" (con guión bajo)
-      { key: "Compras",          label: "Compras",       icon: "📋", acciones: ["ver", "crear", "editar", "cambiar_estado", "anular"] },
+      { key: "Compras",          label: "Compras",       Icon: ClipboardList, acciones: ["ver", "crear", "editar", "cambiar_estado", "anular"] },
     ],
   },
   {
     grupo: "Producción",
-    icon: "🏭",
+    Icon: Factory,
     modulos: [
-      { key: "CategoriaProductos", label: "Cat. Productos", icon: "📦", acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado"] },
-      { key: "GestionProductos",   label: "Gestión Prod.",  icon: "📋", acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado", "generar_salida"] },
-      { key: "OrdenesProduccion",  label: "Órdenes Prod.",  icon: "🏭", acciones: ["ver", "crear", "editar", "cancelar", "cambiar_estado"] },
+      { key: "CategoriaProductos", label: "Cat. Productos", Icon: Package,       acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado"] },
+      { key: "GestionProductos",   label: "Gestión Prod.",  Icon: ClipboardList, acciones: ["ver", "crear", "editar", "eliminar", "cambiar_estado", "generar_salida"] },
+      { key: "OrdenesProduccion",  label: "Órdenes Prod.",  Icon: Factory,       acciones: ["ver", "crear", "editar", "cancelar", "cambiar_estado"] },
     ],
   },
   {
     grupo: "Ventas",
-    icon: "💰",
+    Icon: Banknote,
     modulos: [
-      { key: "GestionVentas", label: "Gestión Ventas", icon: "💳", acciones: ["ver", "crear", "editar", "eliminar"] },
-      { key: "Pedidos",       label: "Pedidos",        icon: "🛒", acciones: ["ver", "crear", "editar", "eliminar"] },
-      { key: "Devoluciones",  label: "Devoluciones",   icon: "↩️", acciones: ["ver", "crear", "editar", "aprobar", "desaprobar"] },
-      { key: "Domicilios",    label: "Domicilios",     icon: "🏍️", acciones: ["ver", "ver_detalles", "cambiar_estado"] },
-      { key: "Liquidaciones", label: "Liquidaciones",  icon: "📑", acciones: ["ver", "crear", "editar", "eliminar", "anular"] },
+      { key: "GestionVentas", label: "Gestión Ventas", Icon: CreditCard,    acciones: ["ver", "crear", "editar", "eliminar"] },
+      { key: "Pedidos",       label: "Pedidos",        Icon: ShoppingCart,  acciones: ["ver", "crear", "editar", "eliminar"] },
+      { key: "Devoluciones",  label: "Devoluciones",   Icon: CornerUpLeft,  acciones: ["ver", "crear", "editar", "aprobar", "desaprobar"] },
+      { key: "Domicilios",    label: "Domicilios",     Icon: Bike,          acciones: ["ver", "ver_detalles", "cambiar_estado"] },
+      { key: "Liquidaciones", label: "Liquidaciones",  Icon: Receipt,       acciones: ["ver", "crear", "editar", "eliminar", "anular"] },
     ],
   },
 ];
@@ -343,7 +343,7 @@ export default function PrivilegiosModal({
             const esActivo = grupo === g.grupo;
             return (
               <button key={g.grupo} style={S.grupoChip(esActivo)} onClick={() => handleGrupo(g.grupo)}>
-                <span style={{ fontSize: 14 }}>{g.icon}</span>
+                <g.Icon size={14} />
                 <span>{g.grupo}</span>
                 {activos > 0 && (
                   <span style={{ fontSize: 10, fontWeight: 700, background: esActivo ? "#c8e6c9" : "#eeeeee", color: esActivo ? "#2e7d32" : "#9e9e9e", borderRadius: 10, padding: "0 5px", marginLeft: 2 }}>
@@ -362,7 +362,7 @@ export default function PrivilegiosModal({
             const esActivo = modKey === m.key;
             return (
               <button key={m.key} style={S.moduloTab(esActivo)} onClick={() => setModKey(m.key)}>
-                <span style={{ fontSize: 13 }}>{m.icon}</span>
+                <m.Icon size={13} />
                 <span>{m.label}</span>
                 {activos > 0 && (
                   <span style={{ fontSize: 10, fontWeight: 700, background: activos === total ? "#e8f5e9" : "#fff3e0", color: activos === total ? "#2e7d32" : "#e65100", border: `1px solid ${activos === total ? "#c8e6c9" : "#ffcc80"}`, borderRadius: 10, padding: "0 5px" }}>
@@ -380,8 +380,8 @@ export default function PrivilegiosModal({
           {/* Sub-cabecera del módulo */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span style={{ fontSize: 24, lineHeight: 1, background: "#f5f5f5", borderRadius: 8, padding: "5px 7px" }}>
-                {modMeta?.icon}
+              <span style={{ lineHeight: 1, background: "#f5f5f5", borderRadius: 8, padding: "5px 7px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                {modMeta && <modMeta.Icon size={22} />}
               </span>
               <div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#212121" }}>{modMeta?.label}</p>
