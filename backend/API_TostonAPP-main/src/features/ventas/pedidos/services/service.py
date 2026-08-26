@@ -211,6 +211,23 @@ def cancelar_pedido(db: Session, id_venta: int, actual: dict = None) -> dict:
 _ESTADOS_PAGO_YA_COBRADO = {"efectivo_recibido", "pagado_completo", "anticipo_pagado"}
 
 
+def _es_mixto(metodo: str | None) -> bool:
+    """Pedido repartido entre efectivo y transferencia."""
+    return "mixto" in (metodo or "").strip().lower()
+
+
+def _lleva_transferencia(metodo: str | None) -> bool:
+    """¿Hay un comprobante que revisar? Transferencia pura o mixto."""
+    _m = (metodo or "").strip().lower()
+    return "transfer" in _m or "mixto" in _m
+
+
+# El mixto se cobra en dos pasos —el comprobante de la parte transferida y la
+# plata en mano— y cada uno puede caer primero. Estos son los estados desde los
+# que todavía falta el otro paso.
+_ESTADOS_MIXTO_A_MEDIAS = {"pendiente", "pendiente_validacion", "comprobante_rechazado"}
+
+
 def registrar_cobro_pedido(db: Session, id_venta: int, datos, id_usuario_actual: int) -> dict:
     """
     Admin/empleado registra cobro en efectivo para un pedido (contra entrega o en tienda).
@@ -223,10 +240,29 @@ def registrar_cobro_pedido(db: Session, id_venta: int, datos, id_usuario_actual:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
     estado_pago = (getattr(venta, "Estado_Pago", None) or "pendiente").strip()
-    if estado_pago in _ESTADOS_PAGO_YA_COBRADO:
+    mixto       = _es_mixto(venta.Metodo_Pago)
+    # En un mixto, "anticipo_pagado" solo dice que UNA de las dos mitades entró.
+    # El efectivo se puede seguir cobrando mientras no esté marcado su registro.
+    efectivo_ya_registrado = bool(getattr(venta, "Pago_Final_Registrado", 0))
+    if estado_pago in _ESTADOS_PAGO_YA_COBRADO and not (mixto and not efectivo_ya_registrado):
         raise HTTPException(status_code=409, detail="El cobro ya fue registrado para este pedido")
 
-    venta.Estado_Pago = "efectivo_recibido" if datos.recibido else "no_recibido"
+    if not datos.recibido:
+        venta.Estado_Pago = "no_recibido"
+    elif mixto:
+        # La plata en mano se marca en su propio registro, para saber cuál de
+        # las dos mitades entró y no tener que adivinarlo desde el estado.
+        venta.Pago_Final_Registrado  = 1
+        venta.Pago_Final_Monto       = venta.Monto_Efectivo
+        venta.Pago_Final_Metodo_Pago = "Efectivo"
+        venta.Pago_Final_Fecha       = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Queda saldado solo si el comprobante de la transferencia ya se aprobó.
+        venta.Estado_Pago = (
+            "anticipo_pagado" if estado_pago in _ESTADOS_MIXTO_A_MEDIAS
+            else "pagado_completo"
+        )
+    else:
+        venta.Estado_Pago = "efectivo_recibido"
     db.commit()
     db.refresh(venta)
     return _formato_venta(venta, db)
@@ -242,9 +278,11 @@ def aprobar_comprobante(db: Session, id_venta: int) -> dict:
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
-    _metodo = (pedido.Metodo_Pago or "").strip().lower()
-    if "transfer" not in _metodo:
-        raise HTTPException(status_code=400, detail="Este pedido no es de tipo Transferencia")
+    # El mixto también trae comprobante: es el de su parte transferida. Antes
+    # esta puerta solo dejaba pasar "Transferencia" y el admin no podía
+    # aprobar ni rechazar el soporte de un pedido mixto.
+    if not _lleva_transferencia(pedido.Metodo_Pago):
+        raise HTTPException(status_code=400, detail="Este pedido no tiene pago por transferencia")
 
     if not pedido.Comprobante_Pago:
         raise HTTPException(status_code=400, detail="El pedido no tiene comprobante adjunto")
@@ -253,7 +291,12 @@ def aprobar_comprobante(db: Session, id_venta: int) -> dict:
     if estado_pago == "pagado_completo":
         raise HTTPException(status_code=409, detail="El comprobante ya fue aprobado")
 
-    pedido.Estado_Pago = "pagado_completo"
+    # En un mixto aprobar el comprobante salda solo la mitad transferida: falta
+    # el efectivo, salvo que ya lo hayan cobrado.
+    if _es_mixto(pedido.Metodo_Pago) and estado_pago in _ESTADOS_MIXTO_A_MEDIAS:
+        pedido.Estado_Pago = "anticipo_pagado"
+    else:
+        pedido.Estado_Pago = "pagado_completo"
     db.commit()
     db.refresh(pedido)
     return _formato_venta(pedido, db)
@@ -271,9 +314,8 @@ def rechazar_comprobante(db: Session, id_venta: int, motivo: str, id_usuario_act
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
-    _metodo = (pedido.Metodo_Pago or "").strip().lower()
-    if "transfer" not in _metodo:
-        raise HTTPException(status_code=400, detail="Este pedido no es de tipo Transferencia")
+    if not _lleva_transferencia(pedido.Metodo_Pago):
+        raise HTTPException(status_code=400, detail="Este pedido no tiene pago por transferencia")
 
     if not pedido.Comprobante_Pago:
         raise HTTPException(status_code=400, detail="El pedido no tiene comprobante adjunto")

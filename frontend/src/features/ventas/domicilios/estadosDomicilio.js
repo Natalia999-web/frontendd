@@ -124,27 +124,11 @@ export const ESTADO_PAGO_LABEL = {
   no_recibido:           { label: "Cobro no recibido",    dot: "#c62828", bg: "#ffebee" },
 };
 
-/**
- * Pago mixto: el pedido se reparte entre efectivo y transferencia. Lleva las
- * dos cargas a la vez —comprobante por lo transferido, cobro en mano por lo
- * demás—, así que las dos preguntas de abajo le dicen que sí.
- */
-export const esPagoMixto = (metodo) => /mixto/i.test(metodo || "");
-
-/** True si el método de pago es transferencia (o equivalente digital). */
-export const esPagoTransferencia = (metodo) =>
-  /transf|nequi|daviplata|bancol|qr/i.test(metodo || "") || esPagoMixto(metodo);
-
-/** True si el método de pago es efectivo / contra entrega. */
-export const esPagoEfectivo = (metodo) =>
-  /efectiv|contra|cash/i.test(metodo || "") || esPagoMixto(metodo);
-
-/**
- * Cuánto hay que cobrar en mano. En un pedido mixto no es el total: la parte
- * transferida ya entró al hacer el pedido.
- */
-export const montoACobrar = (dom) =>
-  (dom?.monto_efectivo ?? null) !== null ? Number(dom.monto_efectivo) : Number(dom?.total || 0);
+// Cómo se paga el pedido: vive en utils/metodosPago.js porque también lo
+// necesita la pantalla de pedidos. Se re-exporta para no cambiar los imports
+// de este módulo.
+import { esPagoMixto, esPagoTransferencia, esPagoEfectivo, montoACobrar } from "../../../utils/metodosPago.js";
+export { esPagoMixto, esPagoTransferencia, esPagoEfectivo, montoACobrar };
 
 /**
  * ¿Este domicilio todavía tiene plata por cobrar en mano?

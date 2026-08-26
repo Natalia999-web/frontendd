@@ -12,6 +12,7 @@ import { getProductos } from "../../../services/productosService.js";
 import CrearPedido from "./CrearPedido.jsx";
 import EditarPedido from "./EditarPedido.jsx";
 import { puedeEditarsePedido } from "./permisosEdicion.js";
+import { esPagoEfectivo, esPagoMixto, esPagoTransferencia, montoACobrar, montoTransferido } from "../../../utils/metodosPago.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   Trash2, Truck, Package,
@@ -183,9 +184,10 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
     { url: pedido.comprobante || pedido.anticipo_comprobante_url, titulo: "Comprobante de pago adjuntado." },
     { url: pedido.pago_final_comprobante_url,                     titulo: "Comprobante del saldo adjuntado." },
   ].filter((c, i, todos) => c.url && todos.findIndex(o => o.url === c.url) === i);
-  const esTransferencia = pedido.metodo_pago?.includes("Transferencia");
-  // Pago mixto: el pedido se reparte entre las dos formas.
-  const esMixto = /mixto/i.test(pedido.metodo_pago || "");
+  // El mixto trae comprobante igual que una transferencia: sin esto el detalle
+  // no mostraba ni los datos bancarios ni el comprobante adjunto.
+  const esMixto         = esPagoMixto(pedido.metodo_pago);
+  const esTransferencia = esPagoTransferencia(pedido.metodo_pago);
   const epInicial = pedido.estado_pago;
   const [tab, setTab] = useState(
     esTransferencia || epInicial === "pendiente_validacion" || epInicial === "comprobante_rechazado"
@@ -418,12 +420,26 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   ? Number(pedido.pago_final_monto ?? Math.max(0, totalPedido - anticipoCobrado))
                   : 0;
 
+                /* Pago mixto: cada mitad entra por su lado y puede llegar
+                   primero cualquiera de las dos. El efectivo se sabe por su
+                   propio registro; la transferencia, porque el comprobante ya
+                   pasó por revisión. Sin esto la tarjeta decía "$0 pagado" con
+                   media plata adentro. */
+                const efectivoMixto = esMixto && pedido.pago_final_registrado
+                  ? montoACobrar(pedido) : 0;
+                const transferMixto = esMixto && (
+                  ep === "pagado_completo" ||
+                  (ep === "anticipo_pagado" && !pedido.pago_final_registrado)
+                ) ? montoTransferido(pedido) : 0;
+
                 // Estados con los que el backend da el pago por cerrado: no queda
                 // saldo aunque los montos registrados no cuadren al peso.
                 const pagoCerrado = !!pedido.pago_final_registrado
                   || ["pagado_completo", "efectivo_recibido"].includes(ep);
 
-                let totalPagado = anticipoCobrado + saldoCobrado;
+                let totalPagado = esMixto
+                  ? efectivoMixto + transferMixto
+                  : anticipoCobrado + saldoCobrado;
                 if (pagoCerrado) totalPagado = Math.max(totalPagado, totalPedido);
 
                 const saldo = Math.max(0, totalPedido - totalPagado);
@@ -433,7 +449,9 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 if (ep === "pagado_completo" || (!ep && totalPagado >= totalPedido && totalPedido > 0 && totalPagado > 0)) {
                   estadoLabel = "Pago completo";    estadoColor = "#2e7d32"; estadoBg = "#e8f5e9"; estadoBorder = "#a5d6a7"; estadoEmoji = "✅";
                 } else if (ep === "anticipo_pagado" || (!ep && totalPagado > 0 && totalPagado < totalPedido)) {
-                  estadoLabel = "Anticipo";         estadoColor = "#e65100"; estadoBg = "#fff8e1"; estadoBorder = "#ffe082"; estadoEmoji = "⚠️";
+                  // En un mixto no hay anticipo: hay una de las dos mitades.
+                  estadoLabel = esMixto ? "Pago parcial" : "Anticipo";
+                  estadoColor = "#e65100"; estadoBg = "#fff8e1"; estadoBorder = "#ffe082"; estadoEmoji = "⚠️";
                 } else if (ep === "pendiente_validacion") {
                   estadoLabel = "Pendiente de validación"; estadoColor = "#1565c0"; estadoBg = "#e3f2fd"; estadoBorder = "#90caf9"; estadoEmoji = "🕐";
                 } else if (ep === "comprobante_rechazado") {
@@ -442,7 +460,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   estadoLabel = "Pendiente";        estadoColor = "#9e9e9e"; estadoBg = "#f5f5f5"; estadoBorder = "#e0e0e0"; estadoEmoji = "🕐";
                 }
 
-                const modalidad = !esTransferencia
+                const modalidad = !esTransferencia || esMixto
                   ? (pedido.domicilio ? "Contraentrega" : "En tienda")
                   : null;
                 const fechaPago = pedido.pago_final_fecha || null;
@@ -457,6 +475,43 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           {estadoEmoji} {estadoLabel}
                         </span>
                       </div>
+
+                      {/* Pago mixto: el pedido entra por dos vías y cada una se
+                          salda por su lado, así que aquí importa el reparto y
+                          no solo el total. */}
+                      {esMixto && (
+                        <div style={{ background: "#fff", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#616161", fontWeight: 600 }}>
+                              🏦 Transferencia
+                            </span>
+                            <span style={{ fontSize: 14, fontWeight: 900, color: "#1565c0" }}>
+                              {fmt(montoTransferido(pedido))}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#616161", fontWeight: 600 }}>
+                              💵 Efectivo
+                            </span>
+                            <span style={{ fontSize: 14, fontWeight: 900, color: "#2e7d32" }}>
+                              {fmt(montoACobrar(pedido))}
+                            </span>
+                          </div>
+                          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: "#9e9e9e", fontWeight: 700 }}>Suman</span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: "#616161" }}>{fmt(totalPedido)}</span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 11, color: "#9e9e9e", lineHeight: 1.4 }}>
+                            {ep === "pagado_completo"
+                              ? "Las dos partes están cobradas."
+                              : transferMixto > 0
+                                ? "La transferencia está aprobada; falta registrar el efectivo."
+                                : efectivoMixto > 0
+                                  ? "El efectivo está cobrado; falta aprobar el comprobante de la transferencia."
+                                  : "Se salda en dos pasos: aprobar el comprobante de la transferencia y registrar el efectivo."}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Barra de progreso del pago */}
                       {totalPedido > 0 && (
@@ -491,20 +546,6 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                             {esMixto ? "⚖️ Mixto" : esTransferencia ? "🏦 Transferencia" : "💵 Efectivo"}
                           </span>
                         </div>
-                        {/* Con pago mixto importa el reparto: una parte llegó
-                            transferida y la otra se cobra en mano. */}
-                        {esMixto && pedido.monto_transferencia != null && (
-                          <>
-                            <div className="ver-ped-field">
-                              <span className="ver-ped-field__label">Por transferencia</span>
-                              <span className="ver-ped-field__value">{fmt(Number(pedido.monto_transferencia))}</span>
-                            </div>
-                            <div className="ver-ped-field">
-                              <span className="ver-ped-field__label">En efectivo</span>
-                              <span className="ver-ped-field__value">{fmt(Number(pedido.monto_efectivo || 0))}</span>
-                            </div>
-                          </>
-                        )}
                         {modalidad && (
                           <div className="ver-ped-field">
                             <span className="ver-ped-field__label">Modalidad</span>
@@ -1095,12 +1136,21 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
         <div className="modal-header shrink-0" style={{ background: "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)", padding: "20px 24px" }}>
           <div>
             <h2 className="text-lg font-black text-white leading-none">Registrar Cobro en Efectivo</h2>
-            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mt-1">Pedido #{pedido.numero} · ${(pedido.total || 0).toLocaleString("es-CO")}</p>
+            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mt-1">
+              Pedido #{pedido.numero} · ${montoACobrar(pedido).toLocaleString("es-CO")}
+            </p>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white"><X size={18} /></button>
         </div>
         <div className="modal-body p-6 space-y-4">
           <p style={{ fontSize: 13, color: "#424242" }}>¿Se recibió el pago en efectivo?</p>
+          {/* Pago mixto: en mano va solo una parte del pedido. */}
+          {esPagoMixto(pedido.metodo_pago) && (
+            <p style={{ fontSize: 12, color: "#757575", background: "#f5f5f5", borderRadius: 8, padding: "8px 10px" }}>
+              Son <strong>${montoACobrar(pedido).toLocaleString("es-CO")}</strong> de
+              un pedido de ${(pedido.total || 0).toLocaleString("es-CO")}: el resto va por transferencia.
+            </p>
+          )}
           <div style={{ display: "flex", gap: 10 }}>
             {[{ val: true, label: "Sí, recibido", color: "#2e7d32" }, { val: false, label: "No recibido", color: "#c62828" }].map(({ val, label, color }) => (
               <button
@@ -1280,15 +1330,19 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canEntregar         = ped.estado === "En camino";
   const canCancel           = !["Entregado", "Cancelado"].includes(ped.estado);
-  const esTransferencia     = (ped.metodo_pago || "").toLowerCase().includes("transfer");
-  const esEfectivo          = (ped.metodo_pago || "").toLowerCase().includes("efectivo");
+  // Un pedido mixto tiene comprobante QUE REVISAR y plata QUE COBRAR: con las
+  // preguntas sueltas de antes ("¿dice transfer?", "¿dice efectivo?") no
+  // coincidía con ninguna y se quedaba sin los dos botones.
+  const esTransferencia     = esPagoTransferencia(ped.metodo_pago);
+  const esEfectivo          = esPagoEfectivo(ped.metodo_pago);
   const canAprobar          = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
   const canRechazar         = esTransferencia && ped.comprobante && ped.estado_pago === "pendiente_validacion";
   const _terminalState      = ["Entregado","Cancelado"].includes(ped.estado);
   const _pagoRegistrado     = ["efectivo_recibido","pagado_completo","anticipo_pagado"].includes(ped.estado_pago);
   const canSubirComprobante = esTransferencia && !_terminalState &&
     (!ped.comprobante || ped.estado_pago === "comprobante_rechazado");
-  const canRegistrarCobro   = esEfectivo && !_terminalState && !_pagoRegistrado;
+  const _faltaEfectivoMixto = esPagoMixto(ped.metodo_pago) && ped.estado_pago === "anticipo_pagado";
+  const canRegistrarCobro   = esEfectivo && !_terminalState && (!_pagoRegistrado || _faltaEfectivoMixto);
 
   return (
     <div className="actions-cell">
@@ -1495,7 +1549,7 @@ export default function GestionPedidos() {
       setModal({ type: "registrarSaldo", pedido: ped });
       return;
     }
-    const esTransferencia = (ped.metodo_pago || "").toLowerCase().includes("transfer");
+    const esTransferencia = esPagoTransferencia(ped.metodo_pago);
     const estadoPago = ped.estado_pago || "pendiente";
     // Transferencia sin comprobante adjunto
     if (esTransferencia && !ped.comprobante) {

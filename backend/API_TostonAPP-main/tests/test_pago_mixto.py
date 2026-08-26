@@ -16,6 +16,10 @@ from src.features.ventas.gestion_ventas.services.service import (
     _es_transferencia,
     _partir_pago_mixto,
 )
+from src.features.ventas.pedidos.services.service import (
+    _ESTADOS_MIXTO_A_MEDIAS,
+    _lleva_transferencia,
+)
 
 
 class EsMixtoTests(unittest.TestCase):
@@ -83,6 +87,31 @@ class PartirPagoMixtoTests(unittest.TestCase):
         efectivo, transferencia = _partir_pago_mixto(Decimal("22500.75"), Decimal("3500.25"))
         self.assertEqual(efectivo, Decimal("3500.25"))
         self.assertEqual(transferencia, Decimal("19000.50"))
+
+
+class ComprobanteYCobroTests(unittest.TestCase):
+    """Las dos puertas que dejaban al mixto sin botones en el panel."""
+
+    def test_el_mixto_tiene_comprobante_que_revisar(self):
+        self.assertTrue(_lleva_transferencia("Mixto"))
+        self.assertTrue(_lleva_transferencia("Transferencia"))
+
+    def test_el_efectivo_puro_no_tiene_comprobante(self):
+        self.assertFalse(_lleva_transferencia("Efectivo"))
+        self.assertFalse(_lleva_transferencia("Contra entrega"))
+        self.assertFalse(_lleva_transferencia(None))
+
+    def test_desde_donde_falta_la_otra_mitad(self):
+        """Estados en los que el mixto todavia no tiene su comprobante aprobado."""
+        for estado in ["pendiente", "pendiente_validacion", "comprobante_rechazado"]:
+            with self.subTest(estado=estado):
+                self.assertIn(estado, _ESTADOS_MIXTO_A_MEDIAS)
+
+    def test_con_una_mitad_dentro_ya_no_esta_a_medias(self):
+        """Si el comprobante ya se aprobo, cobrar el efectivo cierra el pedido."""
+        for estado in ["anticipo_pagado", "pagado_completo", "efectivo_recibido"]:
+            with self.subTest(estado=estado):
+                self.assertNotIn(estado, _ESTADOS_MIXTO_A_MEDIAS)
 
 
 if __name__ == "__main__":
