@@ -707,6 +707,8 @@ button, label, input, p, span {
   color: #9ca3af;
   font-size: 14px;
   pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {

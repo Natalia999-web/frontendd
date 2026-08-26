@@ -115,9 +115,11 @@
   position: absolute;
   left: 26px;
   top: 50%;
-  transform: translateY(-20%);
+  transform: translateY(-50%);
   font-size: 13px;
   pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .notif-search-input {
