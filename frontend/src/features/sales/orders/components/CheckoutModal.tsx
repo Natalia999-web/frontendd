@@ -5,7 +5,7 @@ import { getUser } from '../../../../services/authService';
 import { getMiCredito } from '../../../../services/pedidosService';
 import { apiFetch } from '../../../../utils/api';
 import { MUNICIPIOS_VALLE_ABURRA } from '../../../../utils/departamentosYCiudades';
-import SaldoSlider from '../../../../shared/components/SaldoSlider';
+import SaldoMonto from '../../../../shared/components/SaldoMonto';
 import SplitPagoMonto from '../../../../shared/components/SplitPagoMonto';
 import './CheckoutModal.css';
 
@@ -50,10 +50,10 @@ const SaldoAFavorPicker: React.FC<{
   saldo: number;
   maximo: number;
   activo: boolean;
-  porcentaje: number;
+  monto: number | '';
   onToggle: () => void;
-  onPorcentaje: (p: number) => void;
-}> = ({ saldo, maximo, activo, porcentaje, onToggle, onPorcentaje }) => {
+  onMonto: (m: number | '') => void;
+}> = ({ saldo, maximo, activo, monto, onToggle, onMonto }) => {
   return (
     <div className={`rounded-2xl border-2 transition-all ${activo ? 'border-green-500 bg-green-50' : 'border-gray-100 bg-white hover:border-green-200'}`}>
       <div onClick={onToggle} className="flex items-center gap-3 p-3 cursor-pointer">
@@ -71,12 +71,11 @@ const SaldoAFavorPicker: React.FC<{
 
       {activo && (
         <div className="px-3 pb-3 pt-2.5 border-t border-green-200">
-          <p className="text-[10px] font-bold text-gray-500 mb-1">Cuánto aplicas a este pedido</p>
-          <SaldoSlider
+          <SaldoMonto
             saldo={saldo}
             maximo={maximo}
-            porcentaje={porcentaje}
-            onPorcentaje={onPorcentaje}
+            monto={monto}
+            onMonto={onMonto}
           />
         </div>
       )}
@@ -96,8 +95,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   const [isConfirming,       setIsConfirming]       = useState(false);
   const [credito,            setCredito]            = useState(0);
   const [usarCredito,        setUsarCredito]        = useState(false);
-  // Arranca en 100%: quien prende el saldo casi siempre lo quiere usar entero.
-  const [creditoPct,         setCreditoPct]         = useState(100);
+  // Cuanto saldo a favor se aplica, EN PESOS. Arranca vacio y el tope lo
+  // pone creditoMaximo; el atajo "Todo" cubre el caso mas comun.
+  const [creditoMonto,       setCreditoMonto]       = useState<number | ''>('');
   const [tieneDomicilio,     setTieneDomicilio]     = useState(false);
   const [address,            setAddress]            = useState('');
   const [municipio,          setMunicipio]          = useState('');
@@ -165,7 +165,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     setAnticipoComprobante(null);
     setAnticipoError('');
     setUsarCredito(false);
-    setCreditoPct(100);
+    setCreditoMonto('');
     setEfectivoMonto('');
     setMixtoError('');
     setTerminosAceptados(false);
@@ -197,7 +197,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   // Tope real: no se puede aplicar mas saldo del que hay ni mas de lo que
   // cuesta el pedido. Sobre ese tope corre la barra.
   const creditoMaximo    = Math.min(credito, orderDetails.total + costoDomicilio);
-  const creditoAplicar   = usarCredito ? Math.round((creditoMaximo * creditoPct) / 100) : 0;
+  const creditoAplicar   = usarCredito
+    ? Math.min(Math.max(Number(creditoMonto) || 0, 0), creditoMaximo)
+    : 0;
   const totalFinal       = Math.max(0, orderDetails.total + costoDomicilio - creditoAplicar);
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa y hay que separar la plata. No depende del monto —
@@ -612,9 +614,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                   saldo={credito}
                   maximo={creditoMaximo}
                   activo={usarCredito}
-                  porcentaje={creditoPct}
-                  onToggle={() => setUsarCredito(!usarCredito)}
-                  onPorcentaje={setCreditoPct}
+                  monto={creditoMonto}
+                  onToggle={() => {
+                    const prender = !usarCredito;
+                    setUsarCredito(prender);
+                    if (prender) setCreditoMonto(creditoMaximo);
+                  }}
+                  onMonto={setCreditoMonto}
                 />
               )}
 
@@ -703,9 +709,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               saldo={credito}
               maximo={creditoMaximo}
               activo={usarCredito}
-              porcentaje={creditoPct}
-              onToggle={() => setUsarCredito(!usarCredito)}
-              onPorcentaje={setCreditoPct}
+              monto={creditoMonto}
+              onToggle={() => {
+                const prender = !usarCredito;
+                setUsarCredito(prender);
+                if (prender) setCreditoMonto(creditoMaximo);
+              }}
+              onMonto={setCreditoMonto}
             />
           )}
 

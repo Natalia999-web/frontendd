@@ -1,3 +1,4 @@
+import CampoMonto from "./CampoMonto";
 import "./SplitPagoMonto.css";
 
 const COP = (n) =>
@@ -17,32 +18,18 @@ export default function SplitPagoMonto({ total, montoEfectivo, onMonto, error })
   const efectivo      = Math.min(Math.max(Number(montoEfectivo) || 0, 0), total);
   const transferencia = total - efectivo;
 
-  const escribir = (valor) => {
-    // Solo dígitos: el separador de miles lo pone la vista de abajo.
-    const limpio = String(valor).replace(/\D/g, "");
-    onMonto(limpio === "" ? "" : Math.min(Number(limpio), total));
-  };
-
   return (
     <div className="split-pago">
       <label className="split-pago__label">¿Cuánto vas a pagar en efectivo?</label>
 
-      <div className={`split-pago__campo${error ? " split-pago__campo--error" : ""}`}>
-        <span className="split-pago__signo">$</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={montoEfectivo === "" || montoEfectivo == null ? "" : Number(montoEfectivo).toLocaleString("es-CO")}
-          onChange={e => escribir(e.target.value)}
-          placeholder="0"
-          aria-label="Monto que se paga en efectivo"
-        />
-        <button type="button" className="split-pago__mitad" onClick={() => onMonto(Math.round(total / 2))}>
-          Mitad
-        </button>
-      </div>
-
-      {error && <p className="split-pago__error">{error}</p>}
+      <CampoMonto
+        valor={montoEfectivo}
+        onValor={onMonto}
+        maximo={total}
+        atajos={[{ label: "Mitad", valor: Math.round(total / 2) }]}
+        error={error}
+        ariaLabel="Monto que se paga en efectivo"
+      />
 
       <div className="split-pago__reparto">
         <div>

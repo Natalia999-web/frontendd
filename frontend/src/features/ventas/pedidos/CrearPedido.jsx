@@ -5,7 +5,7 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
 import { getProductos } from "../../../services/productosService.js";
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
-import SaldoSlider from "../../../shared/components/SaldoSlider";
+import SaldoMonto from "../../../shared/components/SaldoMonto";
 import SplitPagoMonto from "../../../shared/components/SplitPagoMonto";
 import { getCreditoCliente } from "../../../services/devolucionesService.js";
 import "./Pedidos.css";
@@ -287,8 +287,9 @@ export default function CrearPedido({ onClose, onSave }) {
   const [pagarTodo,      setPagarTodo]      = useState(false);
   const [creditoCliente, setCreditoCliente] = useState(0);
   const [usarCredito,    setUsarCredito]    = useState(false);
-  // Que parte del saldo a favor se aplica. Arranca entero, que es lo normal.
-  const [creditoPct,     setCreditoPct]     = useState(100);
+  // Cuanto saldo a favor se aplica, EN PESOS: el cliente pide "usame $5.000",
+  // no "usame el 27%". El tope lo pone creditoMaximo.
+  const [creditoMonto,   setCreditoMonto]   = useState("");
   // Pago mixto: cuánta plata cobra el local en efectivo. El resto va
   // transferido. En pesos, porque el cliente paga con lo que tiene encima.
   const [efectivoMonto,  setEfectivoMonto]  = useState("");
@@ -336,7 +337,9 @@ export default function CrearPedido({ onClose, onSave }) {
   // Tope: ni mas saldo del que tiene el cliente ni mas de lo que cuesta el
   // pedido. La barra corre sobre ese tope, asi el 100% cae siempre justo.
   const creditoMaximo  = Math.min(creditoCliente, total);
-  const creditoAplicar = usarCredito ? Math.round((creditoMaximo * creditoPct) / 100) : 0;
+  const creditoAplicar = usarCredito
+    ? Math.min(Math.max(Number(creditoMonto) || 0, 0), creditoMaximo)
+    : 0;
   const totalFinal    = Math.max(0, total - creditoAplicar);
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa. No depende del monto — antes se pedía por pasar de
@@ -568,7 +571,7 @@ export default function CrearPedido({ onClose, onSave }) {
                     if (!cli) {
                       setForm(f => ({ ...f, idCliente: "", departamento: "", municipio: "", direccion_entrega: "" }));
                       setCreditoCliente(0);
-                      setCreditoPct(100);
+                      setCreditoMonto("");
                       setUsarCredito(false);
                       return;
                     }
@@ -580,7 +583,7 @@ export default function CrearPedido({ onClose, onSave }) {
                       direccion_entrega: cli.direccion || "",
                     }));
                     setUsarCredito(false);
-                    setCreditoPct(100);
+                    setCreditoMonto("");
                     getCreditoCliente(cli.id).then(saldo => setCreditoCliente(saldo)).catch(() => setCreditoCliente(0));
                     setErrors(err => ({ ...err, idCliente: "" }));
                   }}
@@ -998,7 +1001,13 @@ export default function CrearPedido({ onClose, onSave }) {
                     <input
                       type="checkbox"
                       checked={usarCredito}
-                      onChange={e => { setUsarCredito(e.target.checked); setPagarTodo(false); }}
+                      onChange={e => {
+                        setUsarCredito(e.target.checked);
+                        // Al prender se propone el maximo: es lo que se pide
+                        // casi siempre y evita escribir la cifra a mano.
+                        if (e.target.checked) setCreditoMonto(creditoMaximo);
+                        setPagarTodo(false);
+                      }}
                       style={{ width: 18, height: 18, accentColor: "#2e7d32" }}
                     />
                     <span style={{ fontSize: 13, color: usarCredito ? "#1b5e20" : "#555", fontWeight: usarCredito ? 700 : 400 }}>
@@ -1010,14 +1019,11 @@ export default function CrearPedido({ onClose, onSave }) {
                       dejar el resto para el proximo pedido. */}
                   {usarCredito && (
                     <div style={{ marginTop: 10, background: "#fff", borderRadius: 10, padding: "14px 16px" }}>
-                      <p style={{ margin: "0 0 2px", fontSize: 12, color: "#666", fontWeight: 600 }}>
-                        Cuánto se aplica a este pedido
-                      </p>
-                      <SaldoSlider
+                      <SaldoMonto
                         saldo={creditoCliente}
                         maximo={creditoMaximo}
-                        porcentaje={creditoPct}
-                        onPorcentaje={setCreditoPct}
+                        monto={creditoMonto}
+                        onMonto={setCreditoMonto}
                       />
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", marginTop: 14, paddingTop: 12 }}>
                         <span style={{ fontSize: 13, color: "#666" }}>Total a pagar después del saldo</span>
