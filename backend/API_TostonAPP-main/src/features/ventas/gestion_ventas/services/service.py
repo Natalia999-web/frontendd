@@ -866,8 +866,9 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     ))
 
     # Cuando el admin crea el pedido directamente: nace en Confirmado (4).
-    # Para pickup (sin domicilio): descuenta stock de los productos que NO requieren producción.
-    # Los productos de producción se saltan (sin stock que descontar; la orden cubre el déficit).
+    # Para pickup (sin domicilio): reserva stock de todos los productos.
+    #   - Producción: reserva min(cantidad, stock); el déficit va a la OP.
+    #   - Normal: reserva la cantidad completa.
     # Para domicilio: el stock se descuenta en ENTREGADO, igual que el flujo normal.
     if datos.creado_por_admin:
         nueva_venta.Estado = EstadoPedido.CONFIRMADO
@@ -877,9 +878,15 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             ).all()
             for item in items_flush:
                 prod = db.query(Producto).filter(Producto.ID_Producto == item.ID_Producto).first()
-                if not prod or getattr(prod, "Requiere_Produccion", 0):
+                if not prod:
                     continue
-                prod.Stock = max(0, (prod.Stock or 0) - (item.Cantidad or 0))
+                if getattr(prod, "Requiere_Produccion", 0):
+                    # Para producción: reservar solo la porción que cubre el stock;
+                    # el déficit (Cantidad_Preorden) lo fabrica la OP.
+                    a_descontar = min(item.Cantidad or 0, prod.Stock or 0)
+                else:
+                    a_descontar = item.Cantidad or 0
+                prod.Stock = max(0, (prod.Stock or 0) - a_descontar)
                 _actualizar_estado_producto(prod)
                 notificar_stock_producto(db, prod)
         # Estas notificaciones ya no aplican: el admin las gestiona en el mismo acto
@@ -1288,9 +1295,9 @@ def _crear_ordenes_produccion_para_venta(db: Session, id_venta: int, fecha_entre
         prod = productos_m.get(item.ID_Producto)
         if not prod or not getattr(prod, "Requiere_Produccion", 0):
             continue
-        cantidad = item.Cantidad or 0
+        cantidad = item.Cantidad_Preorden or 0
         if cantidad <= 0:
-            continue
+            continue  # stock cubría todo; no se necesita producción
         ficha    = fichas_m.get(item.ID_Producto)
         template = templates_m.get(item.ID_Producto)
         id_ficha  = ficha.ID_Ficha     if ficha    else (template.ID_Ficha  if template else None)
@@ -1332,6 +1339,26 @@ def aceptar_fecha(db: Session, id_venta: int, actual: dict) -> dict:
     # cuando se completen sus órdenes.
     if _crear_ordenes_produccion_para_venta(db, id_venta, venta.Fecha_entrega_esperada) > 0:
         venta.Estado = EstadoPedido.PREPARANDO
+
+    # Reservar del stock la porción disponible para pedidos de recoger en tienda:
+    # el déficit ya quedó cubierto por la OP; las unidades en stock se apartan ahora.
+    _tiene_domicilio = db.query(Domicilio).filter(Domicilio.ID_Venta == id_venta).first() is not None
+    if not _tiene_domicilio:
+        for av in db.query(VentaXProducto).filter(VentaXProducto.ID_Venta == id_venta).all():
+            en_stock_reservado = (av.Cantidad or 0) - (av.Cantidad_Preorden or 0)
+            if en_stock_reservado <= 0:
+                continue
+            prod_av = (
+                db.query(Producto)
+                .filter(Producto.ID_Producto == av.ID_Producto)
+                .with_for_update()
+                .first()
+            )
+            if not prod_av or not getattr(prod_av, "Requiere_Produccion", 0):
+                continue
+            prod_av.Stock = max(0, (prod_av.Stock or 0) - en_stock_reservado)
+            _actualizar_estado_producto(prod_av)
+            notificar_stock_producto(db, prod_av)
 
     notificar(
         db, "fecha_aceptada", "Fecha aceptada por el cliente",
