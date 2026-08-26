@@ -220,7 +220,7 @@ export default function VerInsumo({ ins, categorias, unidades, onClose }) {
     );
   }
 
-  const cat    = (categorias ?? []).find(c => c.id === ins.idCategoria) ?? { icon: "🧺", nombre: "—" };
+  const cat    = (categorias ?? []).find(c => c.id === ins.idCategoria) ?? { icon: "", nombre: "—" };
   const unidad = (unidades   ?? []).find(u => u.id === ins.idUnidad)    ?? { simbolo: ins.simboloUnidad || "uds.", nombre: "Unidad" };
   const est    = calcEstado(ins.stockActual, ins.stockMinimo);
 

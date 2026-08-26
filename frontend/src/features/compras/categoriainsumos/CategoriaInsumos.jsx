@@ -20,7 +20,7 @@ const ADAPT = raw => ({
   id:           raw.ID_Categoria,
   nombre:       raw.Nombre_Categoria,
   descripcion:  raw.Descripcion ?? "",
-  icon:         raw.Icono ?? "🧺",
+  icon:         raw.Icono ?? "",
   estado:       raw.Estado === 1,
   fecha:        fmtFecha(raw.Fecha_Creacion ?? raw.Fecha_creacion),
   totalInsumos: raw.total_insumos ?? 0,

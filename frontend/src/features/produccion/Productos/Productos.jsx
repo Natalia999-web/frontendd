@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, X, AlertTriangle, Package, ClipboardList, Eye, PenLine, Trash2, Truck } from "lucide-react";
+import { Search, X, AlertTriangle, Package, ClipboardList, Eye, PenLine, Trash2, Truck, Clock, AlertCircle, Scale, Utensils, CornerUpLeft } from "lucide-react";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import { crearFicha, editarFicha } from "../../../services/fichaTecnicaService.js";
 import { Toast } from "./ui.jsx";
@@ -64,11 +64,11 @@ function diasParaVencer(fechaVenc) {
   );
 }
 const TIPO_COLORS = {
-  vencido:    { color: "#e65100", bg: "#fff3e0", border: "#ffcc80", icon: "🕒" },
-  dañado:     { color: "#c62828", bg: "#ffebee", border: "#ef9a9a", icon: "💥" },
-  ajuste:     { color: "#1565c0", bg: "#e3f2fd", border: "#90caf9", icon: "⚖️" },
-  consumo:    { color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8", icon: "🍽️" },
-  devolucion: { color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", icon: "↩️" },
+  vencido:    { color: "#e65100", bg: "#fff3e0", border: "#ffcc80", Icon: Clock },
+  dañado:     { color: "#c62828", bg: "#ffebee", border: "#ef9a9a", Icon: AlertCircle },
+  ajuste:     { color: "#1565c0", bg: "#e3f2fd", border: "#90caf9", Icon: Scale },
+  consumo:    { color: "#4a148c", bg: "#f3e5f5", border: "#ce93d8", Icon: Utensils },
+  devolucion: { color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7", Icon: CornerUpLeft },
 };
 
 /**
@@ -647,7 +647,7 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
                     {Object.entries(resumenSalidas).map(([tipo, total]) => {
                       const tc = TIPO_COLORS[tipo] || {
-                        color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", icon: "📋",
+                        color: "#757575", bg: "#f5f5f5", border: "#e0e0e0", Icon: ClipboardList,
                       };
                       return (
                         <div
@@ -659,7 +659,7 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
                             fontSize: 12, fontWeight: 700, color: tc.color,
                           }}
                         >
-                          <span>{tc.icon}</span>
+                          {tc.Icon && <tc.Icon size={12} />}
                           {tipo.charAt(0).toUpperCase() + tipo.slice(1)}:
                           <span style={{ marginLeft: 2 }}>{total} uds.</span>
                         </div>
@@ -711,7 +711,7 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
                 <div className="historial-list">
                   {salidas.map((salida) => {
                     const tc = TIPO_COLORS[salida.tipo] || {
-                      color: "#757575", bg: "#f5f5f5", icon: "📋",
+                      color: "#757575", bg: "#f5f5f5", Icon: ClipboardList,
                     };
                     return (
                       <div
@@ -731,7 +731,7 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
                               color: tc.color, background: tc.bg,
                             }}
                           >
-                            {tc.icon} {salida.tipo}
+                            {tc.Icon && <tc.Icon size={11} style={{marginRight:3}} />}{salida.tipo}
                           </span>
                           <span style={{ fontSize: 13, color: "#424242" }}>{salida.motivo}</span>
                         </div>
