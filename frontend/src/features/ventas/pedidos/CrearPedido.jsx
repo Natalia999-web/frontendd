@@ -1189,6 +1189,8 @@ export default function CrearPedido({ onClose, onSave }) {
                   <span style={{ fontSize: 12.5, color: "#37474f", lineHeight: 1.5 }}>
                     He leído y acepto los <strong>términos y condiciones</strong>: entiendo que{" "}
                     <strong>Tostón no realiza devoluciones de dinero</strong> una vez confirmado el pedido.
+                    En caso de devolución aprobada, el valor se acreditará como{" "}
+                    <strong>saldo a favor</strong> para futuros pedidos.
                     Los productos son de naturaleza alimenticia y se preparan bajo pedido,
                     por lo que no se aceptan cancelaciones después de la confirmación.
                   </span>

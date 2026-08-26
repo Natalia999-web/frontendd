@@ -782,7 +782,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 style={{ marginTop: 2, accentColor: '#388e3c', width: 15, height: 15, flexShrink: 0 }}
               />
               <span style={{ fontSize: 11, color: '#5d4037', lineHeight: 1.5 }}>
-                He leído y acepto los <strong>términos y condiciones</strong>: entiendo que <strong>Tostón no realiza devoluciones de dinero</strong> una vez confirmado el pedido, independientemente de la causa.
+                He leído y acepto los <strong>términos y condiciones</strong>: entiendo que <strong>Tostón no realiza devoluciones de dinero</strong> una vez confirmado el pedido. En caso de devolución aprobada, el valor se acreditará como <strong>saldo a favor</strong> para futuros pedidos.
               </span>
             </label>
 
