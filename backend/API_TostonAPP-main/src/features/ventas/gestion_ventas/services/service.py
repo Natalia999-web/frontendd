@@ -92,10 +92,7 @@ def _evaluar_lineas_pedido(db: Session, productos_input) -> tuple[list[dict], De
 
         stock    = producto.Stock or 0
         cantidad = p.Cantidad
-        # Los productos por encargo (Requiere_Produccion) ya tienen su propio
-        # flujo: el déficit se cubre con una orden de producción, no es preorden.
-        requiere_produccion = bool(getattr(producto, "Requiere_Produccion", 0))
-        preorden = 0 if requiere_produccion else max(0, cantidad - stock)
+        preorden = max(0, cantidad - stock)
 
         precio    = producto.Precio_venta or Decimal("0")
         subtotal += precio * Decimal(str(cantidad))
