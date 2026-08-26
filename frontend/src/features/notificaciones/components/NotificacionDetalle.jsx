@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Calendar, AlertTriangle, Check, CheckCircle2, Info } from "lucide-react";
+import { X, Calendar, AlertTriangle, Check, CheckCircle2, Info, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNotificaciones, TIPO_ICONS, TIPO_LABELS, TIPO_COLORS, TIPOS } from "../context/NotificacionesContext";
 
@@ -90,8 +90,9 @@ export default function NotificacionDetalle({ notif, onClose }) {
         <div className="modal-header" style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)` }}>
           <div>
             <p className="modal-header__eyebrow">DETALLE DE NOTIFICACIÓN</p>
-            <h2 className="modal-header__title">
-              {TIPO_ICONS[notif.tipo]} {TIPO_LABELS[notif.tipo]}
+            <h2 className="modal-header__title" style={{display:"flex",alignItems:"center",gap:6}}>
+              {(() => { const Icon = TIPO_ICONS[notif.tipo]; return Icon ? <Icon size={16} /> : null; })()}
+              {TIPO_LABELS[notif.tipo]}
             </h2>
           </div>
           <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
@@ -100,8 +101,9 @@ export default function NotificacionDetalle({ notif, onClose }) {
         {/* Body */}
         <div className="modal-body notif-detalle__body">
           <div className="notif-detalle__pill-row">
-            <span className="notif-detalle__pill" style={{ background: `${color}18`, color }}>
-              {TIPO_ICONS[notif.tipo]} {TIPO_LABELS[notif.tipo]}
+            <span className="notif-detalle__pill" style={{ background: `${color}18`, color, display:"inline-flex", alignItems:"center", gap:5 }}>
+              {(() => { const Icon = TIPO_ICONS[notif.tipo]; return Icon ? <Icon size={13} /> : null; })()}
+              {TIPO_LABELS[notif.tipo]}
             </span>
             <span className="notif-detalle__fecha">{fmtFechaCompleta(notif.fecha)}</span>
           </div>
@@ -181,10 +183,10 @@ export default function NotificacionDetalle({ notif, onClose }) {
           {!esFechaPropuesta && (
             <button
               className="btn-save"
-              style={{ background: color, border: "none", color: "#fff" }}
+              style={{ background: color, border: "none", color: "#fff", display:"inline-flex", alignItems:"center", gap:6 }}
               onClick={handleIrAlRecurso}
             >
-              🚀 Ir al módulo
+              <ExternalLink size={14} /> Ir al módulo
             </button>
           )}
 

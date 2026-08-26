@@ -137,7 +137,7 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
           >
             <option value="">Todos los tipos</option>
             {tiposRelevantes.map(([k, v]) => (
-              <option key={k} value={k}>{TIPO_ICONS[k]} {v}</option>
+              <option key={k} value={k}>{v}</option>
             ))}
           </select>
 
@@ -226,7 +226,7 @@ function NotifItem({ notif, onVer, onMarcarLeida, onEliminar }) {
 
       <div className="notif-item__body" onClick={() => onVer(notif)}>
         <div className="notif-item__top">
-          <span className="notif-item__icon">{TIPO_ICONS[notif.tipo]}</span>
+          <span className="notif-item__icon">{(() => { const Icon = TIPO_ICONS[notif.tipo]; return Icon ? <Icon size={14} /> : null; })()}</span>
           <span className="notif-item__tipo" style={{ color }}>
             {TIPO_LABELS[notif.tipo]}
           </span>

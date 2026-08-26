@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
+  AlertTriangle, AlertCircle, Clock, XCircle, ShoppingCart,
+  Package, Bell, CornerUpLeft, CheckCircle2, Factory, Calendar, Bike,
+} from "lucide-react";
+import {
   getNotificacionesAdmin,
   marcarLeidaAPI,
   eliminarNotificacionAPI,
@@ -52,23 +56,23 @@ export const TIPO_LABELS = {
 };
 
 export const TIPO_ICONS = {
-  [TIPOS.STOCK_MINIMO]:         "⚠️",
-  [TIPOS.STOCK_AGOTADO]:        "🚨",
-  [TIPOS.LOTE_POR_VENCER]:      "⏰",
-  [TIPOS.LOTE_VENCIDO]:         "❌",
-  [TIPOS.PEDIDO_NUEVO]:         "🛒",
-  [TIPOS.COMPRA_PENDIENTE]:     "📦",
-  [TIPOS.SISTEMA]:              "🔔",
-  [TIPOS.DEVOLUCION_PENDIENTE]: "↩️",
-  [TIPOS.PEDIDO_CONFIRMADO]:    "✅",
-  [TIPOS.PEDIDO_ENTREGADO]:     "🎉",
-  [TIPOS.PEDIDO_CANCELADO]:     "❌",
-  [TIPOS.DEVOLUCION_APROBADA]:  "✅",
-  [TIPOS.DEVOLUCION_RECHAZADA]: "❌",
-  [TIPOS.PEDIDO_EN_PRODUCCION]: "🏭",
-  [TIPOS.FECHA_PROPUESTA]:      "📅",
-  [TIPOS.FECHA_RECHAZADA]:      "❌",
-  [TIPOS.DOMICILIO_ASIGNADO]:   "🛵",
+  [TIPOS.STOCK_MINIMO]:         AlertTriangle,
+  [TIPOS.STOCK_AGOTADO]:        AlertCircle,
+  [TIPOS.LOTE_POR_VENCER]:      Clock,
+  [TIPOS.LOTE_VENCIDO]:         XCircle,
+  [TIPOS.PEDIDO_NUEVO]:         ShoppingCart,
+  [TIPOS.COMPRA_PENDIENTE]:     Package,
+  [TIPOS.SISTEMA]:              Bell,
+  [TIPOS.DEVOLUCION_PENDIENTE]: CornerUpLeft,
+  [TIPOS.PEDIDO_CONFIRMADO]:    CheckCircle2,
+  [TIPOS.PEDIDO_ENTREGADO]:     CheckCircle2,
+  [TIPOS.PEDIDO_CANCELADO]:     XCircle,
+  [TIPOS.DEVOLUCION_APROBADA]:  CheckCircle2,
+  [TIPOS.DEVOLUCION_RECHAZADA]: XCircle,
+  [TIPOS.PEDIDO_EN_PRODUCCION]: Factory,
+  [TIPOS.FECHA_PROPUESTA]:      Calendar,
+  [TIPOS.FECHA_RECHAZADA]:      XCircle,
+  [TIPOS.DOMICILIO_ASIGNADO]:   Bike,
 };
 
 export const TIPO_COLORS = {

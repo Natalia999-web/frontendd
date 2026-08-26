@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, AlertCircle } from "lucide-react";
 import { useNotificaciones, TIPO_ICONS, TIPO_COLORS } from "../context/NotificacionesContext";
 import "./notificaciones.css";
 
@@ -45,7 +45,7 @@ export default function AlertaBanner({ onVerTodas }) {
 
         {/* Icono y título */}
         <div className="alerta-banner__header">
-          <span className="alerta-banner__icon-main">🚨</span>
+          <span className="alerta-banner__icon-main"><AlertCircle size={24} /></span>
           <div>
             <p className="alerta-banner__titulo">
               {criticas.length === 1
@@ -63,7 +63,7 @@ export default function AlertaBanner({ onVerTodas }) {
             const color = TIPO_COLORS[n.tipo] || "#c62828";
             return (
               <div key={n.id} className="alerta-banner__item" style={{ "--ac": color }}>
-                <span className="alerta-banner__item-icon">{TIPO_ICONS[n.tipo]}</span>
+                <span className="alerta-banner__item-icon">{(() => { const Icon = TIPO_ICONS[n.tipo]; return Icon ? <Icon size={15} /> : null; })()}</span>
                 <div className="alerta-banner__item-text">
                   <strong>{n.titulo}</strong>
                   <span>{n.mensaje}</span>
