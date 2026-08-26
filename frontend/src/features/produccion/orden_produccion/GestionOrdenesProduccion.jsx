@@ -200,7 +200,7 @@ function ModalDetallesOrden({ orden, onClose }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <EstadoBadge estado={orden.estado} />
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
           </div>
         </div>
 
