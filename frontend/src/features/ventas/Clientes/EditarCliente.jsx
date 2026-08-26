@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { validatePassword } from "../../configuracion/Usuarios/usuariosUtils.js";
 import "./clientes.css";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
+import { Check, X, User, Eye, EyeOff, Camera, MapPin, Lock, Mail, Phone, Calendar } from "lucide-react";
 
 const TIPOS_DOC = ["CC", "TI", "CE", "Pasaporte", "NIT", "PPT"];
 const fmtTel = raw => {
@@ -90,7 +91,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14}/> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -122,9 +123,9 @@ function Toggle({ value, onChange, disabled }) {
    MODAL VER — Side panel con nav lateral
 ══════════════════════════════════════════════════════════ */
 const NAV_VER = [
-  { id: "personal",  label: "Personal",  icon: "👤" },
-  { id: "ubicacion", label: "Ubicación", icon: "📍" },
-  { id: "cuenta",    label: "Cuenta",    icon: "🔐" },
+  { id: "personal",  label: "Personal",  Icon: User },
+  { id: "ubicacion", label: "Ubicación", Icon: MapPin },
+  { id: "cuenta",    label: "Cuenta",    Icon: Lock },
 ];
 
 function ModalVerCliente({ cliente, onClose }) {
@@ -141,7 +142,7 @@ function ModalVerCliente({ cliente, onClose }) {
             <p className="modal-header__eyebrow">Clientes</p>
             <h2 className="modal-header__title">{cliente.nombre} {cliente.apellidos}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         {/* Side panel layout */}
@@ -157,7 +158,7 @@ function ModalVerCliente({ cliente, onClose }) {
               <div className="avatar-wrap" style={{ width: 52, height: 52, fontSize: 22 }}>
                 {cliente.fotoPreview
                   ? <img src={cliente.fotoPreview} alt={cliente.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span>👤</span>}
+                  : <User size={22}/>}
               </div>
             </div>
 
@@ -172,7 +173,7 @@ function ModalVerCliente({ cliente, onClose }) {
                 fontSize: 13, cursor: "pointer", fontFamily: "inherit",
                 transition: "all 0.15s", textAlign: "left", width: "100%",
               }}>
-                <span style={{ fontSize: 14 }}>{item.icon}</span>
+                <item.Icon size={14} />
                 {item.label}
               </button>
             ))}
@@ -207,7 +208,7 @@ function ModalVerCliente({ cliente, onClose }) {
                     <label className="form-label">Correo electrónico</label>
                     <div className="field-input field-input--disabled">
                       {cliente.correo
-                        ? <a href={`mailto:${cliente.correo}`} style={{ color: "#1565c0", textDecoration: "none", fontWeight: 600 }}>✉ {cliente.correo}</a>
+                        ? <a href={`mailto:${cliente.correo}`} style={{ color: "#1565c0", textDecoration: "none", fontWeight: 600, display:"flex", alignItems:"center", gap:6 }}><Mail size={14}/> {cliente.correo}</a>
                         : "—"}
                     </div>
                   </div>
@@ -215,7 +216,7 @@ function ModalVerCliente({ cliente, onClose }) {
                     <label className="form-label">Teléfono</label>
                     <div className="field-input field-input--disabled">
                       {cliente.telefono
-                        ? <a href={`https://wa.me/${cliente.telefono.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#2e7d32", textDecoration: "none", fontWeight: 600 }}>📞 {cliente.telefono}</a>
+                        ? <a href={`https://wa.me/${cliente.telefono.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#2e7d32", textDecoration: "none", fontWeight: 600, display:"flex", alignItems:"center", gap:6 }}><Phone size={14}/> {cliente.telefono}</a>
                         : "—"}
                     </div>
                   </div>
@@ -264,8 +265,8 @@ function ModalVerCliente({ cliente, onClose }) {
                   <div className="field-input field-input--disabled" style={{ color: "#bdbdbd" }}>••••••••</div>
                 </div>
                 {cliente.fechaCreacion && (
-                  <div className="date-info" style={{ marginTop: 8 }}>
-                    <span>📅</span>
+                  <div className="date-info" style={{ marginTop: 8, display:"flex", alignItems:"center", gap:6 }}>
+                    <Calendar size={14}/>
                     <span>Cliente desde <strong>{cliente.fechaCreacion}</strong></span>
                   </div>
                 )}
@@ -402,7 +403,7 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
             <p className="modal-header__eyebrow">Clientes</p>
             <h2 className="modal-header__title">Editar Cliente</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         <div style={{ padding: "16px 24px 0" }}>
@@ -419,8 +420,8 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
                 <div className="avatar-upload-wrap" onClick={() => fotoRef.current.click()}>
                   {form.fotoPreview
                     ? <img className="avatar-upload-img" src={form.fotoPreview} alt="avatar" />
-                    : <div className="avatar-upload-placeholder">👤</div>}
-                  <div className="avatar-upload-overlay">📷</div>
+                    : <div className="avatar-upload-placeholder"><User size={36}/></div>}
+                  <div className="avatar-upload-overlay"><Camera size={16}/></div>
                 </div>
                 <p style={{ margin: 0, fontSize: 11, color: "#9e9e9e" }}>Foto de perfil</p>
                 <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFoto} />
@@ -539,7 +540,7 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
                       placeholder="Dejar vacío para no cambiar"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e  => e.target.style.borderColor = "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
                   </div>
                 </div>
                 <div className="form-group">
@@ -551,7 +552,7 @@ function ModalEditarCliente({ cliente, onClose, onSave }) {
                       placeholder="Repetir contraseña"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e  => e.target.style.borderColor = errors.confirmar ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
                   </div>
                   {errors.confirmar && <p className="field-error">{errors.confirmar}</p>}
                 </div>

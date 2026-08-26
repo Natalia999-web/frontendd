@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, Calendar, AlertTriangle, Check, CheckCircle2, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNotificaciones, TIPO_ICONS, TIPO_LABELS, TIPO_COLORS, TIPOS } from "../context/NotificacionesContext";
 
@@ -93,7 +94,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
               {TIPO_ICONS[notif.tipo]} {TIPO_LABELS[notif.tipo]}
             </h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Body */}
@@ -118,7 +119,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
           {esFechaPropuesta && !accionDone && (
             <div style={{ marginTop: 20, background: "linear-gradient(135deg,#e8eaf6 0%,#ede7f6 100%)", border: "2px solid #9fa8da", borderRadius: 14, padding: "16px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 20 }}>📅</span>
+                <Calendar size={20} />
                 <p style={{ fontWeight: 800, fontSize: 13, color: "#283593", margin: 0 }}>¿Confirmas esta fecha de entrega?</p>
               </div>
 
@@ -137,7 +138,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
                 Si rechazas, el pedido será cancelado.
               </p>
               {accionError && (
-                <p style={{ fontSize: 11, color: "#c62828", fontWeight: 700, marginBottom: 8 }}>⚠ {accionError}</p>
+                <p style={{ fontSize: 11, color: "#c62828", fontWeight: 700, marginBottom: 8, display:"flex", alignItems:"center", gap:4 }}><AlertTriangle size={11} />{accionError}</p>
               )}
               <div style={{ display: "flex", gap: 8 }}>
                 <button
@@ -145,14 +146,14 @@ export default function NotificacionDetalle({ notif, onClose }) {
                   onClick={handleAceptar}
                   style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: "#2e7d32", color: "#fff", fontWeight: 800, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "rechazar" ? 0.5 : 1 }}
                 >
-                  {accionando === "aceptar" ? "Aceptando…" : "✓ Sí, acepto"}
+                  {accionando === "aceptar" ? "Aceptando…" : <><Check size={14} /> Sí, acepto</>}
                 </button>
                 <button
                   disabled={!!accionando}
                   onClick={handleRechazar}
                   style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: "#c62828", color: "#fff", fontWeight: 800, fontSize: 13, cursor: accionando ? "not-allowed" : "pointer", opacity: accionando === "aceptar" ? 0.5 : 1 }}
                 >
-                  {accionando === "rechazar" ? "Rechazando…" : "✕ Rechazar"}
+                  {accionando === "rechazar" ? "Rechazando…" : <><X size={14} /> Rechazar</>}
                 </button>
               </div>
             </div>
@@ -160,14 +161,14 @@ export default function NotificacionDetalle({ notif, onClose }) {
 
           {esFechaPropuesta && accionDone && (
             <div className="info-box info-box--success" style={{ marginTop: 20 }}>
-              <span className="info-box__icon">✅</span>
+              <CheckCircle2 size={16} className="info-box__icon" />
               <span className="info-box__text">Respuesta enviada. Puedes cerrar esta notificación.</span>
             </div>
           )}
 
           {!esFechaPropuesta && (
             <div className="info-box info-box--info" style={{ marginTop: 20 }}>
-              <span className="info-box__icon">💡</span>
+              <Info size={16} className="info-box__icon" />
               <span className="info-box__text">
                 Accede directamente al módulo relacionado para gestionar este evento.
               </span>
@@ -192,7 +193,7 @@ export default function NotificacionDetalle({ notif, onClose }) {
             onClick={handleListo}
             data-tooltip="Marcar como completado y eliminar de la lista"
           >
-            ✓ Listo
+            <Check size={14} /> Listo
           </button>
 
           <button className="btn-ghost" onClick={onClose}>Cerrar</button>

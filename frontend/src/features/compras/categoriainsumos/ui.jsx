@@ -1,4 +1,5 @@
 /* ui.jsx — componentes compartidos del proyecto */
+import { CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
 
 export function ModalOverlay({ onClose, children }) {
   return (

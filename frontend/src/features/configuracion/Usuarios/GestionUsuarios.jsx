@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Check, X, Search, User, Eye, PenLine, Trash2 } from "lucide-react";
 import {
   getUsuarios, eliminarUsuario, toggleEstadoUsuario,
 } from "../../../services/usuariosService.js";
@@ -26,7 +27,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "error" ? "✕" : "✓"}</span>
+      {toast.type === "error" ? <X size={15} /> : <Check size={15} />}
       {toast.message}
     </div>
   );
@@ -178,7 +179,7 @@ export default function GestionUsuarios() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Search size={16} /></span>
             <input
               type="text"
               className="search-input"
@@ -236,8 +237,8 @@ export default function GestionUsuarios() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol("todos"); setFilterDesde(""); setFilterHasta(""); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilter("todos"); setFilterRol("todos"); setFilterDesde(""); setFilterHasta(""); }} style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -267,7 +268,7 @@ export default function GestionUsuarios() {
                 ) : paged.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">👤</div>
+                      <div className="empty-state__icon"><User size={40} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>
                       <p className="empty-state__text">
                         {hasFilter || search ? "Sin usuarios que coincidan." : "No hay usuarios registrados."}
                       </p>
@@ -333,9 +334,9 @@ export default function GestionUsuarios() {
                     <td>
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view" data-tooltip="Ver usuario"
-                          onClick={() => setModal({ type: "ver", user })}>👁</button>
+                          onClick={() => setModal({ type: "ver", user })}><Eye size={16} /></button>
                         <button className="act-btn act-btn--edit" data-tooltip="Editar usuario"
-                          onClick={() => setModal({ type: "form", user })}>✎</button>
+                          onClick={() => setModal({ type: "form", user })}><PenLine size={16} /></button>
                         {!(user.tipo === "empleado" && user.idRol === 1) && (
                           <button className="act-btn act-btn--delete" data-tooltip="Eliminar usuario"
                             onClick={() => {
@@ -343,7 +344,7 @@ export default function GestionUsuarios() {
                                 ? ["Si tiene domicilios asignados, la eliminación será rechazada."]
                                 : ["Si tiene ventas o pedidos registrados, la eliminación será rechazada."];
                               setModal({ type: "delete", user, advertencias, razon: null });
-                            }}>🗑️</button>
+                            }}><Trash2 size={16} /></button>
                         )}
                       </div>
                     </td>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getDomicilios } from "../../../services/domiciliosService.js";
 import { fmtFecha } from "../../../utils/dateUtils.js";
-import { X, Calculator, CheckCircle2, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { X, Calculator, CheckCircle2, ChevronDown, ChevronUp, RefreshCw, Bike } from "lucide-react";
 
 /* ── Formato moneda ─────────────────────────────────────── */
 const fmt = (n) =>
@@ -242,8 +242,18 @@ export default function GestionLiquidaciones() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDomicilios({ porPagina: 500 });
-      setTodosDomic(data.domicilios || []);
+      const primera = await getDomicilios({ pagina: 1, porPagina: 100 });
+      const totalPaginas = Math.ceil(primera.total / 100);
+      let todos = primera.domicilios || [];
+      if (totalPaginas > 1) {
+        const resto = await Promise.all(
+          Array.from({ length: totalPaginas - 1 }, (_, i) =>
+            getDomicilios({ pagina: i + 2, porPagina: 100 })
+          )
+        );
+        resto.forEach((r) => { todos = todos.concat(r.domicilios || []); });
+      }
+      setTodosDomic(todos);
     } catch (err) {
       setError(err?.message || "Error al cargar domicilios");
     } finally {
@@ -364,7 +374,7 @@ export default function GestionLiquidaciones() {
           </div>
         ) : repartidores.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9e9e9e" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛵</div>
+            <Bike size={48} strokeWidth={1} style={{ marginBottom: 12 }} />
             <p style={{ fontSize: 15, fontWeight: 600 }}>No hay domiciliarios con entregas registradas</p>
           </div>
         ) : (

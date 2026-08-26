@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { recuperarContrasena, verificarCodigo, resetearContrasena } from "../services/authService";
 import { validatePassword } from "../features/configuracion/Usuarios/usuariosUtils.js";
-import { Mail, Lock, Eye, EyeOff, Key, ChevronRight, CheckCircle, ArrowLeft, ShieldCheck, Leaf } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Key, ChevronRight, CheckCircle, ArrowLeft, ShieldCheck, Leaf, AlertTriangle, Check, X, CheckCircle2 } from "lucide-react";
 import "./Auth.css";
 
 const PASS_RULES = [

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Ban, AlertTriangle, X, Lock } from "lucide-react";
 
 /**
  * ModalEliminarValidado
@@ -25,8 +26,8 @@ export default function ModalEliminarValidado({ titulo, descripcion, validacion,
 
   /* ── Paleta según modo ── */
   const palette = bloqueado
-    ? { g1: "#b71c1c", g2: "#c62828", icon: "🚫", iconBg: "rgba(255,255,255,0.15)", iconBorder: "rgba(255,255,255,0.3)", boxBg: "#ffebee", boxBorder: "#ef9a9a", boxColor: "#c62828", btnBg: "#c62828" }
-    : { g1: "#e65100", g2: "#f57f17", icon: "⚠️", iconBg: "rgba(255,255,255,0.15)", iconBorder: "rgba(255,255,255,0.3)", boxBg: "#fff8e1", boxBorder: "#ffe082", boxColor: "#e65100", btnBg: "#c62828" };
+    ? { g1: "#b71c1c", g2: "#c62828", Icon: Ban,          iconBg: "rgba(255,255,255,0.15)", iconBorder: "rgba(255,255,255,0.3)", boxBg: "#ffebee", boxBorder: "#ef9a9a", boxColor: "#c62828", btnBg: "#c62828" }
+    : { g1: "#e65100", g2: "#f57f17", Icon: AlertTriangle, iconBg: "rgba(255,255,255,0.15)", iconBorder: "rgba(255,255,255,0.3)", boxBg: "#fff8e1", boxBorder: "#ffe082", boxColor: "#e65100", btnBg: "#c62828" };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -51,15 +52,15 @@ export default function ModalEliminarValidado({ titulo, descripcion, validacion,
               width: 30, height: 30, cursor: "pointer", fontSize: 14,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
-          >✕</button>
+          ><X size={14} /></button>
 
           <div style={{
             width: 64, height: 64, borderRadius: "50%",
             background: palette.iconBg, border: `2px solid ${palette.iconBorder}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 14px", fontSize: 30,
+            margin: "0 auto 14px",
           }}>
-            {palette.icon}
+            <palette.Icon size={30} color="rgba(255,255,255,0.9)" />
           </div>
 
           <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>
@@ -80,7 +81,7 @@ export default function ModalEliminarValidado({ titulo, descripcion, validacion,
               background: palette.boxBg, border: `1.5px solid ${palette.boxBorder}`,
               color: palette.boxColor, fontSize: 13, fontWeight: 600, lineHeight: 1.6,
             }}>
-              🔒 {validacion?.razon}
+              <span style={{display:"flex",alignItems:"center",gap:6}}><Lock size={14} />{validacion?.razon}</span>
             </div>
           ) : (
             <div style={{
@@ -88,7 +89,7 @@ export default function ModalEliminarValidado({ titulo, descripcion, validacion,
               background: palette.boxBg, border: `1.5px solid ${palette.boxBorder}`,
               color: palette.boxColor, fontSize: 13, fontWeight: 600, lineHeight: 1.6,
             }}>
-              ⚠️ Esta acción <strong>no se puede deshacer</strong>. El registro será eliminado permanentemente.
+              Esta acción <strong>no se puede deshacer</strong>. El registro será eliminado permanentemente.
             </div>
           )}
         </div>

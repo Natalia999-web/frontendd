@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check, X } from "lucide-react";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import "./GestionInsumos.css";
 import { soloLetras, esRepetitivo } from "../../../utils/inputFilters";
@@ -15,7 +16,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14}/> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -111,7 +112,7 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
             <p className="modal-header__eyebrow">Gestión de Insumos</p>
             <h2 className="modal-header__title">Nuevo insumo</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         <div style={{ padding: "16px 24px 0" }}>
@@ -142,7 +143,7 @@ export default function CrearInsumo({ onClose, onSave, categorias, unidades, exi
                     getValue={c => c.id}
                     getLabel={c => `${c.icon || ""} ${c.nombre}`}
                     placeholder="— Seleccionar —"
-                    searchPlaceholder="🔍 Buscar categoría…"
+                    searchPlaceholder="Buscar categoría…"
                     className={`field-input${errors.idCategoria ? " field-input--error" : ""}`}
                   />
                   {errors.idCategoria && <p className="field-error">{errors.idCategoria}</p>}

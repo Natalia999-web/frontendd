@@ -4,12 +4,16 @@ import { getUser } from "../../../services/authService";
 import { getDomicilios, getResumenDia } from "../../../services/domiciliosService";
 import { ESTADO_DOMICILIO, ESTADO_DOM_CONFIG, esDomicilioActivo, esPagoEfectivo } from "./estadosDomicilio";
 import "./Domicilios.css";
+import {
+  Package, CheckCircle2, BarChart2, Banknote, Bike, MapPin,
+  ClipboardList, Bell, User, Truck,
+} from "lucide-react";
 
 
 const DISPONIBILIDAD = {
-  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", icon: "🟢" },
-  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", icon: "🟡" },
-  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", icon: "⚫" },
+  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", dot: "#2e7d32" },
+  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", dot: "#e65100" },
+  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", dot: "#616161" },
 };
 
 // Prioridad para elegir el pedido en curso: primero el que ya va en ruta.
@@ -85,6 +89,23 @@ export default function DashboardDomiciliario() {
     weekday: "long", day: "numeric", month: "long",
   });
 
+  const STATS = [
+    { label: "Pedidos activos",    value: resumen.activos,        color: "#1565c0", Icon: Package,        bg: "#e3f2fd" },
+    { label: "Entregados hoy",     value: resumen.entregados_hoy, color: "#2e7d32", Icon: CheckCircle2,   bg: "#e8f5e9" },
+    { label: "Total del día",      value: resumen.total_hoy,      color: "#6a1b9a", Icon: BarChart2,      bg: "#f3e5f5" },
+    // Lo que debe entregar en caja al cerrar el día.
+    { label: "Efectivo recaudado", value: fmtCOP(efectivoHoy),   color: "#e65100", Icon: Banknote,       bg: "#fff3e0" },
+  ];
+
+  const ACCESOS = [
+    { label: "Mis Entregas",   Icon: Bike,          link: "/admin/mis-entregas",        desc: "Pedidos asignados" },
+    { label: "Pedido Actual",  Icon: Package,        link: "/admin/pedido-actual",        desc: "El pedido en curso" },
+    { label: "Historial",      Icon: ClipboardList,  link: "/admin/historial-entregas",   desc: "Entregas anteriores" },
+    { label: "Mis Ganancias",  Icon: Banknote,       link: "/admin/mis-ganancias",        desc: "Hoy, semana, mes" },
+    { label: "Notificaciones", Icon: Bell,           link: "/admin/mis-notificaciones",   desc: "Avisos y alertas" },
+    { label: "Mi Perfil",      Icon: User,           link: "/admin/mi-perfil-repartidor", desc: "Datos personales" },
+  ];
+
   return (
     <div className="page-wrapper">
       <div className="page-header">
@@ -103,7 +124,7 @@ export default function DashboardDomiciliario() {
           <div>
             <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6, textTransform: "capitalize" }}>{hoy}</div>
             <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
-              ¡Hola, {user?.nombre}! 🛵
+              ¡Hola, {user?.nombre}!
             </h2>
             <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
               Panel de domiciliario
@@ -125,9 +146,11 @@ export default function DashboardDomiciliario() {
                     color: status === key ? cfg.color : "rgba(255,255,255,0.9)",
                     fontWeight: 700, fontSize: 12, cursor: "pointer",
                     transition: "all 0.15s",
+                    display: "flex", alignItems: "center", gap: 6,
                   }}
                 >
-                  {cfg.icon} {cfg.label}
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: cfg.dot }} />
+                  {cfg.label}
                 </button>
               ))}
             </div>
@@ -136,13 +159,7 @@ export default function DashboardDomiciliario() {
 
         {/* ── Stats del día ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14, marginBottom: 24 }}>
-          {[
-            { label: "Pedidos activos",  value: resumen.activos,        color: "#1565c0", icon: "📦", bg: "#e3f2fd" },
-            { label: "Entregados hoy",   value: resumen.entregados_hoy, color: "#2e7d32", icon: "✅", bg: "#e8f5e9" },
-            { label: "Total del día",    value: resumen.total_hoy,      color: "#6a1b9a", icon: "📊", bg: "#f3e5f5" },
-            // Lo que debe entregar en caja al cerrar el día.
-            { label: "Efectivo recaudado", value: fmtCOP(efectivoHoy),  color: "#e65100", icon: "💵", bg: "#fff3e0" },
-          ].map(stat => (
+          {STATS.map(stat => (
             <div key={stat.label} style={{
               background: "#fff", borderRadius: 14, padding: "20px 18px",
               border: `1.5px solid ${stat.bg}`,
@@ -151,9 +168,9 @@ export default function DashboardDomiciliario() {
               <div style={{
                 width: 40, height: 40, borderRadius: 10, background: stat.bg,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18, marginBottom: 12,
+                color: stat.color, marginBottom: 12,
               }}>
-                {stat.icon}
+                <stat.Icon size={20} strokeWidth={1.5} />
               </div>
               <div style={{
                 fontSize: typeof stat.value === "string" ? 22 : 30,
@@ -189,13 +206,17 @@ export default function DashboardDomiciliario() {
                   padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
                   background: (ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).bg || "#e3f2fd",
                   color:      (ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).dot || "#1565c0",
+                  display: "flex", alignItems: "center", gap: 5,
                 }}>
-                  {ordenActiva.estadoId === ESTADO_DOMICILIO.EN_CAMINO ? "🛵 " : "📦 "}
+                  {ordenActiva.estadoId === ESTADO_DOMICILIO.EN_CAMINO
+                    ? <Bike size={12} />
+                    : <Package size={12} />}
                   {(ESTADO_DOM_CONFIG[ordenActiva.estadoId] || {}).label || ordenActiva.estado}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: "#616161", marginBottom: 14 }}>
-                📍 {ordenActiva.direccion_entrega || "Sin dirección"}
+              <div style={{ fontSize: 13, color: "#616161", marginBottom: 14, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <MapPin size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                {ordenActiva.direccion_entrega || "Sin dirección"}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <Link to="/admin/pedido-actual" style={{
@@ -215,14 +236,7 @@ export default function DashboardDomiciliario() {
           Accesos rápidos
         </h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
-          {[
-            { label: "Mis Entregas",    icon: "🛵", link: "/admin/mis-entregas",         desc: "Pedidos asignados" },
-            { label: "Pedido Actual",   icon: "📦", link: "/admin/pedido-actual",         desc: "El pedido en curso" },
-            { label: "Historial",       icon: "📋", link: "/admin/historial-entregas",    desc: "Entregas anteriores" },
-            { label: "Mis Ganancias",   icon: "💰", link: "/admin/mis-ganancias",         desc: "Hoy, semana, mes" },
-            { label: "Notificaciones",  icon: "🔔", link: "/admin/mis-notificaciones",    desc: "Avisos y alertas" },
-            { label: "Mi Perfil",       icon: "👤", link: "/admin/mi-perfil-repartidor",  desc: "Datos personales" },
-          ].map(item => (
+          {ACCESOS.map(item => (
             <Link key={item.label} to={item.link} style={{
               background: "#fff", borderRadius: 14, padding: "18px 16px",
               border: "1.5px solid #f0f0f0",
@@ -230,7 +244,7 @@ export default function DashboardDomiciliario() {
               textDecoration: "none", display: "block",
               transition: "box-shadow 0.15s",
             }}>
-              <div style={{ fontSize: 26, marginBottom: 10 }}>{item.icon}</div>
+              <div style={{ marginBottom: 10, color: "#2e7d32" }}><item.Icon size={26} strokeWidth={1.5} /></div>
               <div style={{ fontWeight: 700, fontSize: 14, color: "#212121", marginBottom: 3 }}>{item.label}</div>
               <div style={{ fontSize: 12, color: "#9e9e9e" }}>{item.desc}</div>
             </Link>

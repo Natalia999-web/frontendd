@@ -17,7 +17,11 @@ import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import {
   Trash2, Truck, Package,
   RotateCcw, X, AlertCircle,
-  CheckCircle2, ArrowRight, MapPin, Search
+  CheckCircle2, ArrowRight, MapPin, Search,
+  Eye, Pencil, Check, Calendar, Store, Bike,
+  Banknote, CreditCard, Clock, Ban, Phone, Mail,
+  PenLine, ClipboardList, FileText, Paperclip, XCircle,
+  Info, Building2, AlertTriangle, Scale
 } from 'lucide-react';
 import "./Pedidos.css";
 
@@ -154,7 +158,7 @@ function ComprobanteAdjunto({ url, titulo }) {
   return (
     <div>
       <div className="info-box info-box--success" style={{ marginBottom: 10 }}>
-        <span className="info-box__icon">✅</span>
+        <span className="info-box__icon"><CheckCircle2 size={16} /></span>
         <span className="info-box__text">{titulo}</span>
         <a href={url} target="_blank" rel="noopener noreferrer"
           style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2e7d32", flexShrink: 0 }}>
@@ -212,24 +216,24 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <EstadoBadge estado={pedido.estado} />
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="ver-ped-tabs">
-          <button className={`ver-ped-tab${tab === "resumen"   ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("resumen")}>📋 Resumen</button>
-          <button className={`ver-ped-tab${tab === "productos" ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("productos")}>📦 Productos</button>
-          <button className={`ver-ped-tab${tab === "pago"      ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("pago")}>
-            💳 Pago{" "}
+          <button className={`ver-ped-tab${tab === "resumen"   ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("resumen")} style={{display:"inline-flex",alignItems:"center",gap:5}}><ClipboardList size={14} /> Resumen</button>
+          <button className={`ver-ped-tab${tab === "productos" ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("productos")} style={{display:"inline-flex",alignItems:"center",gap:5}}><Package size={14} /> Productos</button>
+          <button className={`ver-ped-tab${tab === "pago"      ? " ver-ped-tab--active" : ""}`} onClick={() => setTab("pago")} style={{display:"inline-flex",alignItems:"center",gap:5}}>
+            <CreditCard size={14} /> Pago{" "}
             {esTransferencia && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#e3f2fd", color: "#1565c0", border: "1px solid #90caf9", borderRadius: 4, padding: "1px 5px" }}>Transferencia</span>}
             {(() => {
               const ep = pedido.estado_pago;
               const badges = {
-                pagado_completo:      { bg: "#e8f5e9", color: "#2e7d32", border: "#a5d6a7", label: "✅ Completo" },
-                anticipo_pagado:      { bg: "#fff8e1", color: "#e65100", border: "#ffe082", label: "⚠️ Anticipo" },
-                pendiente_validacion: { bg: "#e3f2fd", color: "#1565c0", border: "#90caf9", label: "🕐 Validar" },
-                comprobante_rechazado:{ bg: "#ffebee", color: "#c62828", border: "#ef9a9a", label: "❌ Rechazado" },
+                pagado_completo:      { bg: "#e8f5e9", color: "#2e7d32", border: "#a5d6a7", label: "Completo" },
+                anticipo_pagado:      { bg: "#fff8e1", color: "#e65100", border: "#ffe082", label: "Anticipo" },
+                pendiente_validacion: { bg: "#e3f2fd", color: "#1565c0", border: "#90caf9", label: "Validar" },
+                comprobante_rechazado:{ bg: "#ffebee", color: "#c62828", border: "#ef9a9a", label: "Rechazado" },
               };
               const b = badges[ep];
               return b ? <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: b.bg, color: b.color, border: `1px solid ${b.border}`, borderRadius: 4, padding: "1px 5px" }}>{b.label}</span> : null;
@@ -255,7 +259,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                     <span className="ver-ped-field__label">Correo</span>
                     <span className="ver-ped-field__value">
                       {pedido.cliente?.correo
-                        ? <a href={`mailto:${pedido.cliente.correo}`} style={{ color: "#1565c0", textDecoration: "none", fontWeight: 600 }}>✉ {pedido.cliente.correo}</a>
+                        ? <a href={`mailto:${pedido.cliente.correo}`} style={{ color: "#1565c0", textDecoration: "none", fontWeight: 600, display:"inline-flex", alignItems:"center", gap:4 }}><Mail size={12} /> {pedido.cliente.correo}</a>
                         : "—"}
                     </span>
                   </div>
@@ -263,7 +267,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                     <span className="ver-ped-field__label">Teléfono</span>
                     <span className="ver-ped-field__value">
                       {pedido.cliente?.telefono
-                        ? <a href={`https://wa.me/${pedido.cliente.telefono.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#2e7d32", textDecoration: "none", fontWeight: 600 }}>📞 {pedido.cliente.telefono}</a>
+                        ? <a href={`https://wa.me/${pedido.cliente.telefono.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#2e7d32", textDecoration: "none", fontWeight: 600, display:"inline-flex", alignItems:"center", gap:4 }}><Phone size={12} /> {pedido.cliente.telefono}</a>
                         : "—"}
                     </span>
                   </div>
@@ -276,7 +280,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="ver-ped-field">
                     <span className="ver-ped-field__label">Tipo</span>
-                    <span className="ver-ped-field__value">{pedido.domicilio ? "🛵 Domicilio" : "🏪 Recogida en tienda"}</span>
+                    <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}>{pedido.domicilio ? <><Bike size={14} /> Domicilio</> : <><Store size={14} /> Recogida en tienda</>}</span>
                   </div>
                   {pedido.domicilio && (
                     <>
@@ -300,7 +304,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       </div>
                       {pedido.observaciones_domicilio && (
                         <div className="info-box info-box--warn" style={{ marginTop: 4 }}>
-                          <span className="info-box__icon">📝</span>
+                          <span className="info-box__icon"><PenLine size={16} /></span>
                           <div>
                             <span className="info-box__label">Observaciones del cliente</span>
                             <span className="info-box__text" style={{ display: "block" }}>{pedido.observaciones_domicilio}</span>
@@ -311,7 +315,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                   )}
                   <div className="ver-ped-field">
                     <span className="ver-ped-field__label">Fecha del pedido</span>
-                    <span className="ver-ped-field__value">📅 {fmtFecha(pedido.fecha_pedido)}</span>
+                    <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}><Calendar size={14} /> {fmtFecha(pedido.fecha_pedido)}</span>
                   </div>
                 </div>
               </div>
@@ -320,7 +324,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
               {pedido.notas && (
                 <div style={{ gridColumn: "1 / -1" }}>
                   <div className="info-box info-box--warn">
-                    <span className="info-box__icon">📝</span>
+                    <span className="info-box__icon"><PenLine size={16} /></span>
                     <div>
                       <span className="info-box__label">Notas del pedido</span>
                       <span className="info-box__text" style={{ display: "block" }}>{pedido.notas}</span>
@@ -337,7 +341,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                     style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "1px solid #90caf9" }}
                     onClick={() => { onClose(); navigate(`/admin/ordenes-produccion?search=${pedido.numero}`); }}
                   >
-                    <span className="info-box__icon">📦</span>
+                    <span className="info-box__icon"><Package size={16} /></span>
                     <div>
                       <span className="info-box__label">Producción activa</span>
                       <span className="info-box__text" style={{ display: "block" }}>Ver detalles de fabricación →</span>
@@ -364,7 +368,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 <tbody>
                   {(pedido.productosItems || []).map((p, i) => (
                     <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>📦 {p.nombre}</td>
+                      <td style={{ fontWeight: 600, display:"flex", alignItems:"center", gap:5 }}><Package size={14} /> {p.nombre}</td>
                       <td style={{ textAlign: "center" }}>
                         <span style={{ background: "#f1f8f1", border: "1px solid #c8e6c9", borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>×{p.cantidad}</span>
                       </td>
@@ -389,7 +393,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 </div>
                 {pedido.descuento > 0 && (
                   <div className="totales-row totales-row--descuento">
-                    <span>💳 Crédito aplicado</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5}}><CreditCard size={14} /> Crédito aplicado</span>
                     <span>− {fmt(pedido.descuento)}</span>
                   </div>
                 )}
@@ -445,19 +449,19 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                 const saldo = Math.max(0, totalPedido - totalPagado);
                 const pct = totalPedido > 0 ? Math.min(100, Math.round((totalPagado / totalPedido) * 100)) : 0;
 
-                let estadoLabel, estadoColor, estadoBg, estadoBorder, estadoEmoji;
+                let estadoLabel, estadoColor, estadoBg, estadoBorder, EstadoIcon;
                 if (ep === "pagado_completo" || (!ep && totalPagado >= totalPedido && totalPedido > 0 && totalPagado > 0)) {
-                  estadoLabel = "Pago completo";    estadoColor = "#2e7d32"; estadoBg = "#e8f5e9"; estadoBorder = "#a5d6a7"; estadoEmoji = "✅";
+                  estadoLabel = "Pago completo";    estadoColor = "#2e7d32"; estadoBg = "#e8f5e9"; estadoBorder = "#a5d6a7"; EstadoIcon = CheckCircle2;
                 } else if (ep === "anticipo_pagado" || (!ep && totalPagado > 0 && totalPagado < totalPedido)) {
                   // En un mixto no hay anticipo: hay una de las dos mitades.
                   estadoLabel = esMixto ? "Pago parcial" : "Anticipo";
-                  estadoColor = "#e65100"; estadoBg = "#fff8e1"; estadoBorder = "#ffe082"; estadoEmoji = "⚠️";
+                  estadoColor = "#e65100"; estadoBg = "#fff8e1"; estadoBorder = "#ffe082"; EstadoIcon = AlertCircle;
                 } else if (ep === "pendiente_validacion") {
-                  estadoLabel = "Pendiente de validación"; estadoColor = "#1565c0"; estadoBg = "#e3f2fd"; estadoBorder = "#90caf9"; estadoEmoji = "🕐";
+                  estadoLabel = "Pendiente de validación"; estadoColor = "#1565c0"; estadoBg = "#e3f2fd"; estadoBorder = "#90caf9"; EstadoIcon = Clock;
                 } else if (ep === "comprobante_rechazado") {
-                  estadoLabel = "Comprobante rechazado"; estadoColor = "#c62828"; estadoBg = "#ffebee"; estadoBorder = "#ef9a9a"; estadoEmoji = "❌";
+                  estadoLabel = "Comprobante rechazado"; estadoColor = "#c62828"; estadoBg = "#ffebee"; estadoBorder = "#ef9a9a"; EstadoIcon = XCircle;
                 } else {
-                  estadoLabel = "Pendiente";        estadoColor = "#9e9e9e"; estadoBg = "#f5f5f5"; estadoBorder = "#e0e0e0"; estadoEmoji = "🕐";
+                  estadoLabel = "Pendiente";        estadoColor = "#9e9e9e"; estadoBg = "#f5f5f5"; estadoBorder = "#e0e0e0"; EstadoIcon = Clock;
                 }
 
                 const modalidad = !esTransferencia || esMixto
@@ -472,7 +476,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <p style={{ margin: 0, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.8, color: "#9e9e9e" }}>Estado del pago</p>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", color: estadoColor, border: `1px solid ${estadoBorder}`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                          {estadoEmoji} {estadoLabel}
+                          {EstadoIcon && <EstadoIcon size={12} />} {estadoLabel}
                         </span>
                       </div>
 
@@ -483,7 +487,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         <div style={{ background: "#fff", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#616161", fontWeight: 600 }}>
-                              🏦 Transferencia
+                              <Building2 size={13} /> Transferencia
                             </span>
                             <span style={{ fontSize: 14, fontWeight: 900, color: "#1565c0" }}>
                               {fmt(montoTransferido(pedido))}
@@ -491,7 +495,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#616161", fontWeight: 600 }}>
-                              💵 Efectivo
+                              <Banknote size={13} /> Efectivo
                             </span>
                             <span style={{ fontSize: 14, fontWeight: 900, color: "#2e7d32" }}>
                               {fmt(montoACobrar(pedido))}
@@ -542,9 +546,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         </div>
                         <div className="ver-ped-field">
                           <span className="ver-ped-field__label">Método de pago</span>
-                          <span className="ver-ped-field__value">
-                            {esMixto ? "⚖️ Mixto" : esTransferencia ? "🏦 Transferencia" : "💵 Efectivo"}
-                          </span>
+                          <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}>{esMixto ? <><Scale size={14} /> Mixto</> : esTransferencia ? <><Building2 size={14} /> Transferencia</> : <><Banknote size={14} /> Efectivo</>}</span>
                         </div>
                         {modalidad && (
                           <div className="ver-ped-field">
@@ -561,7 +563,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         {fechaPago && (
                           <div className="ver-ped-field" style={{ gridColumn: "1 / -1" }}>
                             <span className="ver-ped-field__label">Fecha del pago</span>
-                            <span className="ver-ped-field__value">📅 {fmtFecha(fechaPago)}</span>
+                            <span className="ver-ped-field__value" style={{display:"inline-flex",alignItems:"center",gap:5}}><Calendar size={14} /> {fmtFecha(fechaPago)}</span>
                           </div>
                         )}
                       </div>
@@ -569,7 +571,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       {/* Comprobante pendiente de validación */}
                       {ep === "pendiente_validacion" && pedido.comprobante && (
                         <div className="info-box info-box--info" style={{ marginTop: 0 }}>
-                          <span className="info-box__icon">📎</span>
+                          <span className="info-box__icon"><Paperclip size={16} /></span>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
                             <span className="info-box__text">Comprobante cargado — pendiente de validación</span>
                             <a href={pedido.comprobante} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: "#1565c0", flexShrink: 0, marginLeft: 8 }}>Ver →</a>
@@ -580,7 +582,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                       {/* Comprobante rechazado */}
                       {ep === "comprobante_rechazado" && (
                         <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
-                          <span className="info-box__icon">❌</span>
+                          <span className="info-box__icon"><XCircle size={16} /></span>
                           <span className="info-box__text">El comprobante fue rechazado. El cliente debe subir uno nuevo.</span>
                         </div>
                       )}
@@ -612,7 +614,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                           </div>
                         </div>
                         <div className="info-box info-box--warn" style={{ marginTop: 0 }}>
-                          <span className="info-box__icon">ℹ️</span>
+                          <span className="info-box__icon"><Info size={16} /></span>
                           <span className="info-box__text">Recuerda adjuntar el comprobante de pago al confirmar el pedido.</span>
                         </div>
                         {comprobantes.map(c => (
@@ -620,7 +622,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                         ))}
                         {comprobantes.length === 0 && (
                           <div className="info-box info-box--danger" style={{ background: "#ffebee", borderColor: "#ef9a9a", color: "#c62828" }}>
-                            <span className="info-box__icon">⚠️</span>
+                            <span className="info-box__icon"><AlertCircle size={16} /></span>
                             <span className="info-box__text">Aún no se ha adjuntado comprobante de pago.</span>
                           </div>
                         )}
@@ -628,7 +630,7 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
                     ) : (
                       <>
                         <div className="info-box info-box--success">
-                          <span className="info-box__icon">💵</span>
+                          <span className="info-box__icon"><Banknote size={16} /></span>
                           <span className="info-box__text">
                             Pago en efectivo {pedido.domicilio ? "al momento de la entrega (contraentrega)" : "en tienda al retirar el pedido"}.
                           </span>
@@ -652,13 +654,13 @@ function ModalVerPedido({ pedido, empleados, onClose, onEdit }) {
           <button className="btn-ghost" onClick={onClose}>Cerrar</button>
           <button
             className="btn-cancel"
-            style={{ background: '#f1f8f1', color: '#2e7d32', border: '1.5px solid #c8e6c9' }}
+            style={{ background: '#f1f8f1', color: '#2e7d32', border: '1.5px solid #c8e6c9', display:"inline-flex", alignItems:"center", gap:6 }}
             onClick={() => descargarFacturaPedido(pedido, pedido.cliente)}
           >
-            📄 Ver / Imprimir factura
+            <FileText size={14} /> Ver / Imprimir factura
           </button>
           {puedeEditarsePedido(pedido.estado) && (
-            <button className="btn-save" onClick={() => { onClose(); onEdit(pedido); }}>✎ Editar Pedido</button>
+            <button className="btn-save" style={{display:"inline-flex",alignItems:"center",gap:6}} onClick={() => { onClose(); onEdit(pedido); }}><Pencil size={14} /> Editar Pedido</button>
           )}
         </div>
       </div>
@@ -693,7 +695,7 @@ function ModalProponerFecha({ pedido, saving, onClose, onConfirm }) {
 
         <div className="modal-body p-6 space-y-4">
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
-            <p className="text-xs font-black text-blue-800 mb-1">📅 Fecha estimada de entrega</p>
+            <p className="text-xs font-black text-blue-800 mb-1" style={{display:"flex",alignItems:"center",gap:5}}><Calendar size={14} /> Fecha estimada de entrega</p>
             <p className="text-[11px] text-blue-700 font-medium leading-snug">
               El cliente recibirá una notificación con esta fecha y podrá aceptarla o rechazarla.
             </p>
@@ -726,7 +728,7 @@ function ModalProponerFecha({ pedido, saving, onClose, onConfirm }) {
               className="w-full py-4 text-xs font-black uppercase tracking-widest rounded-2xl text-white shadow-lg"
               style={{ background: "linear-gradient(135deg, #283593, #3949ab)" }}
             >
-              {saving ? "Enviando…" : "📅 Proponer fecha"}
+              {saving ? "Enviando…" : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Calendar size={14} /> Proponer fecha</span>}
             </button>
             <button
               onClick={onClose}
@@ -752,14 +754,14 @@ function ModalEliminarPedido({ pedido, onClose, onConfirm }) {
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()} style={{ overflow: "hidden", padding: 0 }}>
           <div style={{ background: "linear-gradient(135deg, #b71c1c 0%, #c62828 100%)", padding: "28px 24px 22px", textAlign: "center", position: "relative" }}>
-            <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 30 }}>🚫</div>
+            <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><Ban size={28} color="white" /></div>
             <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>No se puede eliminar</h3>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>Pedido #{pedido.numero}</p>
           </div>
           <div style={{ padding: "18px 24px" }}>
             <div style={{ padding: "12px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10, color: "#c62828", fontSize: 13, fontWeight: 600, lineHeight: 1.6 }}>
-              🔒 Los pedidos entregados forman parte del historial financiero y <strong>no pueden eliminarse</strong>.
+              <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Info size={14} /></span> Los pedidos entregados forman parte del historial financiero y <strong>no pueden eliminarse</strong>.
             </div>
           </div>
           <div style={{ padding: "0 24px 20px" }}>
@@ -774,14 +776,14 @@ function ModalEliminarPedido({ pedido, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()} style={{ overflow: "hidden", padding: 0 }}>
         <div style={{ background: "linear-gradient(135deg, #e65100 0%, #f57f17 100%)", padding: "28px 24px 22px", textAlign: "center", position: "relative" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 30 }}>⚠️</div>
+          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><AlertCircle size={28} color="white" /></div>
           <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>Eliminar pedido</h3>
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>#{pedido.numero}</p>
         </div>
         <div style={{ padding: "18px 24px" }}>
           <div style={{ padding: "12px 14px", background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 10, color: "#e65100", fontSize: 13, fontWeight: 600, lineHeight: 1.6 }}>
-            ⚠️ Esta acción <strong>no se puede deshacer</strong>. El pedido será eliminado permanentemente.
+            <span style={{display:"inline-flex",alignItems:"center",gap:6}}><AlertCircle size={14} /></span> Esta acción <strong>no se puede deshacer</strong>. El pedido será eliminado permanentemente.
           </div>
         </div>
         <div style={{ padding: "0 24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -842,8 +844,8 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()} style={{ overflow: "hidden", padding: 0, maxWidth: 420 }}>
         <div style={{ background: "linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)", padding: "24px 24px 18px", position: "relative" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14 }}>✕</button>
-          <div style={{ fontSize: 30, marginBottom: 10, textAlign: "center" }}>💳</div>
+          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom: 10 }}><CreditCard size={30} color="white" /></div>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff", textAlign: "center" }}>Registrar pago del saldo</h3>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(255,255,255,0.85)", textAlign: "center" }}>Pedido {pedido.numero}</p>
         </div>
@@ -870,7 +872,7 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {/* El valor viaja a la API (que compara contra "transferencia"): el
                   emoji se queda en la etiqueta y no en lo que se guarda. */}
-              {[{ id: "Efectivo", label: "Efectivo 💵" }, { id: "Transferencia", label: "Transferencia 🏦" }].map(m => (
+              {[{ id: "Efectivo", label: "Efectivo" }, { id: "Transferencia", label: "Transferencia" }].map(m => (
                 <button key={m.id} onClick={() => { setMetodo(m.id); setEfectivo(false); setArchivo(null); setPreview(null); setErrors(x => ({ ...x, metodo: "", efectivo: "", archivo: "" })); }}
                   style={{ padding: "11px 8px", borderRadius: 10, border: `2px solid ${metodo === m.id ? "#2e7d32" : "#e0e0e0"}`, background: metodo === m.id ? "#f1f8f1" : "#fff", color: metodo === m.id ? "#1b5e20" : "#888", fontWeight: metodo === m.id ? 700 : 500, fontSize: 13, cursor: "pointer" }}>
                   {m.label}
@@ -897,13 +899,13 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
               {preview ? (
                 <div style={{ position: "relative", height: 120, borderRadius: 10, overflow: "hidden", background: "#000" }}>
                   <img src={preview} alt="Comprobante saldo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                  <button style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", fontSize: 12 }} onClick={() => { setArchivo(null); setPreview(null); }}>✕</button>
+                  <button style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => { setArchivo(null); setPreview(null); }}><X size={12} /></button>
                 </div>
               ) : (
                 <label className={`comprobante-dropzone${errors.archivo ? " error" : ""}`} style={{ height: 100 }}>
-                  <input type="file" accept="image/*,application/pdf" onChange={handleFile} hidden />
+                  <input type="file" accept="image/*" onChange={handleFile} hidden />
                   <div style={{ textAlign: "center" }}>
-                    <span style={{ fontSize: 24 }}>📎</span>
+                    <Paperclip size={24} color="#1565c0" />
                     <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Comprobante del saldo</p>
                   </div>
                 </label>
@@ -919,7 +921,7 @@ function ModalRegistrarSaldo({ pedido, saving, onClose, onConfirm }) {
             disabled={saving || uploading}
             style={{ width: "100%", padding: "12px", borderRadius: 10, border: "none", background: "#2e7d32", color: "#fff", fontWeight: 700, fontSize: 14, cursor: saving || uploading ? "not-allowed" : "pointer", opacity: saving || uploading ? 0.7 : 1, fontFamily: "inherit" }}
           >
-            {uploading ? "Subiendo comprobante…" : saving ? "Procesando…" : "✅ Confirmar entrega y registrar pago"}
+            {uploading ? "Subiendo comprobante…" : saving ? "Procesando…" : <><CheckCircle2 size={14} /> Confirmar entrega y registrar pago</>}
           </button>
           <button onClick={onClose} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1.5px solid #e0e0e0", background: "#fff", color: "#616161", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancelar</button>
         </div>
@@ -934,13 +936,13 @@ function ModalErrorEstadoPedido({ mensaje, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()} style={{ overflow: "hidden", padding: 0 }}>
         <div style={{ background: "linear-gradient(135deg, #e65100 0%, #f57f17 100%)", padding: "28px 24px 22px", textAlign: "center", position: "relative" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 30 }}>⚠️</div>
+          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><AlertCircle size={28} color="white" /></div>
           <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>No se pudo avanzar</h3>
         </div>
         <div style={{ padding: "18px 24px" }}>
           <div style={{ padding: "12px 14px", background: "#fff8e1", border: "1.5px solid #ffe082", borderRadius: 10, color: "#e65100", fontSize: 13, fontWeight: 600, lineHeight: 1.6 }}>
-            ⚠️ {mensaje}
+            <span style={{display:"inline-flex",alignItems:"center",gap:6}}><AlertCircle size={14} /></span> {mensaje}
           </div>
         </div>
         <div style={{ padding: "0 24px 20px" }}>
@@ -1020,7 +1022,7 @@ function ModalAsignarDomiciliario({ pedido, empleados, onClose, onConfirm }) {
               getValue={e => e.id}
               getLabel={e => `${e.nombre} ${e.apellidos}${e.id === pedido.idEmpleado ? " (actual)" : ""}`}
               placeholder="— Elegir de la lista —"
-              searchPlaceholder="🔍 Buscar repartidor…"
+              searchPlaceholder="Buscar repartidor…"
               className={`field-input${error ? " error" : ""}`}
             />
             {error && <p className="text-[10px] font-bold text-red-500 px-2 flex items-center gap-1"><AlertCircle size={10} /> {error}</p>}
@@ -1234,11 +1236,11 @@ function ModalSubirComprobante({ pedido, saving, onClose, onConfirm }) {
           }}>
             {preview
               ? <img src={preview} alt="Comprobante" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8 }} />
-              : <><span style={{ fontSize: 32 }}>📎</span><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar imagen del comprobante</span></>
+              : <><Paperclip size={32} color="#9e9e9e" /><span style={{ fontSize: 13, color: "#9e9e9e" }}>Seleccionar imagen del comprobante</span></>
             }
-            <input type="file" accept="image/*,application/pdf" onChange={handleFile} style={{ display: "none" }} />
+            <input type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
           </label>
-          {file && <p style={{ fontSize: 11, color: "#2e7d32", fontWeight: 700 }}>✓ {file.name}</p>}
+          {file && <p style={{ fontSize: 11, color: "#2e7d32", fontWeight: 700, display:"flex", alignItems:"center", gap:4 }}><Check size={12} /> {file.name}</p>}
           {error && <p style={{ fontSize: 12, color: "#c62828", background: "#ffebee", padding: "8px 12px", borderRadius: 8 }}>{error}</p>}
           <div className="space-y-2 pt-2">
             <button
@@ -1323,9 +1325,18 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
   const canEdit             = puedeEditarsePedido(ped.estado);
   const canAdvance          = ped.estado === "Pendiente" && !necesitaProduccion;
   const canProponerFecha    = ped.estado === "Pendiente" && necesitaProduccion;
-  // Usar orden_produccion (¿hay OPs pendientes para ESTE pedido?) no requiereProduccion
-  // (flag del tipo de producto). Si hay stock, no hay OP y se puede marcar como listo.
-  const canMarcarListo      = ped.estado === "Confirmado" && !ped.orden_produccion;
+  // canMarcarListo: no debe quedar desbloqueado solo porque no hay OPs pendientes.
+  // sobre_stock indica que el pedido se creó con más unidades de las que había en
+  // stock, por lo tanto sí necesitaba OPs. Si además no hay ninguna OP creada
+  // (total_ordenes_produccion = 0), la OP nunca se generó y el pedido no puede
+  // marcarse como listo. Esto distingue "OP terminada" de "OP nunca creada".
+  // requiereProduccion solo señala el tipo de producto, no si había stock:
+  // un producto que requiere producción con stock disponible no genera OP.
+  const opsPendientes       = ped.orden_produccion;
+  const opsCreadas          = ped.total_ordenes_produccion > 0;
+  const canMarcarListo      = ped.estado === "Confirmado"
+    && !opsPendientes
+    && (!ped.sobre_stock || opsCreadas);
   const canEntregarTienda   = ped.estado === "Listo" && !ped.domicilio;
   const canAsignarDomicilio = ped.estado === "Listo" && ped.domicilio;
   const canEntregar         = ped.estado === "En camino";
@@ -1346,19 +1357,19 @@ function AccionesCell({ ped, saving, onVer, onEditar, onConfirmar, onMarcarListo
 
   return (
     <div className="actions-cell">
-      <button className="act-btn act-btn--view"   data-tooltip="Ver detalle"           onClick={() => onVer(ped)}>👁</button>
-      {canEdit          && <button className="act-btn act-btn--edit"    data-tooltip="Editar pedido"          disabled={saving} onClick={() => onEditar(ped)}>✎</button>}
-      {canAdvance       && <button className="act-btn act-btn--success" data-tooltip="Confirmar pedido"       disabled={saving} onClick={() => onConfirmar(ped)}>✔</button>}
-      {canProponerFecha && <button className="act-btn act-btn--info"    data-tooltip="Proponer fecha entrega" disabled={saving} onClick={() => onProponerFecha(ped)}>📅</button>}
-      {canMarcarListo   && <button className="act-btn act-btn--success" data-tooltip="Marcar como listo"      disabled={saving} onClick={() => onMarcarListo(ped)}>📦</button>}
-      {canEntregarTienda   && <button className="act-btn act-btn--success" data-tooltip="Entregar en tienda"     disabled={saving} onClick={() => onEntregar(ped)}>🏪</button>}
-      {canAsignarDomicilio && <button className="act-btn act-btn--info"    data-tooltip="Asignar domiciliario"   disabled={saving} onClick={() => onAsignarDomicilio(ped)}>🛵</button>}
-      {canEntregar         && <button className="act-btn act-btn--success" data-tooltip="Registrar entrega"      disabled={saving} onClick={() => onEntregar(ped)}>🚚</button>}
-      {canSubirComprobante && <button className="act-btn act-btn--info"    data-tooltip="Subir comprobante"    disabled={saving} onClick={() => onSubirComprobante(ped)}>📎</button>}
-      {canRegistrarCobro   && <button className="act-btn act-btn--success" data-tooltip="Registrar cobro efectivo" disabled={saving} onClick={() => onRegistrarCobro(ped)}>💵</button>}
-      {canAprobar && <button className="act-btn act-btn--success" data-tooltip="Aprobar comprobante" disabled={saving} onClick={() => onAprobarComprobante(ped)}>✅</button>}
-      {canRechazar && <button className="act-btn act-btn--delete"  data-tooltip="Rechazar comprobante" disabled={saving} onClick={() => onRechazarComprobante(ped)}>🚫</button>}
-      {canCancel           && <button className="act-btn act-btn--delete"  data-tooltip="Cancelar pedido"        disabled={saving} onClick={() => onCancelar(ped)}>✕</button>}
+      <button className="act-btn act-btn--view"   data-tooltip="Ver detalle"           onClick={() => onVer(ped)}><Eye size={15} /></button>
+      {canEdit          && <button className="act-btn act-btn--edit"    data-tooltip="Editar pedido"          disabled={saving} onClick={() => onEditar(ped)}><Pencil size={15} /></button>}
+      {canAdvance       && <button className="act-btn act-btn--success" data-tooltip="Confirmar pedido"       disabled={saving} onClick={() => onConfirmar(ped)}><Check size={15} /></button>}
+      {canProponerFecha && <button className="act-btn act-btn--info"    data-tooltip="Proponer fecha entrega" disabled={saving} onClick={() => onProponerFecha(ped)}><Calendar size={15} /></button>}
+      {canMarcarListo   && <button className="act-btn act-btn--success" data-tooltip="Marcar como listo"      disabled={saving} onClick={() => onMarcarListo(ped)}><Package size={15} /></button>}
+      {canEntregarTienda   && <button className="act-btn act-btn--success" data-tooltip="Entregar en tienda"     disabled={saving} onClick={() => onEntregar(ped)}><Store size={15} /></button>}
+      {canAsignarDomicilio && <button className="act-btn act-btn--info"    data-tooltip="Asignar domiciliario"   disabled={saving} onClick={() => onAsignarDomicilio(ped)}><Bike size={15} /></button>}
+      {canEntregar         && <button className="act-btn act-btn--success" data-tooltip="Registrar entrega"      disabled={saving} onClick={() => onEntregar(ped)}><Truck size={15} /></button>}
+      {canSubirComprobante && <button className="act-btn act-btn--info"    data-tooltip="Subir comprobante"    disabled={saving} onClick={() => onSubirComprobante(ped)}><Paperclip size={15} /></button>}
+      {canRegistrarCobro   && <button className="act-btn act-btn--success" data-tooltip="Registrar cobro efectivo" disabled={saving} onClick={() => onRegistrarCobro(ped)}><Banknote size={15} /></button>}
+      {canAprobar && <button className="act-btn act-btn--success" data-tooltip="Aprobar comprobante" disabled={saving} onClick={() => onAprobarComprobante(ped)}><CheckCircle2 size={15} /></button>}
+      {canRechazar && <button className="act-btn act-btn--delete"  data-tooltip="Rechazar comprobante" disabled={saving} onClick={() => onRechazarComprobante(ped)}><Ban size={15} /></button>}
+      {canCancel           && <button className="act-btn act-btn--delete"  data-tooltip="Cancelar pedido"        disabled={saving} onClick={() => onCancelar(ped)}><X size={15} /></button>}
     </div>
   );
 }
@@ -1951,7 +1962,7 @@ export default function GestionPedidos() {
 
           {(hasFilter || search) && (
             <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterTipo("todos"); }}>
-              ✕ Limpiar
+              <X size={12} style={{display:"inline",verticalAlign:"middle"}} /> Limpiar
             </button>
           )}
 
@@ -2008,7 +2019,7 @@ export default function GestionPedidos() {
                 ) : vista === "historial" && errorHistorial ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">⚠️</div>
+                      <div className="empty-state__icon"><AlertCircle size={40} /></div>
                       <p className="empty-state__text">{errorHistorial}</p>
                       <button className="btn-ghost" style={{ marginTop: 10 }} onClick={reintentarHistorial}>
                         Reintentar
@@ -2016,7 +2027,7 @@ export default function GestionPedidos() {
                     </div>
                   </td></tr>
                 ) : paged.length === 0 ? (
-                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state__icon">📦</div><p className="empty-state__text">
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state__icon"><Package size={40} strokeWidth={1} /></div><p className="empty-state__text">
                     {vista === "historial" ? "Aún no hay pedidos entregados ni cancelados." : "Sin pedidos activos."}
                   </p></div></td></tr>
                 ) : paged.map((ped, idx) => {
@@ -2064,7 +2075,7 @@ export default function GestionPedidos() {
                       <td>
                         {ped.domicilio ? (
                           <div className="flex flex-col">
-                            <div className="tipo-domicilio text-[11px] font-black text-purple-600 flex items-center gap-1">🛵 Domicilio</div>
+                            <div className="tipo-domicilio text-[11px] font-black text-purple-600 flex items-center gap-1"><Bike size={12} /> Domicilio</div>
                             <div className="tipo-sub text-[10px] font-bold text-gray-400 italic">
                               {(() => {
                                 const nombre = ped.nombre_domiciliario
@@ -2075,7 +2086,7 @@ export default function GestionPedidos() {
                             </div>
                           </div>
                         ) : (
-                          <div className="tipo-tienda text-[11px] font-black text-blue-600 flex items-center gap-1">🏪 Tienda</div>
+                          <div className="tipo-tienda text-[11px] font-black text-blue-600 flex items-center gap-1"><Store size={12} /> Tienda</div>
                         )}
                       </td>
                       <td>
@@ -2083,7 +2094,7 @@ export default function GestionPedidos() {
                           <EstadoBadge estado={ped.estado} />
                           {ped.estado === "En producción" && (
                             <span style={{ fontSize: 9, fontWeight: 700, color: "#1976d2", letterSpacing: 0.3 }}>
-                              ⏳ Esperando producción
+                              <Clock size={9} style={{ display:"inline", verticalAlign:"middle", marginRight:2 }} /> Esperando producción
                             </span>
                           )}
                           {ped.fecha_rechazada && (

@@ -5,7 +5,7 @@ import { getCategorias } from '../../../services/categoriasProductosService';
 import ProductCard from './components/ProductCard';
 import {
   Search, SlidersHorizontal, ShoppingBag, Leaf,
-  X, CheckCircle2, ShoppingCart
+  X, CheckCircle2, ShoppingCart, MapPin
 } from 'lucide-react';
 import { getUser } from '../../../services/authService';
 import { updateUser } from '../../client/profile/services/profileService.js';
@@ -78,7 +78,7 @@ const OrdersPage = () => {
 
   const handleAddToCart = (product) => {
     addToCart(product);
-    showToast(`${product.nombre} agregado al carrito ✓`);
+    showToast(`${product.nombre} agregado al carrito`);
   };
 
   const COSTO_DOMICILIO = 5000;
@@ -110,7 +110,7 @@ const OrdersPage = () => {
       });
       clearCart();
       setCheckoutOpen(false);
-      showToast('¡Pedido creado exitosamente! 🎉');
+      showToast('¡Pedido creado exitosamente!');
       // Ofrecer guardar la dirección si es un domicilio
       if (entrega.tieneDomicilio && entrega.address) {
         setSaveAddressPrompt({
@@ -300,8 +300,8 @@ const OrdersPage = () => {
           padding: '16px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
           maxWidth: 320, animation: 'fadeInUp 0.3s ease',
         }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: '#1a1a1a', marginBottom: 4 }}>
-            📍 ¿Guardar esta dirección?
+          <p style={{ fontSize: 13, fontWeight: 800, color: '#1a1a1a', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <MapPin size={13} /> ¿Guardar esta dirección?
           </p>
           <p style={{ fontSize: 11, color: '#757575', marginBottom: 14, lineHeight: 1.4 }}>
             {saveAddressPrompt.direccion}

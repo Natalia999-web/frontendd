@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Bell, X, Search, Check, Eye, Trash2 } from "lucide-react";
 import {
   useNotificaciones,
   TIPOS, TIPO_LABELS, TIPO_ICONS, TIPO_COLORS,
@@ -100,7 +101,7 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
         {/* ── Header ── */}
         <div className="notif-panel__header">
           <div className="notif-panel__title-row">
-            <span className="notif-panel__title">🔔 Notificaciones</span>
+            <span className="notif-panel__title" style={{display:"flex",alignItems:"center",gap:6}}><Bell size={16} /> Notificaciones</span>
             {noLeidas > 0 && (
               <span className="notif-badge-header">{noLeidas} nueva{noLeidas > 1 ? "s" : ""}</span>
             )}
@@ -111,13 +112,13 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
                 Marcar todas como leídas
               </button>
             )}
-            <button className="notif-close-btn" onClick={onClose} data-tooltip="Cerrar panel">✕</button>
+            <button className="notif-close-btn" onClick={onClose} data-tooltip="Cerrar panel" style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
           </div>
         </div>
 
         {/* ── Buscador ── */}
         <div className="notif-search-wrap">
-          <span className="notif-search-icon">🔍</span>
+          <span className="notif-search-icon"><Search size={15} /></span>
           <input
             className="notif-search-input"
             placeholder="Buscar notificación..."
@@ -153,8 +154,8 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
 
           {/* CA_03_05 — limpiar */}
           {hayFiltros && (
-            <button className="notif-clear-btn" onClick={limpiarFiltros} data-tooltip="Limpiar filtros activos">
-              ✕ Limpiar
+            <button className="notif-clear-btn" onClick={limpiarFiltros} data-tooltip="Limpiar filtros activos" style={{display:"flex",alignItems:"center",gap:4}}>
+              <X size={13} /> Limpiar
             </button>
           )}
         </div>
@@ -247,7 +248,7 @@ function NotifItem({ notif, onVer, onMarcarLeida, onEliminar }) {
             onClick={e => { e.stopPropagation(); onMarcarLeida(notif.id); }}
             data-tooltip="Marcar como leída"
           >
-            ✓
+            <Check size={13} />
           </button>
         )}
         <button
@@ -255,14 +256,14 @@ function NotifItem({ notif, onVer, onMarcarLeida, onEliminar }) {
           onClick={e => { e.stopPropagation(); onVer(notif); }}
           data-tooltip="Ver detalle"
         >
-          👁
+          <Eye size={14} />
         </button>
         <button
           className="notif-item__btn notif-item__btn--del"
           onClick={e => { e.stopPropagation(); onEliminar(notif.id); }}
           data-tooltip="Eliminar notificación"
         >
-          🗑
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

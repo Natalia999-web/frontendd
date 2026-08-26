@@ -16,13 +16,13 @@ const ReturnList = ({ returns, onViewDetails }) => {
         const Icon = config.icon;
         
         return (
-          <div 
-            key={item.id} 
+          <div
+            key={item.id}
             className="group bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden"
           >
             {/* Indicador de estado lateral */}
             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${config.bg.replace('bg-', 'bg-')}`}></div>
-            
+
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-start">
                 <div className="flex gap-4">
@@ -30,14 +30,16 @@ const ReturnList = ({ returns, onViewDetails }) => {
                     <Package size={22} className={config.text} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-gray-800 leading-tight group-hover:text-emerald-700 transition-colors">{item.productName}</h4>
+                    <h4 className="text-sm font-black text-gray-800 leading-tight group-hover:text-emerald-700 transition-colors">
+                      {item.productos?.[0]?.nombre || item.numero}
+                    </h4>
                     <div className="flex items-center gap-3 mt-1.5">
                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
-                         <Hash size={10} /> {item.idVenta}
+                         <Hash size={10} /> {item.numeroPedido || item.idVenta}
                        </span>
                        <span className="w-1 h-1 bg-gray-200 rounded-full"></span>
                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
-                         <Calendar size={10} /> {item.date}
+                         <Calendar size={10} /> {item.fechaSolicitud}
                        </span>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AlertTriangle, Info, X, User, MapPin, ShieldCheck, Banknote, Check, Calendar, Package, CheckCircle2, XCircle, Search, Trash2 } from "lucide-react";
 import { getPedidos } from "../../../services/pedidosService.js";
 import { Avatar } from "./CrearUsuario.jsx";
 import { Ic } from "./usuariosIcons.jsx";
@@ -48,7 +49,7 @@ function ToggleView({ value, razon }) {
             fontSize: 11, marginTop: 2, fontWeight: 600,
             color: razon.startsWith("El rol") ? "#ef5350" : "#757575",
           }}>
-            {razon.startsWith("El rol") ? "⚠️ " : "ℹ️ "}{razon}
+            {razon.startsWith("El rol") ? <AlertTriangle size={11} style={{marginRight:3}} /> : <Info size={11} style={{marginRight:3}} />}{razon}
           </div>
         )}
       </div>
@@ -58,9 +59,9 @@ function ToggleView({ value, razon }) {
 
 // ─── Secciones del side panel ─────────────────────────────
 const NAV_ITEMS_BASE = [
-  { id: "personal",  label: "Personal",  icon: "👤" },
-  { id: "ubicacion", label: "Ubicación", icon: "📍" },
-  { id: "rol",       label: "Rol",       icon: "🎖️" },
+  { id: "personal",  label: "Personal",  Icon: User },
+  { id: "ubicacion", label: "Ubicación", Icon: MapPin },
+  { id: "rol",       label: "Rol",       Icon: ShieldCheck },
 ];
 
 // ─── MODAL VER USUARIO — SIDE PANEL ──────────────────────
@@ -81,7 +82,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
   }, [user, esCliente]);
 
   const navItems = esCliente
-    ? [...NAV_ITEMS_BASE, { id: "cliente", label: "Saldo", icon: "💰" }]
+    ? [...NAV_ITEMS_BASE, { id: "cliente", label: "Saldo", Icon: Banknote }]
     : NAV_ITEMS_BASE;
 
   const rolObj   = roles.find(r => r.nombre === user.rol);
@@ -107,7 +108,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
               {user.nombre} {user.apellidos}
             </h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* SIDE PANEL LAYOUT */}
@@ -149,7 +150,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                   width: "100%",
                 }}
               >
-                <span style={{ fontSize: 14 }}>{item.icon}</span>
+                {item.Icon ? <item.Icon size={14} /> : <span style={{ fontSize: 14 }}>{item.icon}</span>}
                 {item.label}
               </button>
             ))}
@@ -232,14 +233,14 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                       fontSize: 12, fontWeight: 700,
                       color: rolObj.estado ? "#2e7d32" : "#c62828",
                     }}>
-                      {rolObj.estado ? "✓ Activo" : "✕ Desactivado"}
+                      {rolObj.estado ? <><Check size={12} /> Activo</> : <><X size={12} /> Desactivado</>}
                     </div>
                   </div>
                 )}
 
                 {user.fechaCreacion && (
                   <div className="date-info" style={{ marginTop: 16 }}>
-                    <span>📅</span>
+                    <Calendar size={14} />
                     <span>Usuario desde <strong>{user.fechaCreacion}</strong></span>
                   </div>
                 )}
@@ -262,7 +263,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                   gap: 14,
                   marginBottom: 20,
                 }}>
-                  <span style={{ fontSize: 32 }}>{saldoFavor > 0 ? "💰" : "🪙"}</span>
+                  <Banknote size={32} strokeWidth={1} style={{color: saldoFavor > 0 ? "#2e7d32" : "#9e9e9e"}} />
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#9e9e9e", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
                       Saldo disponible
@@ -289,10 +290,10 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                     <p className="section-label">Actividad del cliente</p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       {[
-                        { label: "Total pedidos", value: pedidosCliente.length, icon: "📦" },
-                        { label: "Entregados",    value: pedidosCliente.filter(p => p.estado === "Entregado").length,  icon: "✅" },
+                        { label: "Total pedidos", value: pedidosCliente.length, Icon: Package },
+                        { label: "Entregados",    value: pedidosCliente.filter(p => p.estado === "Entregado").length,  Icon: CheckCircle2 },
                         { label: "En curso",      value: pedidosCliente.filter(p => !["Entregado","Cancelado"].includes(p.estado)).length, icon: "🔄" },
-                        { label: "Cancelados",    value: pedidosCliente.filter(p => p.estado === "Cancelado").length,  icon: "❌" },
+                        { label: "Cancelados",    value: pedidosCliente.filter(p => p.estado === "Cancelado").length,  Icon: XCircle },
                       ].map(stat => (
                         <div key={stat.label} style={{
                           background: "#fff",
@@ -303,7 +304,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
                           alignItems: "center",
                           gap: 10,
                         }}>
-                          <span style={{ fontSize: 20 }}>{stat.icon}</span>
+                          {stat.Icon ? <stat.Icon size={20} /> : <span style={{ fontSize: 20 }}>{stat.icon}</span>}
                           <div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1a1a" }}>{stat.value}</div>
                             <div style={{ fontSize: 11, color: "#9e9e9e" }}>{stat.label}</div>
@@ -316,7 +317,7 @@ export function ModalVerUsuario({ user, roles = [], onClose }) {
 
                 {pedidosCliente.length === 0 && (
                   <div style={{ textAlign: "center", padding: "24px 0", color: "#9e9e9e", fontSize: 13 }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
+                    <Search size={28} strokeWidth={1} style={{color:"#bdbdbd",marginBottom:8}} />
                     No se encontró un registro de cliente vinculado a este usuario.
                   </div>
                 )}
@@ -351,7 +352,7 @@ export function ModalEliminarUsuario({ user, razon, advertencias = [], onClose, 
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
           <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-            <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100" }}>⚠️</div>
+            <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100" }}><AlertTriangle size={32} /></div>
             <h3 className="delete-title">Restricción de seguridad</h3>
             <p className="delete-body" style={{ color: "#e65100", fontWeight: 500 }}>{razon}</p>
           </div>
@@ -368,7 +369,7 @@ export function ModalEliminarUsuario({ user, razon, advertencias = [], onClose, 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
         <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-          <div className="delete-icon-wrap">🗑️</div>
+          <div className="delete-icon-wrap"><Trash2 size={32} /></div>
           <h3 className="delete-title">Eliminar usuario</h3>
           <p className="delete-body">
             ¿Está seguro de que desea eliminar permanentemente al usuario{" "}
@@ -385,8 +386,8 @@ export function ModalEliminarUsuario({ user, razon, advertencias = [], onClose, 
               padding: "12px 16px",
               border: "1px solid #ffe082",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9a6400", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
-                ⚠️ Ten en cuenta lo siguiente
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9a6400", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8, display:"flex", alignItems:"center", gap:4 }}>
+                <AlertTriangle size={11} /> Ten en cuenta lo siguiente
               </div>
               {advertencias.map((adv, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: i < advertencias.length - 1 ? 7 : 0 }}>
@@ -426,7 +427,7 @@ export function ModalDesactivarUsuario({ user, advertencias, onClose, onConfirm 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
         <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-          <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100", fontSize: 24 }}>⚠️</div>
+          <div className="delete-icon-wrap" style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#e65100" }}><AlertTriangle size={32} /></div>
           <h3 className="delete-title">Desactivar usuario</h3>
           <p className="delete-body">
             El usuario <strong>"{user.nombre} {user.apellidos}"</strong> tiene elementos asociados. Al desactivarlo ocurrirá lo siguiente:

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Check, X, User, MapPin, ShieldCheck, Trash2, Camera, Eye, EyeOff } from "lucide-react";
 import { TIPOS_DOC, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { RolBadge, LocationSelects } from "./CrearEmpleado.jsx";
@@ -18,7 +19,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -35,9 +36,9 @@ function StepsBar({ current }) {
 
 /* ─── Modal Ver — Side Panel ─────────────────────────────── */
 const NAV_ITEMS = [
-  { id:"personal",  label:"Personal",  icon:"👤" },
-  { id:"ubicacion", label:"Ubicación", icon:"📍" },
-  { id:"rol",       label:"Rol",       icon:"🎖️" },
+  { id:"personal",  label:"Personal",  Icon: User },
+  { id:"ubicacion", label:"Ubicación", Icon: MapPin },
+  { id:"rol",       label:"Rol",       Icon: ShieldCheck },
 ];
 
 export function ModalVerEmpleado({ empleado, onClose, roles = [] }) {
@@ -57,7 +58,7 @@ export function ModalVerEmpleado({ empleado, onClose, roles = [] }) {
             <p className="modal-header__eyebrow">Empleados</p>
             <h2 className="modal-header__title">{empleado.nombre} {empleado.apellidos}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Side panel layout */}
@@ -73,7 +74,7 @@ export function ModalVerEmpleado({ empleado, onClose, roles = [] }) {
               <div className="avatar-wrap" style={{ width:52, height:52, fontSize:22 }}>
                 {empleado.fotoPreview
                   ? <img src={empleado.fotoPreview} alt={empleado.nombre} />
-                  : <span>👤</span>}
+                  : <User size={22} />}
               </div>
             </div>
 
@@ -92,7 +93,7 @@ export function ModalVerEmpleado({ empleado, onClose, roles = [] }) {
                   transition:"all 0.15s", textAlign:"left", width:"100%",
                 }}
               >
-                <span style={{ fontSize:14 }}>{item.icon}</span>
+                <item.Icon size={14} />
                 {item.label}
               </button>
             ))}
@@ -205,7 +206,7 @@ export function ModalEliminarEmpleado({ empleado, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
         <div style={{ padding:"28px 24px 18px", textAlign:"center" }}>
-          <div className="delete-icon-wrap">🗑️</div>
+          <div className="delete-icon-wrap"><Trash2 size={32} /></div>
           <h3 className="delete-title">Eliminar empleado</h3>
           <p className="delete-body">¿Eliminar a <strong>"{empleado.nombre} {empleado.apellidos}"</strong>?</p>
           <p className="delete-warn">Esta acción no se puede deshacer.</p>
@@ -342,7 +343,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave, roles = [] }
             <p className="modal-header__eyebrow">Empleados</p>
             <h2 className="modal-header__title">Editar Empleado</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Steps */}
@@ -360,8 +361,8 @@ export default function EditarEmpleado({ empleado, onClose, onSave, roles = [] }
                 <div className="avatar-upload-wrap" onClick={() => fotoRef.current.click()}>
                   {form.fotoPreview
                     ? <img className="avatar-upload-img" src={form.fotoPreview} alt="avatar" />
-                    : <div className="avatar-upload-placeholder">👤</div>}
-                  <div className="avatar-upload-overlay">📷</div>
+                    : <div className="avatar-upload-placeholder"><User size={36} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>}
+                  <div className="avatar-upload-overlay"><Camera size={20} /></div>
                 </div>
                 <p style={{ margin:0, fontSize:11, color:"#9e9e9e" }}>Foto de perfil</p>
                 <input ref={fotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFoto} />
@@ -500,7 +501,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave, roles = [] }
                       placeholder="Dejar vacío para no cambiar"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e => e.target.style.borderColor = "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
                 </div>
                 <div className="form-group">
@@ -512,7 +513,7 @@ export default function EditarEmpleado({ empleado, onClose, onSave, roles = [] }
                       placeholder="Repetir contraseña"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e => e.target.style.borderColor = errors.confirmar ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
                   {errors.confirmar && <p className="field-error">{errors.confirmar}</p>}
                 </div>

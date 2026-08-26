@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Check, X, Search, Trash2, Eye, PenLine, ClipboardList } from "lucide-react";
 import CrearFicha from "./CrearFicha.jsx";
 import EditarFicha from "./EditarFicha.jsx";
 import { getFichas, crearFicha, editarFicha, eliminarFicha, toggleEstadoFicha } from "../../../../services/fichaTecnicaService.js";
@@ -21,7 +22,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "success" ? "#2e7d32" : "#c62828" }}>
-      <span className="toast-icon">{toast.type === "success" ? "✓" : "✕"}</span>
+      <span className="toast-icon">{toast.type === "success" ? <Check size={14}/> : <X size={16}/>}</span>
       {toast.message}
     </div>
   );
@@ -44,7 +45,7 @@ function EliminarModal({ ficha, onClose, onConfirm }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box--sm" onClick={e => e.stopPropagation()}>
         <div style={{ padding: "28px 24px 18px", textAlign: "center" }}>
-          <div className="delete-icon-wrap">🗑️</div>
+          <div className="delete-icon-wrap"><Trash2 size={30}/></div>
           <h3 className="delete-title">Eliminar ficha</h3>
           <p className="delete-body">¿Eliminar ficha de <strong>"{ficha.producto}"</strong>?</p>
           <p className="delete-warn">Esta acción no se puede deshacer.</p>
@@ -155,14 +156,14 @@ export default function FichaTecnica() {
   return (
     <div className="page-wrapper">
       <div className="page-header">
-        <h1 className="page-header__title">Ficha Técnica 📖</h1>
+        <h1 className="page-header__title">Ficha Técnica</h1>
         <div className="page-header__line" />
       </div>
 
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Search size={16}/></span>
             <input type="text" className="search-input"
               placeholder="Buscar por producto o categoría…"
               value={search} onChange={e => setSearch(e.target.value)} />
@@ -184,8 +185,8 @@ export default function FichaTecnica() {
           </div>
 
           {(filterCat !== "Todas" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("Todas"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("Todas"); }} style={{display:"flex",alignItems:"center",gap:6}}>
+              <X size={14}/> Limpiar
             </button>
           )}
 
@@ -214,7 +215,7 @@ export default function FichaTecnica() {
                 ) : paginated.length === 0 ? (
                   <tr><td colSpan={7}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">📖</div>
+                      <div className="empty-state__icon"><ClipboardList size={36} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
                       <p className="empty-state__text">
                         {search || filterCat !== "Todas" ? "Sin fichas que coincidan." : "Sin fichas técnicas registradas."}
                       </p>
@@ -228,7 +229,7 @@ export default function FichaTecnica() {
                       <div className="cat-cell">
                         {f.fotoPreview
                           ? <img src={f.fotoPreview} alt={f.producto} style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", border: "1px solid #c8e6c9", flexShrink: 0 }} />
-                          : <div style={{ width: 34, height: 34, borderRadius: 8, background: "#f1f8f1", border: "1px solid #c8e6c9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>📋</div>
+                          : <div style={{ width: 34, height: 34, borderRadius: 8, background: "#f1f8f1", border: "1px solid #c8e6c9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><ClipboardList size={16}/></div>
                         }
                         <span className="cat-name">{f.producto}</span>
                       </div>
@@ -250,9 +251,9 @@ export default function FichaTecnica() {
 
                     <td>
                       <div className="actions-cell">
-                        <button className="act-btn act-btn--view"   onClick={() => setModal({ mode: "view",   ficha: f })}>👁</button>
-                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ mode: "edit",   ficha: f })}>✎</button>
-                        <button className="act-btn act-btn--delete" onClick={() => setModal({ mode: "delete", ficha: f })}>🗑️</button>
+                        <button className="act-btn act-btn--view"   onClick={() => setModal({ mode: "view",   ficha: f })}><Eye size={15}/></button>
+                        <button className="act-btn act-btn--edit"   onClick={() => setModal({ mode: "edit",   ficha: f })}><PenLine size={15}/></button>
+                        <button className="act-btn act-btn--delete" onClick={() => setModal({ mode: "delete", ficha: f })}><Trash2 size={15}/></button>
                       </div>
                     </td>
                   </tr>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { X, Check, AlertCircle, Package, Bike, Store, Banknote, Building2, CreditCard, Calendar, PenLine, ClipboardList, Phone, Mail, User, MapPin, ShoppingCart, Truck, Paperclip, Camera, Search } from "lucide-react";
 import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
 import { getUsuarios } from "../../../services/usuariosService.js";
@@ -68,8 +69,8 @@ function ClienteSelect({ value, clientes, onChange, error }) {
           <span style={{ fontSize: 12, fontWeight: 400, color: "#4caf50", marginLeft: 8 }}>{selected.cedula}</span>
         </span>
         <button type="button" onClick={() => { onChange(null); setQuery(""); }}
-          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", fontSize: 16, padding: 0, lineHeight: 1 }}>
-          ✕
+          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", padding: 0, display:"flex", alignItems:"center" }}>
+          <X size={16} />
         </button>
       </div>
     );
@@ -78,7 +79,7 @@ function ClienteSelect({ value, clientes, onChange, error }) {
   return (
     <div style={{ border: `1.5px solid ${error ? "#ef5350" : "#e0e0e0"}`, borderRadius: 10, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fafdf9" }}>
-        <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+        <span style={{ fontSize: 13, color: "#9e9e9e", display:"flex" }}><Search size={13} /></span>
         <input
           type="text"
           placeholder="Buscar por nombre, apellido o cédula…"
@@ -256,7 +257,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={12} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -338,10 +339,8 @@ export default function CrearPedido({ onClose, onSave }) {
   const totalFinal    = Math.max(0, total - creditoAplicar);
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa. No depende del monto — antes se pedía por pasar de
-  // $50.000 y caía en pedidos normales. Los productos por encargo no cuentan:
-  // su déficit lo cubre la orden de producción.
   const requiereAnticipo = form.productosItems.some(
-    p => !p.requiereProduccion && p.cantidad > p.stockActual
+    p => p.cantidad > p.stockActual
   );
   const montoAnticipo    = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   // Con anticipo el método se elige una sola vez, en el bloque del anticipo, y de
@@ -968,7 +967,7 @@ export default function CrearPedido({ onClose, onSave }) {
                         </div>
                       ) : (
                         <label className={`comprobante-dropzone${errors.anticipo_comprobante ? " error" : ""}`} style={{ height: 110, background: "rgba(255,255,255,0.7)" }}>
-                          <input type="file" accept="image/*,application/pdf" onChange={handleAnticipo} hidden />
+                          <input type="file" accept="image/*" onChange={handleAnticipo} hidden />
                           <div style={{ textAlign: "center" }}>
                             <span style={{ fontSize: 26 }}>📎</span>
                             <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, color: "#1565c0" }}>Subir comprobante {pagarTodo ? "del pago" : "del anticipo"}</p>

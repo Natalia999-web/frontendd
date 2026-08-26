@@ -476,14 +476,14 @@ export default function CrearCompra({ onClose, onSave }) {
                     <label className="comprobante-upload-btn" style={{ flex: 1 }}>
                       <input
                         type="file"
-                        accept="image/*,application/pdf"
+                        accept="image/*"
                         style={{ display: "none" }}
                         onChange={e => setComprobante(e.target.files?.[0] || null)}
                       />
                       <span className="comprobante-upload-icon">📎</span>
                       {comprobante
                         ? <span className="comprobante-filename">{comprobante.name}</span>
-                        : <span>Adjuntar comprobante (imagen o PDF)</span>
+                        : <span>Adjuntar comprobante (imagen)</span>
                       }
                     </label>
                     {comprobante && (

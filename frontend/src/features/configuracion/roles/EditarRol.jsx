@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { X, Lock } from "lucide-react";
 import { createPortal } from "react-dom";
 import { soloLetras } from "../../../utils/inputFilters";
 import "./Roles.css";
@@ -85,7 +86,7 @@ export default function EditarRol({ rol, mode = "edit", onClose, onSave }) {
               <p className="modal-header__eyebrow">Roles</p>
               <h2 className="modal-header__title">{isView ? "Ver rol" : "Editar rol"}</h2>
             </div>
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
           </div>
 
           <div className="modal-body">
@@ -166,7 +167,7 @@ export default function EditarRol({ rol, mode = "edit", onClose, onSave }) {
                 className="privilegios-open-btn"
                 onClick={() => setShowPrivilegios(true)}
               >
-                <span>🔐</span>
+                <Lock size={16} />
                 <span>Ver y gestionar privilegios</span>
                 <span className="permiso-grupo-badge" style={{ marginLeft: "auto" }}>
                   {activosCount}/{totalCount} activos

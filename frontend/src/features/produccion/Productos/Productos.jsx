@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { Search, X, AlertTriangle, Package, ClipboardList, Eye, PenLine, Trash2, Truck } from "lucide-react";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import { crearFicha, editarFicha } from "../../../services/fichaTecnicaService.js";
 import { Toast } from "./ui.jsx";
@@ -218,17 +219,17 @@ function VencCellProd({ fecha, dias }) {
   const label = `${d}/${m}/${y}`;
   if (dias <= 0) return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#c62828", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 6, padding: "3px 8px" }}>
-      ⚠️ Vencido
+      <AlertTriangle size={13} style={{ flexShrink: 0 }} /> Vencido
     </span>
   );
   if (dias <= 7) return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#e65100", background: "#fff3e0", border: "1px solid #ffcc80", borderRadius: 6, padding: "3px 8px" }}>
-      🔴 {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
+      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#e53935", flexShrink: 0 }} /> {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
     </span>
   );
   if (dias <= 30) return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#f57f17", background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, padding: "3px 8px" }}>
-      🟡 {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
+      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f9a825", flexShrink: 0 }} /> {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
     </span>
   );
   return <span style={{ fontSize: 12, fontWeight: 600, color: "#616161" }}>{label}</span>;
@@ -250,7 +251,7 @@ function CatCell({ cat }) {
           fontSize: 17, cursor: "default",
         }}
       >
-        {cat?.icon || "📦"}
+        {cat?.icon || <Package size={17} />}
       </span>
       {show && (
         <span
@@ -294,10 +295,9 @@ function ProductImg({ previews, nombre }) {
         width: 36, height: 36, borderRadius: 8, flexShrink: 0,
         background: "#f1f8f1", border: "1px solid #c8e6c9",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 17,
       }}
     >
-      🍌
+      <Package size={17} strokeWidth={1} style={{ color: "#bdbdbd" }} />
     </div>
   );
 }
@@ -327,7 +327,7 @@ function LotesProductoPanel({ idProducto, tipo = "lotes" }) {
 
   if (!mostrar.length) return (
     <div className="empty-state" style={{ padding: "28px 20px" }}>
-      <div className="empty-state__icon">📦</div>
+      <div className="empty-state__icon"><Package size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
       <p className="empty-state__text">
         {tipo === "historial" ? "Sin lotes vencidos registrados." : "Sin lotes activos registrados."}
       </p>
@@ -358,8 +358,8 @@ function LotesProductoPanel({ idProducto, tipo = "lotes" }) {
                   </span>
                 )}
                 {urgente && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e65100", background: "#fff3e0", padding: "2px 8px", borderRadius: 20, border: "1px solid #ffcc80" }}>
-                    ⚠️ Vence en {dias}d
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e65100", background: "#fff3e0", padding: "2px 8px", borderRadius: 20, border: "1px solid #ffcc80", display: "flex", alignItems: "center", gap: 4 }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0 }} /> Vence en {dias}d
                   </span>
                 )}
                 {fv && <span style={{ fontWeight: 600, fontSize: 12 }}>Vence: {fv}</span>}
@@ -411,15 +411,15 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
               <h2 className="modal-header__title">{product.nombre}</h2>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
         </div>
 
         <div className="ver-ins-tabs">
           {[
-            { key: "info",     label: "📋 Información" },
-            { key: "lotes",    label: "📦 Lotes" },
-            { key: "historial",label: "🕒 Vencidos" },
-            { key: "ficha",    label: "📖 Ficha técnica" },
+            { key: "info",     label: "Información" },
+            { key: "lotes",    label: "Lotes" },
+            { key: "historial",label: "Vencidos" },
+            { key: "ficha",    label: "Ficha técnica" },
           ].map((t) => (
             <button
               key={t.key}
@@ -627,7 +627,7 @@ function VerProducto({ product, catObj, onClose, onOpenFicha }) {
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: "28px 0" }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                <ClipboardList size={32} strokeWidth={1} style={{ color: "#bdbdbd", marginBottom: 8 }} />
                 <p style={{ margin: "0 0 12px", fontSize: 13, color: "#9e9e9e" }}>Este producto no tiene ficha técnica.</p>
                 <button onClick={() => { onClose(); onOpenFicha?.(product); }}
                   style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "#2e7d32", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer" }}>
@@ -808,8 +808,8 @@ export default function GestionProductos() {
     (idCategoria) => {
       const cat = categorias.find((c) => c.ID_Categoria === idCategoria);
       return cat
-        ? { id: cat.ID_Categoria, nombre: cat.Nombre_Categoria, icon: cat.Icono ?? "📦" }
-        : { id: null, nombre: "Sin categoría", icon: "📦" };
+        ? { id: cat.ID_Categoria, nombre: cat.Nombre_Categoria, icon: cat.Icono ?? null }
+        : { id: null, nombre: "Sin categoría", icon: null };
     },
     [categorias]
   );
@@ -1017,7 +1017,7 @@ export default function GestionProductos() {
         {/* ── Toolbar ── */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input
               type="text"
               className="search-input"
@@ -1105,8 +1105,8 @@ export default function GestionProductos() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("Todas"); setFilterEst("Todos"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("Todas"); setFilterEst("Todos"); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -1144,7 +1144,7 @@ export default function GestionProductos() {
                     <tr>
                       <td colSpan={9}>
                         <div className="empty-state">
-                          <div className="empty-state__icon">🍌</div>
+                          <div className="empty-state__icon"><Package size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                           <p className="empty-state__text">Sin resultados</p>
                         </div>
                       </td>
@@ -1199,32 +1199,32 @@ export default function GestionProductos() {
                                 className="act-btn act-btn--view"
                                 data-tooltip="Ver detalle del producto"
                                 onClick={() => setModal({ type: "ver", product: p })}
-                              >👁</button>
+                              ><Eye size={15} /></button>
                               {puedeEditar && (
                                 <button
                                   className="act-btn act-btn--edit"
                                   data-tooltip="Editar producto"
                                   onClick={() => setModal({ type: "editar", product: p })}
-                                >✎</button>
+                                ><PenLine size={15} /></button>
                               )}
                               <button
                                 className="act-btn act-btn--ficha"
                                 data-tooltip="Ver ficha técnica"
                                 onClick={() => setModal({ type: "ficha", product: p })}
-                              >📋</button>
+                              ><ClipboardList size={15} /></button>
                               {puedeSalida && (
                                 <button
                                   className="act-btn act-btn--salida"
                                   data-tooltip="Registrar salida de producto"
                                   onClick={() => setModal({ type: "salida", product: p })}
-                                >🚚</button>
+                                ><Truck size={15} /></button>
                               )}
                               {puedeEliminar && (
                                 <button
                                   className="act-btn act-btn--delete"
                                   data-tooltip="Eliminar producto"
                                   onClick={() => handleOpenDelete(p)}
-                                >🗑️</button>
+                                ><Trash2 size={15} /></button>
                               )}
                             </div>
                           </td>

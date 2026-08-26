@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, MapPin, Trash2, Plus, Minus, ShoppingBag, LogIn, Sparkles, ChevronRight, ShoppingCart, FileText, Truck } from 'lucide-react';
+import { X, MapPin, Trash2, Plus, Minus, ShoppingBag, LogIn, Sparkles, ChevronRight, ShoppingCart, FileText, Truck, Clock, AlertTriangle, Package } from 'lucide-react';
 import { CartItem, removeFromCart, updateQuantity, clearCart, getCart } from '../services/cartService';
 import { isAuthenticated } from '../../../../services/authService';
 import { apiFetch } from '../../../../utils/api';
@@ -145,7 +145,7 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
         {/* Aviso horario */}
         {!abierto && (
           <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 shrink-0 flex items-start gap-2.5">
-            <span className="text-lg leading-none mt-0.5">⏰</span>
+            <Clock size={18} className="shrink-0 mt-0.5 text-amber-600" />
             <div>
               <p className="text-xs font-black text-amber-700">Fuera del horario de atención</p>
               <p className="text-[11px] font-medium text-amber-600 mt-0.5 leading-snug">{mensajeFueraHorario()}</p>
@@ -182,11 +182,11 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
                     onClick={usarDireccionRegistrada}
                     className="w-full py-2 px-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl text-xs font-black text-green-800 uppercase tracking-widest transition-all text-center"
                   >
-                    📍 Usar mi dirección registrada
+                    <MapPin size={13} /> Usar mi dirección registrada
                   </button>
                   {sinDireccionMsg && (
                     <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
-                      <span style={{ fontSize: 13 }}>⚠️</span>
+                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
                       <p className="text-xs font-bold text-amber-700 leading-tight">
                         No tienes dirección registrada. Ve a tu <strong>Perfil</strong> para agregarla.
                       </p>
@@ -272,7 +272,7 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
                         {(item as any).imagenPreview || (item as any).imagen ? (
                           <img src={(item as any).imagenPreview || (item as any).imagen} alt={item.nombre} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-50 text-xl">📦</div>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-50"><Package size={24} className="text-gray-300" /></div>
                         )}
                       </div>
                       <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
@@ -280,7 +280,7 @@ const CartAside: React.FC<CartAsideProps> = ({ isOpen, onClose, onCheckout, onLo
                           <h4 className="font-black text-gray-800 text-[11px] mb-0.5 truncate">{item.nombre}</h4>
                           <p className="font-black text-[10px]" style={{ color: 'var(--green-700)' }}>{COP(item.precio)}</p>
                           {(item as any).pedidoProgramado && (
-                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">⏳ Pedido programado</span>
+                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1"><Clock size={10} /> Pedido programado</span>
                           )}
                         </div>
                         <div className="flex items-center justify-between">

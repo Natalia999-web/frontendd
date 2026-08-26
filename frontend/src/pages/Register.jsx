@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { soloLetras } from '../utils/inputFilters';
-import { User, Mail, Lock, Eye, EyeOff, Check, Leaf, ChevronRight, FileText } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Check, X, AlertTriangle, Leaf, ChevronRight, FileText } from 'lucide-react';
 import { validatePassword } from '../features/configuracion/Usuarios/usuariosUtils.js';
 import './Auth.css';
 
@@ -25,7 +25,7 @@ function PasswordChecklist({ password }) {
         return (
           <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
             color: ok ? '#166534' : '#991b1b' }}>
-            {ok ? '✓' : '✗'} {label}
+            {ok ? <Check size={12} /> : <X size={12} />} {label}
           </li>
         );
       })}
@@ -235,7 +235,7 @@ const Register = () => {
         <PanelIzquierdo />
         <div className="auth-panel-right">
           <div className="auth-form-box" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>📧</div>
+            <div style={{ marginBottom: 16 }}><Mail size={56} strokeWidth={1} style={{color:"#2e7d32"}} /></div>
             <h2 className="auth-form-title" style={{ textAlign: 'center' }}>¡Cuenta creada!</h2>
             <p className="auth-form-subtitle" style={{ textAlign: 'center', marginBottom: 24 }}>
               Enviamos un enlace de verificación a:
@@ -276,7 +276,7 @@ const Register = () => {
 
           {errors.global && (
             <div className="auth-error">
-              <span>⚠</span> {errors.global}
+              <AlertTriangle size={13} /> {errors.global}
             </div>
           )}
 
@@ -395,7 +395,7 @@ const Register = () => {
                   display: 'flex', alignItems: 'center', gap: 4 }}>
                   {form.Contrasena === form.Confirmar_contrasena
                     ? <><Check size={12} /> Las contraseñas coinciden</>
-                    : '✗ Las contraseñas no coinciden'}
+                    : <><X size={12} /> Las contraseñas no coinciden</>}
                 </p>
               )}
             </div>

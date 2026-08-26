@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Search, X, Check, Eye, PenLine, Trash2, Building2, Phone } from "lucide-react";
 import "./Proveedores.css";
 import CrearProveedor  from "./CrearProveedor";
 import EditarProveedor from "./EditarProveedor";
@@ -32,7 +33,7 @@ function Toast({ toast }) {
   if (!toast) return null;
   return (
     <div className="toast" style={{ background: toast.type === "success" ? "#2e7d32" : "#c62828" }}>
-      <span style={{ fontSize: 15 }}>{toast.type === "success" ? "✓" : "✕"}</span>
+      <span style={{ fontSize: 15, display: "flex", alignItems: "center" }}>{toast.type === "success" ? <Check size={14} /> : <X size={14} />}</span>
       {toast.message}
     </div>
   );
@@ -169,7 +170,7 @@ export default function GestionProveedores() {
 
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input
               type="text"
               className="search-input"
@@ -219,8 +220,8 @@ export default function GestionProveedores() {
           </div>
 
           {(filterCiudad !== "todas" || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCiudad("todas"); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCiudad("todas"); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -248,7 +249,7 @@ export default function GestionProveedores() {
                   <tr>
                     <td colSpan={5}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🏭</div>
+                        <Building2 size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} />
                         <p className="empty-state__text">
                           {hasFilter || search ? "Sin proveedores que coincidan." : "Sin proveedores registrados"}
                         </p>
@@ -266,8 +267,8 @@ export default function GestionProveedores() {
 
                     <td>
                       <div className="client-cell">
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: "#e8f5e9", border: "2px solid #c8e6c9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                          🏭
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: "#e8f5e9", border: "2px solid #c8e6c9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Building2 size={18} />
                         </div>
                         <div>
                           <div className="client-name">{p.responsable}</div>
@@ -282,7 +283,7 @@ export default function GestionProveedores() {
                     <td>
                       {p.celular
                         ? <a href={`https://wa.me/${p.celular.replace(/\D/g, "")}`} className="phone-cell" style={{ textDecoration: "none" }} target="_blank" rel="noopener noreferrer">
-                            <span className="phone-icon">📞</span>
+                            <Phone size={14} />
                             {p.celular}
                           </a>
                         : <span className="phone-cell" style={{ color: "#bdbdbd" }}>—</span>
@@ -297,11 +298,11 @@ export default function GestionProveedores() {
                     <td>
                       <div className="actions-cell">
                         <button className="act-btn act-btn--view" data-tooltip="Ver proveedor"
-                          onClick={() => setModal({ mode: "view", proveedor: p })}>👁</button>
+                          onClick={() => setModal({ mode: "view", proveedor: p })}><Eye size={15} /></button>
                         <button className="act-btn act-btn--edit" data-tooltip="Editar proveedor"
-                          onClick={() => setModal({ mode: "edit", proveedor: p })}>✎</button>
+                          onClick={() => setModal({ mode: "edit", proveedor: p })}><PenLine size={15} /></button>
                         <button className="act-btn act-btn--delete" data-tooltip="Eliminar proveedor"
-                          onClick={() => setModal({ mode: "delete", proveedor: p })}>🗑️</button>
+                          onClick={() => setModal({ mode: "delete", proveedor: p })}><Trash2 size={15} /></button>
                       </div>
                     </td>
 

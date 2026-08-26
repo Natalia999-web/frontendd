@@ -649,13 +649,13 @@ export default function EditarCompra({ compra, mode, onClose, onSave }) {
                   <label className="field-label">Comprobante de transferencia</label>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <label className="comprobante-upload-btn" style={{ flex: 1 }}>
-                      <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => setComprobante(e.target.files?.[0] || null)} />
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setComprobante(e.target.files?.[0] || null)} />
                       <span className="comprobante-upload-icon">📎</span>
                       {comprobante
                         ? <span className="comprobante-filename">{comprobante.name}</span>
                         : compra.comprobante
                           ? <span className="comprobante-filename">{compra.comprobante.name || "Comprobante existente"}</span>
-                          : <span>Adjuntar comprobante (imagen o PDF)</span>
+                          : <span>Adjuntar comprobante (imagen)</span>
                       }
                     </label>
                     {(comprobante || compra.comprobante) && (

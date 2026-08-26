@@ -7,13 +7,14 @@ import { MUNICIPIOS_VALLE_ABURRA } from "../../../utils/departamentosYCiudades.j
 import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import { registrarPagoFinal, editarPedido } from "../../../services/pedidosService.js";
 import { PERMISOS_POR_ESTADO, puedeEditarsePedido } from "./permisosEdicion.js";
+import { X, Ban, AlertTriangle, CheckCircle2, CreditCard, PenLine, Check, Paperclip, Upload, Bike, Store } from "lucide-react";
 import "./Pedidos.css";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const METODOS_PAGO = ["Efectivo 💵", "Transferencia 🏦"];
+const METODOS_PAGO = ["Efectivo", "Transferencia"];
 
 /* ─── Campo solo lectura ─────────────────────────────────── */
 function FieldReadOnly({ label, value }) {
@@ -61,7 +62,7 @@ function ProductoItemEditable({ item, onChange, onRemove }) {
         <button className="qty-btn" onClick={() => setQty(item.cantidad + 1)}>+</button>
       </div>
       <div className="producto-item__total">{fmt(item.precio * item.cantidad)}</div>
-      <button className="producto-item__remove" onClick={onRemove}>✕</button>
+      <button className="producto-item__remove" onClick={onRemove}><X size={16}/></button>
     </div>
   );
 }
@@ -235,8 +236,9 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               width: 52, height: 52, borderRadius: 14,
               background: "#ffebee", border: "1px solid #ef9a9a",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 24, margin: "0 auto 14px",
-            }}>🚫</div>
+              margin: "0 auto 14px",
+              display:"flex",alignItems:"center",justifyContent:"center",
+            }}><Ban size={24}/></div>
             <h3 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, fontFamily: "var(--font-head)" }}>
               No editable
             </h3>
@@ -394,7 +396,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const handleRegistrarAnticipo = async () => {
     const e = {};
     if (!apMetodo) e.metodo = "Selecciona el método de pago del anticipo";
-    if (apMetodo === "Efectivo 💵" && !apEfectivo) e.efectivo = "Confirma que recibiste el anticipo en efectivo";
+    if (apMetodo === "Efectivo" && !apEfectivo) e.efectivo = "Confirma que recibiste el anticipo en efectivo";
     if (Object.keys(e).length) { setApErrors(e); return; }
     setApSaving(true);
     try {
@@ -414,8 +416,8 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
   const handlePagoFinal = async () => {
     const e = {};
     if (!pfMetodo) e.metodo = "Selecciona el método de pago";
-    if (pfMetodo === "Efectivo 💵" && !pfEfectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
-    if (pfMetodo === "Transferencia 🏦" && !pfPreview) e.archivo = "Adjunta el comprobante del saldo";
+    if (pfMetodo === "Efectivo" && !pfEfectivo) e.efectivo = "Confirma que recibiste el saldo en efectivo";
+    if (pfMetodo === "Transferencia" && !pfPreview) e.archivo = "Adjunta el comprobante del saldo";
     if (Object.keys(e).length) { setPfErrors(e); return; }
 
     setPfSaving(true);
@@ -476,7 +478,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
             }}>
               {pedido.estado}
             </span>
-            <button className="modal-close-btn" onClick={onClose}>✕</button>
+            <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
           </div>
         </div>
 
@@ -492,7 +494,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
         >
           {restriccionesMsg[pedido.estado] && (
             <div className="info-box info-box--warn">
-              <span className="info-box__icon">⚠️</span>
+              <span className="info-box__icon"><AlertTriangle size={13}/></span>
               <span className="info-box__text">{restriccionesMsg[pedido.estado]}</span>
             </div>
           )}
@@ -500,7 +502,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
           {/* ── Anticipo del 50% ── */}
           {pedido.requiere_anticipo && !apOk && (
             <div style={{ border: "2px solid #ff9800", borderRadius: 14, background: "#fff8e1", padding: "16px 18px", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 10 }}>⚠️ Registrar anticipo del 50%</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 10, display:"flex",alignItems:"center",gap:6 }}><AlertTriangle size={14}/> Registrar anticipo del 50%</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                 <div style={{ background: "#fff3e0", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
                   <div style={{ fontSize: 10, color: "#f57c00", fontWeight: 700, textTransform: "uppercase" }}>Total pedido</div>
@@ -520,7 +522,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                   </button>
                 ))}
               </div>
-              {apMetodo === "Efectivo 💵" && (
+              {apMetodo === "Efectivo" && (
                 <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: apEfectivo ? "#f1f8f1" : "#fafafa", padding: "10px 12px", borderRadius: 8, border: `2px solid ${apEfectivo ? "#2e7d32" : "#e0e0e0"}`, marginBottom: 8 }}>
                   <input type="checkbox" checked={apEfectivo} onChange={e => { setApEfectivo(e.target.checked); setApErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 16, height: 16, accentColor: "#2e7d32" }} />
                   <span style={{ fontSize: 12, color: apEfectivo ? "#1b5e20" : "#555", fontWeight: apEfectivo ? 700 : 400 }}>
@@ -528,7 +530,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                   </span>
                 </label>
               )}
-              {apMetodo === "Transferencia 🏦" && (
+              {apMetodo === "Transferencia" && (
                 <p style={{ fontSize: 11, color: "#666", background: "#f5f5f5", padding: "8px 10px", borderRadius: 6, marginBottom: 8 }}>
                   Sube el comprobante usando el botón 📎 de la tabla después de guardar.
                 </p>
@@ -544,7 +546,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
           )}
           {pedido.requiere_anticipo && apOk && (
             <div style={{ border: "1.5px solid #a5d6a7", borderRadius: 12, background: "#e8f5e9", padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
-              <span style={{ fontSize: 20 }}>✅</span>
+              <CheckCircle2 size={20} style={{color:"#2e7d32",flexShrink:0}}/>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#2e7d32" }}>Anticipo registrado</div>
                 <div style={{ fontSize: 11, color: "#4caf50" }}>50% — {fmt(montoAnticipo)}</div>
@@ -555,8 +557,8 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
           {/* ── Pago final (saldo del anticipo) ── */}
           {pedido.requiere_anticipo && !pedido.pago_final_registrado && !pfOk && (
             <div style={{ border: "2px solid #f9a825", borderRadius: 14, background: "#fffdf0", padding: "16px 18px", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 12 }}>
-                💳 Registrar pago del saldo restante
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#e65100", marginBottom: 12, display:"flex",alignItems:"center",gap:6 }}>
+                <CreditCard size={14}/> Registrar pago del saldo restante
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                 <div style={{ background: "#f5f5f5", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
@@ -585,7 +587,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               </div>
               {pfErrors.metodo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors.metodo}</span>}
 
-              {pfMetodo === "Efectivo 💵" && (
+              {pfMetodo === "Efectivo" && (
                 <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", background: pfEfectivo ? "#f1f8f1" : "#fafafa", padding: "10px 12px", borderRadius: 8, border: `2px solid ${pfEfectivo ? "#2e7d32" : "#e0e0e0"}`, marginBottom: 8 }}>
                   <input type="checkbox" checked={pfEfectivo} onChange={e => { setPfEfectivo(e.target.checked); setPfErrors(x => ({ ...x, efectivo: "" })); }} style={{ width: 16, height: 16, accentColor: "#2e7d32" }} />
                   <span style={{ fontSize: 12, color: pfEfectivo ? "#1b5e20" : "#555", fontWeight: pfEfectivo ? 700 : 400 }}>Confirmo que recibí <strong>{fmt(saldoAnticipo)}</strong> en efectivo</span>
@@ -593,16 +595,16 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               )}
               {pfErrors.efectivo && <span style={{ fontSize: 11, color: "#e53935", display: "block", marginBottom: 6 }}>{pfErrors.efectivo}</span>}
 
-              {pfMetodo === "Transferencia 🏦" && (
+              {pfMetodo === "Transferencia" && (
                 pfPreview ? (
                   <div style={{ position: "relative", height: 100, borderRadius: 8, overflow: "hidden", background: "#000", marginBottom: 8 }}>
                     <img src={pfPreview} alt="Comprobante saldo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                    <button type="button" style={{ position: "absolute", top: 5, right: 5, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer", fontSize: 11 }} onClick={() => { setPfArchivo(null); setPfPreview(null); }}>✕</button>
+                    <button type="button" style={{ position: "absolute", top: 5, right: 5, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer", display:"flex",alignItems:"center",justifyContent:"center" }} onClick={() => { setPfArchivo(null); setPfPreview(null); }}><X size={12}/></button>
                   </div>
                 ) : (
                   <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, borderRadius: 8, border: `2px dashed ${pfErrors.archivo ? "#e53935" : "#f9a825"}`, background: "#fffdf0", cursor: "pointer", marginBottom: 8 }}>
-                    <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { setPfArchivo(f); setPfPreview(ev.target.result); setPfErrors(x => ({ ...x, archivo: "" })); }; r.readAsDataURL(f); }} hidden />
-                    <span style={{ fontSize: 20 }}>📎</span>
+                    <input type="file" accept="image/*" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { setPfArchivo(f); setPfPreview(ev.target.result); setPfErrors(x => ({ ...x, archivo: "" })); }; r.readAsDataURL(f); }} hidden />
+                    <Paperclip size={20} style={{color:"#f9a825"}}/>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#f9a825" }}>Comprobante del saldo</span>
                   </label>
                 )
@@ -619,7 +621,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
 
           {pedido.requiere_anticipo && (pedido.pago_final_registrado || pfOk) && (
             <div style={{ border: "1.5px solid #a5d6a7", borderRadius: 12, background: "#e8f5e9", padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
-              <span style={{ fontSize: 20 }}>✅</span>
+              <CheckCircle2 size={20} style={{color:"#2e7d32",flexShrink:0}}/>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#2e7d32" }}>Pago final registrado</div>
                 <div style={{ fontSize: 11, color: "#4caf50" }}>Saldo {fmt(pedido.pago_final_monto ?? saldoAnticipo)} — {pedido.pago_final_metodo_pago || "—"}</div>
@@ -645,7 +647,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                     getValue={c => c.id}
                     getLabel={c => `${c.nombre} ${c.apellidos} — ${c.correo}`}
                     placeholder="Seleccione un cliente…"
-                    searchPlaceholder="🔍 Buscar cliente…"
+                    searchPlaceholder="Buscar cliente…"
                     className={`field-select${errors.idCliente ? " error" : ""}`}
                   />
                   {errors.idCliente && <span className="field-error">{errors.idCliente}</span>}
@@ -705,13 +707,13 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                   background: "#fffdf0", padding: "16px",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#f9a825", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-                      ✎ Editando datos de {clienteActual?.nombre}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#f9a825", textTransform: "uppercase", letterSpacing: "0.8px", display:"flex",alignItems:"center",gap:6 }}>
+                      <PenLine size={13}/> Editando datos de {clienteActual?.nombre}
                     </div>
                     <button
                       onClick={() => { setEditandoCliente(false); setDatosCliente(null); }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e", fontSize: 14 }}
-                    >✕</button>
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#9e9e9e" }}
+                    ><X size={14}/></button>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     {[
@@ -740,7 +742,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                         getValue={o => o.value}
                         getLabel={o => o.label}
                         placeholder="— Valle de Aburrá —"
-                        searchPlaceholder="🔍 Buscar municipio…"
+                        searchPlaceholder="Buscar municipio…"
                         className="field-select"
                       />
                     </div>
@@ -758,7 +760,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
                     <button className="btn-ghost" onClick={() => { setEditandoCliente(false); setDatosCliente(null); }}>Cancelar</button>
-                    <button className="btn-save" onClick={guardarDatosCliente}>✓ Guardar datos</button>
+                    <button className="btn-save" onClick={guardarDatosCliente} style={{display:"flex",alignItems:"center",gap:6}}><Check size={14}/> Guardar datos</button>
                   </div>
                 </div>
               )}
@@ -782,7 +784,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               )}
               {hayProductosSinStock && (
                 <div className="info-box info-box--warn">
-                  <span className="info-box__icon">⚠️</span>
+                  <span className="info-box__icon"><AlertTriangle size={13}/></span>
                   <div className="info-box__text">
                     <span className="info-box__label">Hay productos sin stock suficiente</span>
                     Se generará una orden de producción al guardar.
@@ -841,7 +843,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                   getValue={o => o.value}
                   getLabel={o => o.label}
                   placeholder="Seleccione…"
-                  searchPlaceholder="🔍 Método…"
+                  searchPlaceholder="Método…"
                   className={`field-select${errors.metodo_pago ? " error" : ""}`}
                 />
                 {errors.metodo_pago && <span className="field-error">{errors.metodo_pago}</span>}
@@ -855,8 +857,8 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                 <label className="field-label">Tipo de entrega</label>
                 <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
                   {[
-                    { val: false, label: "🏪 Tienda"   },
-                    { val: true,  label: "🛵 Domicilio" },
+                    { val: false, label: "Tienda",    Icon: Store },
+                    { val: true,  label: "Domicilio", Icon: Bike },
                   ].map(opt => (
                     <button
                       key={String(opt.val)}
@@ -870,13 +872,13 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                         transition: "all 0.15s",
                       }}
                     >
-                      {opt.label}
+                      <opt.Icon size={14}/> {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
-              <FieldReadOnly label="Tipo de entrega" value={pedido.domicilio ? "🛵 Domicilio" : "🏪 Tienda"} />
+              <FieldReadOnly label="Tipo de entrega" value={pedido.domicilio ? "Domicilio" : "Tienda"} />
             )}
           </div>
 
@@ -887,12 +889,12 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
                 {form.comprobantePreview ? (
                   <div className="comprobante-preview-wrap">
                     <img src={form.comprobantePreview} alt="Comprobante" className="comprobante-preview-img" />
-                    <button className="comprobante-remove-btn" onClick={() => setForm(f => ({ ...f, comprobante: null, comprobantePreview: null }))}>✕</button>
+                    <button className="comprobante-remove-btn" onClick={() => setForm(f => ({ ...f, comprobante: null, comprobantePreview: null }))}><X size={14}/></button>
                   </div>
                 ) : (
                   <label className={`comprobante-dropzone${errors.comprobante ? " error" : ""}`}>
                     <input type="file" accept="image/*" onChange={handleFile} hidden />
-                    <span style={{ fontSize: 24 }}>📤</span>
+                    <Upload size={24} style={{color:"#9e9e9e"}}/>
                     <span style={{ fontSize: 12, fontWeight: 600 }}>Subir comprobante</span>
                     <span style={{ fontSize: 10, color: "#9e9e9e" }}>JPG, PNG o WEBP</span>
                   </label>
@@ -908,7 +910,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
               <>
                 {errors.telefono_cliente && (
                   <div style={{ padding: "10px 14px", background: "#ffebee", borderRadius: 10, border: "1px solid #ef9a9a", color: "#c62828", fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
-                    ⚠️ {errors.telefono_cliente}
+                    <AlertTriangle size={14} style={{marginRight:6}}/> {errors.telefono_cliente}
                   </div>
                 )}
                 <div className="field-wrap">
@@ -1003,7 +1005,7 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
           </div>
           {form.estadoPedido === "Cancelado" && pedido.estado !== "Cancelado" && (
             <div className="info-box info-box--danger">
-              <span className="info-box__icon">⚠️</span>
+              <span className="info-box__icon"><AlertTriangle size={13}/></span>
               <span className="info-box__text">Esta acción restaurará el stock de los productos.</span>
             </div>
           )}
@@ -1021,8 +1023,8 @@ export default function EditarPedido({ pedido, onClose, onSave }) {
         </div>
 
         {saved && (
-          <div className="modal-success-toast">
-            <span>✓</span>
+          <div className="modal-success-toast" style={{display:"flex",alignItems:"center",gap:6}}>
+            <Check size={14}/>
             <span>Pedido actualizado con éxito</span>
           </div>
         )}

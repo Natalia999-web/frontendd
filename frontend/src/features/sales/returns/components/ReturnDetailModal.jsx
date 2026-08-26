@@ -90,7 +90,7 @@ const ReturnDetailModal = ({ show, onClose, request }) => {
             <h2 style={{
               margin: 0, fontFamily: 'var(--font-display)',
               fontSize: '1.4rem', fontWeight: 800, color: 'white',
-            }}>{request.productName}</h2>
+            }}>{request.productos?.[0]?.nombre || request.numero}</h2>
           </div>
           <button
             onClick={onClose}
@@ -129,12 +129,12 @@ const ReturnDetailModal = ({ show, onClose, request }) => {
 
         {/* Body */}
         <div style={{ padding: '8px 28px 24px' }}>
-          <InfoRow icon={Hash}          label="N° de Venta"          value={request.idVenta    ? `#${request.idVenta}` : null} />
-          <InfoRow icon={Package}       label="Producto"             value={request.productName} />
-          <InfoRow icon={CalendarDays}  label="Fecha de solicitud"   value={request.date} />
+          <InfoRow icon={Hash}          label="N° de Venta"          value={request.numeroPedido || (request.idVenta ? `#${request.idVenta}` : null)} />
+          <InfoRow icon={Package}       label="Producto"             value={request.productos?.[0]?.nombre || '—'} />
+          <InfoRow icon={CalendarDays}  label="Fecha de solicitud"   value={request.fechaSolicitud} />
           <InfoRow icon={FileText}      label="Motivo"               value={request.motivo} />
-          <InfoRow icon={Image}         label="Evidencia"            value={request.evidencia}   muted />
-          <InfoRow icon={MessageSquare} label="Comentario adicional" value={request.comentario}  muted />
+          <InfoRow icon={Image}         label="Evidencia"            value={request.evidencia?.nombre || null} muted />
+          <InfoRow icon={MessageSquare} label="Comentario adicional" value={request.comentario || null} muted />
         </div>
 
         {/* Footer */}

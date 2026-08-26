@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Search, X, AlertTriangle, Package, ClipboardList, Eye, PenLine, Trash2, Truck, Ban, CheckCircle2, ShoppingCart, Settings } from "lucide-react";
 import { usePrivilegio } from "../../../context/PrivilegiosContext";
 import { registrarSalida, procesarVencidos } from "../../../services/salidasService";
 import CrearInsumo from "./CrearInsumo.jsx";
@@ -44,7 +45,7 @@ const ADAPT_CAT = raw => ({
   id:          raw.ID_Categoria,
   nombre:      raw.Nombre_Categoria,
   descripcion: raw.Descripcion ?? "",
-  icon:        raw.Icono ?? "🧺",
+  icon:        raw.Icono ?? null,
   estado:      raw.Estado === 1,
 });
 
@@ -96,7 +97,7 @@ function StockBar({ actual, minimo, simbolo = "" }) {
       </span>
       {est !== "disponible" && (
         <span style={{ fontSize: 10, fontWeight: 700, color: est === "agotado" ? "#c62828" : "#e65100", whiteSpace: "nowrap" }}>
-          {est === "agotado" ? "🚫 Agotado" : "⚠ Bajo mínimo"}
+          {est === "agotado" ? "Agotado" : "Bajo mínimo"}
         </span>
       )}
       {hovered && (
@@ -116,7 +117,7 @@ function CatCell({ cat }) {
     <span style={{ position: "relative", display: "inline-flex" }}
       onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       <span style={{ width: 34, height: 34, borderRadius: 8, background: "#f1f8f1", border: "1px solid #c8e6c9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, cursor: "default" }}>
-        {cat?.icon || "🧺"}
+        {cat?.icon || <Package size={17} />}
       </span>
       {show && (
         <span style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#1a1a1a", color: "#fff", fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 999, pointerEvents: "none" }}>
@@ -156,19 +157,19 @@ function VencCell({ fecha, dias }) {
 
   if (dias <= 0) return (
     <span {...handlers} style={{ ...handlers.style, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#c62828", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 6, padding: "3px 8px" }}>
-      ⚠️ Vencido
+      <AlertTriangle size={13} style={{ flexShrink: 0 }} /> Vencido
       <Tooltip bg="#ffebee" border="#ef9a9a" color="#c62828" text="Este insumo ya está vencido — no apto para producción" />
     </span>
   );
   if (dias <= 7) return (
     <span {...handlers} style={{ ...handlers.style, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#e65100", background: "#fff3e0", border: "1px solid #ffcc80", borderRadius: 6, padding: "3px 8px" }}>
-      🔴 {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
-      <Tooltip bg="#fff3e0" border="#ffcc80" color="#e65100" text={`⚠️ Vence en ${dias} día${dias === 1 ? "" : "s"} — atención urgente`} />
+      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#e53935", flexShrink: 0 }} /> {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
+      <Tooltip bg="#fff3e0" border="#ffcc80" color="#e65100" text={`Vence en ${dias} día${dias === 1 ? "" : "s"} — atención urgente`} />
     </span>
   );
   if (dias <= 30) return (
     <span {...handlers} style={{ ...handlers.style, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#f57f17", background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, padding: "3px 8px" }}>
-      🟡 {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
+      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f9a825", flexShrink: 0 }} /> {label} <span style={{ fontWeight: 400, opacity: 0.8 }}>({dias}d)</span>
       <Tooltip bg="#fff8e1" border="#ffe082" color="#f57f17" text={`Próximo a vencer — quedan ${dias} días`} />
     </span>
   );
@@ -248,7 +249,7 @@ export default function GestionInsumos() {
     cargarDatos();
   }, []);
 
-  const getCatInsumo = (idCat) => categorias.find(c => c.id === idCat) ?? { icon: "🧺", nombre: "—" };
+  const getCatInsumo = (idCat) => categorias.find(c => c.id === idCat) ?? { icon: null, nombre: "—" };
   const getUnidad    = (idU)   => UNIDADES.find(u => u.id === idU) ?? { simbolo: "uds.", nombre: "Unidad" };
 
   /* ── Filtrado ── */
@@ -367,7 +368,7 @@ export default function GestionInsumos() {
         if (!bajoStock.length) return null;
         return (
           <div className="ins-stock-alert">
-            <span className="ins-stock-alert__icon">⚠️</span>
+            <span className="ins-stock-alert__icon" style={{ display: "flex", alignItems: "center" }}><AlertTriangle size={20} /></span>
             <div className="ins-stock-alert__body">
               <strong>
                 {bajoStock.filter(i => i.stockActual === 0).length > 0
@@ -381,7 +382,7 @@ export default function GestionInsumos() {
                 {bajoStock.length > 4 && ` · y ${bajoStock.length - 4} más`}
               </span>
             </div>
-            <button className="ins-stock-alert__close" onClick={() => setAlertaDismissed(true)} data-tooltip="Cerrar alerta">✕</button>
+            <button className="ins-stock-alert__close" onClick={() => setAlertaDismissed(true)} data-tooltip="Cerrar alerta" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
           </div>
         );
       })()}
@@ -389,7 +390,7 @@ export default function GestionInsumos() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
             <input type="text" className="search-input"
               placeholder="Buscar por nombre o categoría…"
               value={search} onChange={e => setSearch(e.target.value)} />
@@ -442,8 +443,8 @@ export default function GestionInsumos() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("todas"); setFilterEst("todos"); setFilterDesde(""); setFilterHasta(""); }}>
-              ✕ Limpiar
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterCat("todas"); setFilterEst("todos"); setFilterDesde(""); setFilterHasta(""); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Limpiar
             </button>
           )}
 
@@ -476,7 +477,7 @@ export default function GestionInsumos() {
                   <tr>
                     <td colSpan={8}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🧺</div>
+                        <div className="empty-state__icon"><Package size={32} strokeWidth={1} style={{ color: "#bdbdbd" }} /></div>
                         <p className="empty-state__text">
                           {hasFilter || search ? "Sin insumos que coincidan." : "Sin insumos registrados"}
                         </p>
@@ -517,10 +518,10 @@ export default function GestionInsumos() {
                       </td>
                       <td>
                         <div className="actions-cell">
-                          {puedeVer      && <button className="act-btn act-btn--view"   data-tooltip="Ver detalle del insumo"   onClick={() => setModal({ type: "ver",      ins })}>👁</button>}
-                          {puedeEditar   && <button className="act-btn act-btn--edit"   data-tooltip="Editar insumo"            onClick={() => setModal({ type: "editar",   ins })}>✎</button>}
-                          {puedeSalida   && <button className="act-btn act-btn--salida" data-tooltip="Registrar salida"         onClick={() => setModal({ type: "salida",   ins })}>🚚</button>}
-                          {puedeEliminar && <button className="act-btn act-btn--delete" data-tooltip="Eliminar insumo"          onClick={() => setModal({ type: "eliminar", ins })}>🗑️</button>}
+                          {puedeVer      && <button className="act-btn act-btn--view"   data-tooltip="Ver detalle del insumo"   onClick={() => setModal({ type: "ver",      ins })}><Eye size={15} /></button>}
+                          {puedeEditar   && <button className="act-btn act-btn--edit"   data-tooltip="Editar insumo"            onClick={() => setModal({ type: "editar",   ins })}><PenLine size={15} /></button>}
+                          {puedeSalida   && <button className="act-btn act-btn--salida" data-tooltip="Registrar salida"         onClick={() => setModal({ type: "salida",   ins })}><Truck size={15} /></button>}
+                          {puedeEliminar && <button className="act-btn act-btn--delete" data-tooltip="Eliminar insumo"          onClick={() => setModal({ type: "eliminar", ins })}><Trash2 size={15} /></button>}
                         </div>
                       </td>
                     </tr>
@@ -574,9 +575,9 @@ export default function GestionInsumos() {
               {/* ── Cabecera roja ── */}
               <div style={{ background: "linear-gradient(135deg, #b71c1c 0%, #c62828 100%)", padding: "28px 24px 22px", textAlign: "center", position: "relative" }}>
                 <button className="modal-close-btn" onClick={() => setModal(null)}
-                  style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)" }}>✕</button>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 32 }}>
-                  🚫
+                  style={{ position: "absolute", top: 12, right: 12, color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                  <Ban size={32} style={{ color: "#fff" }} />
                 </div>
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>
                   No se puede eliminar
@@ -595,7 +596,7 @@ export default function GestionInsumos() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {modal.ins.tieneFicha && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10 }}>
-                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📋</span>
+                      <ClipboardList size={18} style={{ flexShrink: 0 }} />
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>Ficha técnica</p>
                         <p style={{ margin: "2px 0 0", fontSize: 12, color: "#616161" }}>
@@ -606,7 +607,7 @@ export default function GestionInsumos() {
                   )}
                   {modal.ins.tieneOrden && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10 }}>
-                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚙️</span>
+                      <Settings size={18} style={{ flexShrink: 0 }} />
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>Órdenes de producción</p>
                         <p style={{ margin: "2px 0 0", fontSize: 12, color: "#616161" }}>
@@ -617,7 +618,7 @@ export default function GestionInsumos() {
                   )}
                   {modal.ins.tieneCompra && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10 }}>
-                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🛒</span>
+                      <ShoppingCart size={18} style={{ flexShrink: 0 }} />
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#c62828" }}>Compras registradas</p>
                         <p style={{ margin: "2px 0 0", fontSize: 12, color: "#616161" }}>
@@ -653,7 +654,7 @@ export default function GestionInsumos() {
 
       {toast && (
         <div className="toast" style={{ background: toast.type === "error" ? "#c62828" : "#2e7d32" }}>
-          <span className="toast-icon">{toast.type === "error" ? "🗑️" : "✅"}</span>
+          <span className="toast-icon" style={{ display: "flex", alignItems: "center" }}>{toast.type === "error" ? <Trash2 size={14} /> : <CheckCircle2 size={13} />}</span>
           {toast.msg}
         </div>
       )}

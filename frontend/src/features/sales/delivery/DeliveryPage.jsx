@@ -4,7 +4,7 @@ import { descargarFacturaEntrega } from '../../../utils/facturaGenerator.js';
 import DeliveryStatus   from './components/DeliveryStatus';
 import DeliveryDetails  from './components/DeliveryDetails';
 import DeliveryTimeline from './components/DeliveryTimeline';
-import { MapPin, Leaf, Clock } from 'lucide-react';
+import { MapPin, Leaf, Clock, Bike } from 'lucide-react';
 import '../../../styles/Client.css';
 
 const DeliveryPage = () => {
@@ -45,7 +45,7 @@ const DeliveryPage = () => {
   if (loading) return (
     <div className="toston-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center', color: 'var(--gray-500)', fontFamily: 'var(--font-body)' }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🛵</div>
+        <Bike size={40} strokeWidth={1} style={{ marginBottom: 12 }} />
         <p style={{ fontWeight: 600, margin: 0 }}>Cargando seguimiento...</p>
       </div>
     </div>

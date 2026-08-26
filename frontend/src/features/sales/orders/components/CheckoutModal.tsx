@@ -321,7 +321,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
           {itemsConDeficit.length > 0 && (
             <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3">
               <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
-                🏭 Orden de producción requerida
+                <Package size={13} /> Orden de producción requerida
               </p>
               <p className="text-xs font-semibold text-blue-700 mb-2">
                 Los siguientes productos no tienen suficiente stock. Se creará una orden de producción y el administrador te propondrá una fecha de entrega.
@@ -549,7 +549,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                   </p>
                 )}
                 <div className="relative group">
-                  <input type="file" accept="image/*,application/pdf"
+                  <input type="file" accept="image/*"
                     onChange={e => { setComprobante(e.target.files?.[0] || null); setComprobanteError(''); }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   <div className="border-2 border-dashed border-green-200 bg-white group-hover:bg-green-50 transition-all rounded-xl p-3 text-center">
@@ -578,7 +578,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
           {requiereAnticipo && (
             <div className="rounded-2xl border-2 border-yellow-300 bg-yellow-50 px-3 py-3 space-y-3">
               <div className="flex items-start gap-2">
-                <span className="text-xl">💰</span>
+                <Banknote size={20} className="text-yellow-600 shrink-0" />
                 <div>
                   <p className="text-xs font-black text-yellow-800">Anticipo requerido</p>
                   <p className="text-[10px] font-bold text-yellow-700">El pedido lleva más unidades de las que hay en stock. Registra un anticipo para apartarlas.</p>
@@ -660,7 +660,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                         Transfiere <strong>{COP(montoAnticipo)}</strong> a <strong>{CUENTA.banco}</strong> · {CUENTA.tipo} · <strong>{CUENTA.numero}</strong> — {CUENTA.titular}
                       </div>
                       <div className="relative group">
-                        <input type="file" accept="image/*,application/pdf"
+                        <input type="file" accept="image/*"
                           onChange={e => { setAnticipoComprobante(e.target.files?.[0] || null); setAnticipoError(''); }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                         <div className="border-2 border-dashed border-yellow-300 bg-white group-hover:bg-yellow-50 transition-all rounded-xl p-3 text-center">
@@ -756,7 +756,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                   <span>Total del pedido</span><span>{COP(totalFinal)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold text-yellow-700">
-                  <span>💰 {pagarTodo ? 'Total pagado ahora' : 'Anticipo ahora (50%)'}</span><span>{COP(montoAnticipo)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Banknote size={13} /> {pagarTodo ? 'Total pagado ahora' : 'Anticipo ahora (50%)'}</span><span>{COP(montoAnticipo)}</span>
                 </div>
                 {!pagarTodo && (
                   <div className="flex justify-between text-xs font-bold text-gray-400">

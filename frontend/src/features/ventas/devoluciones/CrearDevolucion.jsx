@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { getPedidos } from "../../../services/pedidosService.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
+import { Check, X, Search, Paperclip, AlertTriangle, Video, FileText } from "lucide-react";
 import "./Devoluciones.css";
 
 const fmt = (n) =>
@@ -29,7 +30,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14}/> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -64,8 +65,8 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
           {selected.numero} — {selected.cliente?.nombre}
         </span>
         <button type="button" onClick={() => { onChange(""); setQuery(""); }}
-          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", fontSize: 16, padding: 0, lineHeight: 1 }}>
-          ✕
+          style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", padding: 0, lineHeight: 1 }}>
+          <X size={16}/>
         </button>
       </div>
     );
@@ -74,7 +75,7 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
   return (
     <div style={{ border: `1.5px solid ${error ? "#ef5350" : "#e0e0e0"}`, borderRadius: 10, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fafdf9" }}>
-        <span style={{ fontSize: 13, color: "#9e9e9e" }}>🔍</span>
+        <Search size={13} style={{color:"#9e9e9e",flexShrink:0}}/>
         <input
           type="text"
           placeholder={disabled ? "Cargando pedidos…" : "Buscar por número o nombre de cliente…"}
@@ -85,8 +86,8 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
         />
         {query && (
           <button type="button" onClick={() => setQuery("")}
-            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", fontSize: 14, padding: 0, lineHeight: 1 }}>
-            ✕
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", padding: 0, lineHeight: 1 }}>
+            <X size={14}/>
           </button>
         )}
       </div>
@@ -183,14 +184,14 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
         ) : (
           <div className="evidencia-preview__file">
             <span className="evidencia-preview__file-icon">
-              {evidencia.tipo?.startsWith("video/") ? "🎥" : "📄"}
+              {evidencia.tipo?.startsWith("video/") ? <Video size={20}/> : <FileText size={20}/>}
             </span>
             <span className="evidencia-preview__file-name">{evidencia.nombre}</span>
           </div>
         )}
         <div className="evidencia-preview__bar">
-          <span className="evidencia-preview__name">📎 {evidencia.nombre}</span>
-          <button className="evidencia-preview__remove" onClick={() => onEvidencia(null)}>✕</button>
+          <span className="evidencia-preview__name" style={{display:"flex",alignItems:"center",gap:4}}><Paperclip size={13}/> {evidencia.nombre}</span>
+          <button className="evidencia-preview__remove" onClick={() => onEvidencia(null)}><X size={14}/></button>
         </div>
       </div>
     );
@@ -204,7 +205,7 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
     >
-      <span className="evidencia-dropzone__icon">📎</span>
+      <span className="evidencia-dropzone__icon"><Paperclip size={24}/></span>
       <span className="evidencia-dropzone__text">
         Arrastra un archivo o <strong>haz clic para seleccionar</strong>
       </span>
@@ -375,7 +376,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
               Registrar devolución
             </h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose}><X size={16}/></button>
         </div>
 
         {/* Steps */}
@@ -394,7 +395,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
 
               {loadError && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 10, color: "#c62828", fontSize: 13, fontWeight: 600 }}>
-                  <span>⚠️ El servidor tardó en responder.</span>
+                  <span style={{display:"flex",alignItems:"center",gap:5}}><AlertTriangle size={13}/> El servidor tardó en responder.</span>
                   <button
                     onClick={cargarPedidos}
                     style={{ background: "#c62828", color: "#fff", border: "none", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
@@ -475,7 +476,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
                   getValue={o => o.value}
                   getLabel={o => o.label}
                   placeholder="Seleccione…"
-                  searchPlaceholder="🔍 Buscar motivo…"
+                  searchPlaceholder="Buscar motivo…"
                   className={`field-select${errors.motivo ? " error" : ""}`}
                 />
                 {errors.motivo && <span className="field-error">{errors.motivo}</span>}

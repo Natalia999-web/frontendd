@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Check, X, User, Camera, Eye, EyeOff } from "lucide-react";
 import { TIPOS_DOC, fmtTel, toInputDate, fromInputDate } from "./empleadosUtils.js";
 import { soloLetras, soloDigitos } from "../../../utils/inputFilters";
 import { getUsuarios } from "../../../services/usuariosService.js";
@@ -104,7 +105,7 @@ function StepsBar({ current }) {
         return (
           <div key={label} className="wizard-step-item">
             <div className={`wizard-step-circle${done ? " done" : active ? " active" : ""}`}>
-              {done ? "✓" : idx}
+              {done ? <Check size={14} /> : idx}
             </div>
             <span className={`wizard-step-label${active ? " active" : done ? " done" : ""}`}>
               {label}
@@ -264,7 +265,7 @@ export default function CrearEmpleado({ onClose, onSave, roles = [] }) {
             <p className="modal-header__eyebrow">Empleados</p>
             <h2 className="modal-header__title">Nuevo Empleado</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} /></button>
         </div>
 
         {/* Steps */}
@@ -283,8 +284,8 @@ export default function CrearEmpleado({ onClose, onSave, roles = [] }) {
                 <div className="avatar-upload-wrap" onClick={() => fotoRef.current.click()}>
                   {form.fotoPreview
                     ? <img className="avatar-upload-img" src={form.fotoPreview} alt="avatar" />
-                    : <div className="avatar-upload-placeholder">👤</div>}
-                  <div className="avatar-upload-overlay">📷</div>
+                    : <div className="avatar-upload-placeholder"><User size={36} strokeWidth={1} style={{color:"#bdbdbd"}} /></div>}
+                  <div className="avatar-upload-overlay"><Camera size={20} /></div>
                 </div>
                 <p style={{ margin:0, fontSize:11, color:"#9e9e9e" }}>Foto de perfil (opcional)</p>
                 <input ref={fotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFoto} />
@@ -401,7 +402,7 @@ export default function CrearEmpleado({ onClose, onSave, roles = [] }) {
                       placeholder="Mínimo 8 caracteres"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e => e.target.style.borderColor = errors.contrasena ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
                   {errors.contrasena && <p className="field-error">{errors.contrasena}</p>}
                 </div>
@@ -414,7 +415,7 @@ export default function CrearEmpleado({ onClose, onSave, roles = [] }) {
                       placeholder="Repetir contraseña"
                       onFocus={e => e.target.style.borderColor = "#4caf50"}
                       onBlur={e => e.target.style.borderColor = errors.confirmar ? "#e53935" : "#e0e0e0"} />
-                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? "🙈" : "👁"}</button>
+                    <button className="pass-toggle-btn" onClick={() => setShowPass(v => !v)}>{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
                   {errors.confirmar && <p className="field-error">{errors.confirmar}</p>}
                 </div>

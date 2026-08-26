@@ -6,6 +6,7 @@ import { getPedidos, cambiarEstadoVenta, cancelarPedido } from "../../../service
 import { getOrdenes, cambiarEstadoOrden } from "../../../services/ordenesProduccionService.js";
 import { getInsumos } from "../../../services/insumosService.js";
 import "./DashboardCocina.css";
+import { Search, Check, X, Clock, Package, Flame } from "lucide-react";
 
 // Pendiente aparece en la lista (el cocinero ve que viene) pero sin botón de acción;
 // el botón "Iniciar preparación" solo se activa desde Confirmado (la transición 1→13
@@ -208,42 +209,42 @@ export default function DashboardCocina() {
       {errorAccion && (
         <div className="cocina-error-banner" role="alert">
           <span>{errorAccion}</span>
-          <button className="cocina-error-close" onClick={() => setErrorAccion(null)} aria-label="Cerrar">✕</button>
+          <button className="cocina-error-close" onClick={() => setErrorAccion(null)} aria-label="Cerrar"><X size={16} /></button>
         </div>
       )}
 
       {/* ── Estadísticas rápidas ── */}
       <section className="cocina-stats-grid">
         <article className="ck-stat ck-stat--pending">
-          <div className="ck-stat__icon">⏳</div>
+          <div className="ck-stat__icon"><Clock size={20} /></div>
           <div className="ck-stat__body">
             <strong className="ck-stat__num">{pedidosPendientes.length}</strong>
             <span className="ck-stat__label">Pendientes</span>
           </div>
         </article>
         <article className="ck-stat ck-stat--confirmed">
-          <div className="ck-stat__icon">✓</div>
+          <div className="ck-stat__icon"><Check size={20} /></div>
           <div className="ck-stat__body">
             <strong className="ck-stat__num">{pedidosConfirmados.length}</strong>
             <span className="ck-stat__label">Confirmados</span>
           </div>
         </article>
         <article className="ck-stat ck-stat--progress">
-          <div className="ck-stat__icon">🔥</div>
+          <div className="ck-stat__icon"><Flame size={20} /></div>
           <div className="ck-stat__body">
             <strong className="ck-stat__num">{pedidosEnPreparacion.length}</strong>
             <span className="ck-stat__label">En preparación</span>
           </div>
         </article>
         <article className="ck-stat ck-stat--ready">
-          <div className="ck-stat__icon">📦</div>
+          <div className="ck-stat__icon"><Package size={20} /></div>
           <div className="ck-stat__body">
             <strong className="ck-stat__num">{pedidosListos.length}</strong>
             <span className="ck-stat__label">Listos</span>
           </div>
         </article>
         <article className="ck-stat ck-stat--avg-time">
-          <div className="ck-stat__icon">⏱</div>
+          <div className="ck-stat__icon"><Clock size={20} /></div>
           <div className="ck-stat__body">
             <strong className={`ck-stat__num${tiempoPromedio == null ? " ck-stat__num--empty" : ""}`}>
               {tiempoPromedio != null ? formatDuration(tiempoPromedio) : "—"}
@@ -266,7 +267,7 @@ export default function DashboardCocina() {
         {/* Barra de búsqueda y filtro de estado */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#9e9e9e", pointerEvents: "none" }}>🔍</span>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9e9e9e", pointerEvents: "none", display: "flex" }}><Search size={14} /></span>
             <input
               type="text"
               placeholder="Buscar pedido o cliente…"

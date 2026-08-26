@@ -16,21 +16,22 @@
  */
 
 import { useState } from "react";
+import { X, AlertTriangle, Check, Lock, Eye, Plus, PenLine, Trash2, Ban, Upload, Search, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { createPortal } from "react-dom";
 
 // ── Catálogo completo de acciones posibles ──────────────────────────────────
 const TODAS_ACCIONES = {
-  ver:            { key: "ver",            label: "Ver",            icon: "👁️",  color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
-  crear:          { key: "crear",          label: "Crear",          icon: "➕",   color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
-  editar:         { key: "editar",         label: "Editar",         icon: "✎",    color: "#e65100", bg: "#fff3e0", border: "#ffcc80" },
-  eliminar:       { key: "eliminar",       label: "Eliminar",       icon: "🗑️",  color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
-  anular:         { key: "anular",         label: "Anular",         icon: "🚫",   color: "#6a1b9a", bg: "#f3e5f5", border: "#ce93d8" },
-  generar_salida: { key: "generar_salida", label: "Generar Salida", icon: "📤",   color: "#00695c", bg: "#e0f2f1", border: "#80cbc4" },
-  ver_detalles:   { key: "ver_detalles",   label: "Ver Detalles",   icon: "🔍",   color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
-  cambiar_estado: { key: "cambiar_estado", label: "Cambiar Estado", icon: "🔄",   color: "#f57f17", bg: "#fff8e1", border: "#ffe082" },
-  aprobar:        { key: "aprobar",        label: "Aprobar",        icon: "✅",   color: "#1b5e20", bg: "#e8f5e9", border: "#81c784" },
-  desaprobar:     { key: "desaprobar",     label: "Desaprobar",     icon: "❌",   color: "#b71c1c", bg: "#ffebee", border: "#ef5350" },
-  cancelar:       { key: "cancelar",       label: "Cancelar",       icon: "✖️",   color: "#4e342e", bg: "#efebe9", border: "#bcaaa4" },
+  ver:            { key: "ver",            label: "Ver",            Icon: Eye,          color: "#2e7d32", bg: "#e8f5e9", border: "#a5d6a7" },
+  crear:          { key: "crear",          label: "Crear",          Icon: Plus,         color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
+  editar:         { key: "editar",         label: "Editar",         Icon: PenLine,      color: "#e65100", bg: "#fff3e0", border: "#ffcc80" },
+  eliminar:       { key: "eliminar",       label: "Eliminar",       Icon: Trash2,       color: "#c62828", bg: "#ffebee", border: "#ef9a9a" },
+  anular:         { key: "anular",         label: "Anular",         Icon: Ban,          color: "#6a1b9a", bg: "#f3e5f5", border: "#ce93d8" },
+  generar_salida: { key: "generar_salida", label: "Generar Salida", Icon: Upload,       color: "#00695c", bg: "#e0f2f1", border: "#80cbc4" },
+  ver_detalles:   { key: "ver_detalles",   label: "Ver Detalles",   Icon: Search,       color: "#1565c0", bg: "#e3f2fd", border: "#90caf9" },
+  cambiar_estado: { key: "cambiar_estado", label: "Cambiar Estado", Icon: RefreshCw,    color: "#f57f17", bg: "#fff8e1", border: "#ffe082" },
+  aprobar:        { key: "aprobar",        label: "Aprobar",        Icon: CheckCircle2, color: "#1b5e20", bg: "#e8f5e9", border: "#81c784" },
+  desaprobar:     { key: "desaprobar",     label: "Desaprobar",     Icon: XCircle,      color: "#b71c1c", bg: "#ffebee", border: "#ef5350" },
+  cancelar:       { key: "cancelar",       label: "Cancelar",       Icon: X,            color: "#4e342e", bg: "#efebe9", border: "#bcaaa4" },
 };
 
 const STD = ["ver", "crear", "editar", "eliminar", "cambiar_estado"];
@@ -324,14 +325,14 @@ export default function PrivilegiosModal({
             <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, background: "#f5f5f5", color: "#757575", border: "1px solid #e0e0e0" }}>
               {totalActivos}/{local.length} activos
             </span>
-            <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, color: "#9e9e9e", cursor: "pointer", lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "#9e9e9e", cursor: "pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={18} /></button>
           </div>
         </div>
 
         {/* Advertencia todos los privilegios */}
         {advertencia && (
           <div style={{ margin: "8px 20px 0", padding: "8px 12px", borderRadius: 8, background: "#fff8e1", border: "1px solid #ffe082", color: "#f57f17", fontSize: 12, display: "flex", gap: 7, alignItems: "center", flexShrink: 0 }}>
-            ⚠️ <span>Este rol no es administrador pero tiene <strong>todos los privilegios</strong> activos.</span>
+            <AlertTriangle size={13} /> <span>Este rol no es administrador pero tiene <strong>todos los privilegios</strong> activos.</span>
           </div>
         )}
 
@@ -416,13 +417,13 @@ export default function PrivilegiosModal({
                     onClick={() => toggle(permiso.id)}
                   >
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: on ? accion.bg : "#f5f5f5", border: `1.5px solid ${on ? accion.border : "#e8e8e8"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 22 }}>{accion.icon}</span>
+                      <accion.Icon size={22} />
                     </div>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: on ? accion.color : "#9e9e9e" }}>
                       {accion.label}
                     </p>
                     <div style={S.accionCheck(on, accion)}>
-                      {on && <span style={{ color: "#fff", fontSize: 10, fontWeight: 800 }}>✓</span>}
+                      {on && <Check size={10} color="#fff" strokeWidth={3} />}
                     </div>
                   </div>
                 );
@@ -430,7 +431,7 @@ export default function PrivilegiosModal({
 
             {isView && accionesMod.filter(a => modItems.find(p => p.accion === a.key)?.estado).length === 0 && (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "28px 0", color: "#bdbdbd", fontSize: 13 }}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>🔒</div>
+                <Lock size={28} strokeWidth={1} style={{color:"#bdbdbd",marginBottom:6}} />
                 Sin acciones habilitadas para este módulo
               </div>
             )}
