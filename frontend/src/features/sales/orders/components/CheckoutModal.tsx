@@ -120,6 +120,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   const [anticipoComprobante, setAnticipoComprobante] = useState<File | null>(null);
   const [anticipoError,       setAnticipoError]       = useState('');
   const [pagarTodo,           setPagarTodo]           = useState(false);
+  const [terminosAceptados,  setTerminosAceptados]   = useState(false);
 
   useEffect(() => {
     if (!isOpen || !orderDetails) return;
@@ -167,6 +168,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     setCreditoPct(100);
     setEfectivoMonto('');
     setMixtoError('');
+    setTerminosAceptados(false);
   }, [isOpen]);
 
   if (!isOpen || !orderDetails) return null;
@@ -765,6 +767,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 )}
               </>
             )}
+            {/* Términos y condiciones */}
+            <label style={{
+              display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer',
+              padding: '10px 12px', borderRadius: 10,
+              background: terminosAceptados ? '#f1f8e9' : '#fff8e1',
+              border: `1px solid ${terminosAceptados ? '#aed581' : '#ffe082'}`,
+              transition: 'background 0.2s, border-color 0.2s',
+            }}>
+              <input
+                type="checkbox"
+                checked={terminosAceptados}
+                onChange={e => setTerminosAceptados(e.target.checked)}
+                style={{ marginTop: 2, accentColor: '#388e3c', width: 15, height: 15, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 11, color: '#5d4037', lineHeight: 1.5 }}>
+                He leído y acepto los <strong>términos y condiciones</strong>: entiendo que <strong>Tostón no realiza devoluciones de dinero</strong> una vez confirmado el pedido, independientemente de la causa.
+              </span>
+            </label>
+
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
               <div>
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
@@ -776,9 +797,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               </div>
               <button
                 onClick={handleFinalConfirm}
-                disabled={isConfirming}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${isConfirming ? 'bg-green-800 text-white' : 'text-white hover:shadow-xl hover:-translate-y-0.5'}`}
-                style={!isConfirming ? { background: 'linear-gradient(135deg, var(--green-800) 0%, var(--green-700) 100%)' } : {}}
+                disabled={isConfirming || !terminosAceptados}
+                title={!terminosAceptados ? 'Debes aceptar los términos y condiciones' : undefined}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${isConfirming || !terminosAceptados ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'text-white hover:shadow-xl hover:-translate-y-0.5'}`}
+                style={(!isConfirming && terminosAceptados) ? { background: 'linear-gradient(135deg, var(--green-800) 0%, var(--green-700) 100%)' } : {}}
               >
                 {isConfirming
                   ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando</>
