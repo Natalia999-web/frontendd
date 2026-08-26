@@ -102,10 +102,11 @@ export const getCreditoCliente = async (idCliente) => {
 // Admin: aprobar o rechazar
 // decision: "aprobar" → Estado 6 | "rechazar" → Estado 7
 export const resolverDevolucion = async (id, decision, motivoRechazo = "") => {
+  const aprobando = decision === "aprobar";
   const body = {
-    Estado:         decision === "aprobar" ? 6 : 7,
-    Comentario:     motivoRechazo || null,
-    UsuarioAprueba: true,
+    Estado:         aprobando ? 6 : 7,
+    Comentario:     motivoRechazo || (aprobando ? null : ""),
+    UsuarioAprueba: aprobando,
   };
   const data = await apiFetch(`/devoluciones/${id}/resolver`, {
     method: "PATCH",

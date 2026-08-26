@@ -4,7 +4,7 @@ import ProfileView from './components/ProfileView.jsx';
 import ProfileForm from './components/ProfileForm.jsx';
 import { getCurrentUser, updateUser, eliminarCuenta } from './services/profileService.js';
 import { getPedidos, getMiCredito, getMisVentas } from '../../../services/pedidosService.js';
-import { UserCircle, Leaf, ShieldCheck, Package, Gift, Trash2, AlertTriangle } from 'lucide-react';
+import { UserCircle, Leaf, ShieldCheck, Package, Gift, Trash2, AlertTriangle, Bike, Building2, Banknote, CheckCircle2, XCircle, Clock, ShoppingCart } from 'lucide-react';
 import { apiFetch } from '../../../utils/api.js';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/Client.css';
@@ -91,8 +91,9 @@ function PedidoCard({ pedido }) {
               fontSize: 10, fontWeight: 700, padding: '2px 7px',
               borderRadius: 99, background: '#e3f2fd', color: '#1565c0',
               border: '1px solid #90caf9', fontFamily: 'var(--font-body)',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
-              🛵 Domicilio
+              <Bike size={10} /> Domicilio
             </span>
           )}
           {pedido.metodo_pago && (
@@ -100,8 +101,9 @@ function PedidoCard({ pedido }) {
               fontSize: 10, fontWeight: 600, padding: '2px 7px',
               borderRadius: 99, background: 'var(--gray-100)', color: 'var(--gray-600)',
               border: '1px solid var(--gray-300)', fontFamily: 'var(--font-body)',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
-              {pedido.metodo_pago === 'Transferencia' ? '🏦' : '💵'} {pedido.metodo_pago}
+              {pedido.metodo_pago === 'Transferencia' ? <Building2 size={10} /> : <Banknote size={10} />} {pedido.metodo_pago}
             </span>
           )}
         </div>
@@ -274,7 +276,7 @@ const ProfilePage = () => {
   if (loadingPerfil && !perfil) return (
     <div className="toston-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center', color: 'var(--gray-500)', fontFamily: 'var(--font-body)' }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>⌛</div>
+        <Clock size={36} strokeWidth={1} style={{color:"#bdbdbd", marginBottom: 12}} />
         <p style={{ fontWeight: 600 }}>Cargando perfil...</p>
       </div>
     </div>
@@ -297,8 +299,8 @@ const ProfilePage = () => {
 
       {toast && (
         <div className="toast-wrap">
-          <div className={`toast ${toast.type === 'error' ? 'toast--error' : ''}`}>
-            {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+          <div className={`toast ${toast.type === 'error' ? 'toast--error' : ''}`} style={{display:'flex',alignItems:'center',gap:5}}>
+            {toast.type === 'success' ? <CheckCircle2 size={13} /> : <XCircle size={13} />} {toast.message}
           </div>
         </div>
       )}

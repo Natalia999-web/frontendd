@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, X, Search, Check, Eye, Trash2 } from "lucide-react";
+import { Bell, X, Search, Check, Eye, Trash2, BellOff } from "lucide-react";
 import {
   useNotificaciones,
   TIPOS, TIPO_LABELS, TIPO_ICONS, TIPO_COLORS,
@@ -164,7 +164,7 @@ export default function NotificacionesPanel({ isOpen, onClose }) {
         <div className="notif-list">
           {lista.length === 0 ? (
             <div className="notif-empty">
-              <span className="notif-empty__icon">🎉</span>
+              <span className="notif-empty__icon"><BellOff size={48} strokeWidth={1} style={{color:"#bdbdbd"}}/></span>
               <p className="notif-empty__text">
                 {hayFiltros ? "Sin resultados con estos filtros" : "No hay notificaciones"}
               </p>

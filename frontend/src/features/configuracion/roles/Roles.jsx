@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { AlertTriangle, Check, X, Search, Eye, PenLine, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, X, Search, Eye, PenLine, Trash2, Shield } from "lucide-react";
 import { usePrivilegio } from "../../../context/PrivilegiosContext";
 import { getRoles, eliminarRol, toggleEstadoRol } from "../../../services/rolesService.js";
 import CrearRol from "./CrearRol.jsx";
@@ -259,7 +259,7 @@ export default function GestionRoles() {
                   <tr>
                     <td colSpan={6}>
                       <div className="empty-state">
-                        <div className="empty-state__icon">🛡️</div>
+                        <div className="empty-state__icon"><Shield size={48} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
                         <p className="empty-state__text">Sin resultados</p>
                       </div>
                     </td>

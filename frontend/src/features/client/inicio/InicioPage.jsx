@@ -58,7 +58,7 @@ const InicioPage = () => {
 
   if (!user) return <div className="toston-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
     <div style={{ textAlign: 'center', color: 'var(--gray-500)' }}>
-      <div style={{ fontSize: 36, marginBottom: 12 }}>⌛</div>
+      <Clock size={36} strokeWidth={1} style={{color:"#bdbdbd", marginBottom: 12}} />
       <p>Cargando...</p>
     </div>
   </div>;
@@ -142,8 +142,8 @@ const InicioPage = () => {
                   <div key={producto.id} className="card" style={{ padding: 20, cursor: agotado ? 'default' : 'pointer', transition: 'transform 0.2s', opacity: agotado ? 0.75 : 1 }}
                        onMouseEnter={e => { if (!agotado) e.currentTarget.style.transform = 'translateY(-2px)'; }}
                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <div style={{ position: 'relative', width: '100%', height: 150, background: 'var(--gray-100)', borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, filter: agotado ? 'grayscale(0.6)' : 'none' }}>
-                      🥑
+                    <div style={{ position: 'relative', width: '100%', height: 150, background: 'var(--gray-100)', borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: agotado ? 'grayscale(0.6)' : 'none' }}>
+                      <Package size={48} strokeWidth={1} style={{color:"#bdbdbd"}} />
                       {agotado && (
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <span style={{ background: '#d32f2f', color: '#fff', fontWeight: 800, fontSize: 12, padding: '4px 14px', borderRadius: 99, letterSpacing: '0.05em', textTransform: 'uppercase' }}>

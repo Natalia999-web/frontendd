@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Check, X, Search, User, Eye, PenLine, Trash2 } from "lucide-react";
+import { Check, X, Search, User, Eye, PenLine, Trash2, Phone } from "lucide-react";
 import { ITEMS_PER_PAGE } from "./empleadosUtils.js";
 import { RolBadge } from "./CrearEmpleado.jsx";
 import CrearEmpleado from "./CrearEmpleado.jsx";
@@ -256,7 +256,7 @@ export default function GestionEmpleados() {
                 ) : paginated.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state__icon">👷</div>
+                      <div className="empty-state__icon"><User size={48} strokeWidth={1} style={{color:"#bdbdbd"}}/></div>
                       <p className="empty-state__text">Sin empleados encontrados</p>
                     </div>
                   </td></tr>
@@ -274,7 +274,7 @@ export default function GestionEmpleados() {
                     </td>
                     <td><div className="doc-badge"><span className="doc-type">{emp.tipoDoc}</span><span className="doc-num">{emp.numDoc}</span></div></td>
                     <td><RolBadge idRol={emp.idRol} roles={roles} /></td>
-                    <td><span className="phone-cell"><span className="phone-icon">📞</span>{emp.telefono}</span></td>
+                    <td><span className="phone-cell" style={{display:"flex",alignItems:"center",gap:5}}><Phone size={14} />{emp.telefono}</span></td>
                     <td><div className="location-city">{emp.municipio}</div><div className="location-dept">{emp.departamento}</div></td>
                     <td><Toggle value={emp.estado} onChange={() => toggleEstado(emp)} /></td>
                     <td>

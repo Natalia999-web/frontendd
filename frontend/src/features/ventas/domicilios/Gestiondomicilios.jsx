@@ -1365,7 +1365,6 @@ export default function GestionDomicilios() {
                 <table className="tbl">
                   <thead>
                     <tr>
-                      <th style={{ width: 44 }}>Nº</th>
                       <th>Pedido</th>
                       <th>Cliente</th>
                       <th>Dirección</th>
@@ -1377,9 +1376,9 @@ export default function GestionDomicilios() {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <SkeletonRows cols={8} rows={5} />
+                      <SkeletonRows cols={7} rows={5} />
                     ) : errorCarga ? (
-                      <tr><td colSpan={8}>
+                      <tr><td colSpan={7}>
                         <div className="empty-state">
                           <div className="empty-state__icon" style={{ color: "#ef9a9a", display: "flex", justifyContent: "center" }}><AlertTriangle size={40} /></div>
                           <p className="empty-state__text">{errorCarga}</p>
@@ -1389,7 +1388,7 @@ export default function GestionDomicilios() {
                         </div>
                       </td></tr>
                     ) : paged.length === 0 ? (
-                      <tr><td colSpan={8}>
+                      <tr><td colSpan={7}>
                         <div className="empty-state">
                           <div className="empty-state__icon" style={{ color: "#d4d4d4", display: "flex", justifyContent: "center" }}>
                             {hasFilter || search ? <Search size={40} /> : <Bike size={40} />}
@@ -1406,7 +1405,7 @@ export default function GestionDomicilios() {
                           )}
                         </div>
                       </td></tr>
-                    ) : paged.map((ped, idx) => {
+                    ) : paged.map((ped) => {
                       const emp    = empleados.find(e => e.id === ped.idEmpleado);
                       const activo = !["Entregado", "Cancelado"].includes(ped.estado);
                       const sinAsignado = !emp && activo;
@@ -1416,11 +1415,6 @@ export default function GestionDomicilios() {
                           className="tbl-row"
                           style={{ background: sinAsignado ? "#fffbf0" : "transparent" }}
                         >
-                          <td data-label="Nº">
-                            <span className="row-num">
-                              {String((safePage - 1) * PER_PAGE + idx + 1).padStart(2, "0")}
-                            </span>
-                          </td>
                           <td data-label="Pedido">
                             <div className="pedido-num">{ped.numero}</div>
                             <div className="pedido-fecha">{fmt(ped.total)}</div>
@@ -1497,15 +1491,13 @@ export default function GestionDomicilios() {
                                   style={{ background: "#e8f5e9", color: "#2e7d32" }}
                                 ><Zap size={14} /></button>
                               )}
-                              <button
-                                className="act-btn act-btn--reasignar"
-                                data-tooltip="Reasignar domiciliario"
-                                onClick={() => abrirReasignar(ped)}
-                                style={{
-                                  opacity: puedeReasignarse(ped.estadoId) ? 1 : 0.35,
-                                  cursor:  puedeReasignarse(ped.estadoId) ? "pointer" : "default",
-                                }}
-                              ><Bike size={14} /></button>
+                              {puedeReasignarse(ped.estadoId) && (
+                                <button
+                                  className="act-btn act-btn--reasignar"
+                                  data-tooltip="Reasignar domiciliario"
+                                  onClick={() => abrirReasignar(ped)}
+                                ><Bike size={14} /></button>
+                              )}
                               <button
                                 className="act-btn act-btn--obs"
                                 data-tooltip="Agregar observación"

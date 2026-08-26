@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Check, X, Search, User, Eye, PenLine, Trash2 } from "lucide-react";
+import { Check, X, Search, User, Eye, PenLine, Trash2, Phone } from "lucide-react";
 import {
   getUsuarios, eliminarUsuario, toggleEstadoUsuario,
 } from "../../../services/usuariosService.js";
@@ -300,8 +300,8 @@ export default function GestionUsuarios() {
                     </td>
                     <td>
                       {user.telefono
-                        ? <a href={`https://wa.me/${user.telefono.replace(/\D/g, "")}`} className="phone-cell" style={{ textDecoration: "none" }} target="_blank" rel="noopener noreferrer">
-                            <span className="phone-icon">📞</span>
+                        ? <a href={`https://wa.me/${user.telefono.replace(/\D/g, "")}`} className="phone-cell" style={{ textDecoration: "none", display:"flex", alignItems:"center", gap:5 }} target="_blank" rel="noopener noreferrer">
+                            <Phone size={14} />
                             {user.telefono}
                           </a>
                         : <span className="phone-cell" style={{ color: "#bdbdbd" }}>—</span>
