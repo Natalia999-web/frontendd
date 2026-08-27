@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 from zoneinfo import ZoneInfo
 
 _BOGOTA = ZoneInfo("America/Bogota")
@@ -37,6 +37,23 @@ COSTO_DOMICILIO = Decimal("5000")
 # las que hay en stock (pedido especial / preorden). Regla de negocio del backend:
 # nunca se toma del request, el cliente no puede alterarla.
 PORCENTAJE_ANTICIPO_SOBRE_STOCK = Decimal("0.50")
+
+
+def _calcular_anticipo(total_pedido: Decimal, credito_aplicado: Decimal) -> Decimal:
+    """Cuánto hay que anticipar por un pedido que supera el stock.
+
+    Se calcula sobre lo que QUEDA por pagar, es decir con el saldo a favor ya
+    descontado: si el cliente puso plata suya, esa plata ya respalda el pedido y
+    no tiene sentido volver a exigir la mitad del total bruto sobre lo demás.
+    Es la cuenta que muestran el checkout de la web y la app, y este servidor
+    tiene que pedir exactamente lo mismo que se le mostró al cliente.
+
+    Redondea hacia arriba al peso, como el checkout: nunca se cobra de menos.
+    """
+    por_pagar = max(Decimal("0"), total_pedido - credito_aplicado)
+    return (por_pagar * PORCENTAJE_ANTICIPO_SOBRE_STOCK).quantize(
+        Decimal("1"), rounding=ROUND_CEILING
+    )
 
 
 def _es_transferencia(metodo: str | None) -> bool:
@@ -805,7 +822,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     if sobre_stock:
         # Valor real del pedido antes de aplicar créditos (lo que cuesta).
         total_pedido       = subtotal_bruto - descuento_aplicado + costo_domicilio
-        anticipo_requerido = (total_pedido * PORCENTAJE_ANTICIPO_SOBRE_STOCK).quantize(Decimal("0.01"))
+        anticipo_requerido = _calcular_anticipo(total_pedido, credito_aplicado)
         # Solo cuenta como pagado lo verificable en el servidor: el crédito
         # efectivamente descontado del libro mayor del cliente.
         anticipo_pagado    = credito_aplicado

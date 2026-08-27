@@ -15,6 +15,7 @@ from fastapi import HTTPException
 
 from src.features.ventas.gestion_ventas.services.service import (
     PORCENTAJE_ANTICIPO_SOBRE_STOCK,
+    _calcular_anticipo,
     _es_transferencia,
     _evaluar_lineas_pedido,
     requiere_fecha_propuesta,
@@ -259,6 +260,60 @@ class RequiereFechaPropuestaTests(unittest.TestCase):
             [item_venta(1, 1, 4)],
         )
         self.assertFalse(requiere_fecha_propuesta(db, venta(necesita_produccion=0)))
+
+
+class CalcularAnticipoTests(unittest.TestCase):
+    """El anticipo se calcula sobre lo que QUEDA por pagar.
+
+    Antes salía del total bruto, así que el servidor guardaba un anticipo mayor
+    que el que el checkout le había mostrado y cobrado al cliente.
+    """
+
+    def test_sin_saldo_a_favor_es_la_mitad_del_total(self):
+        self.assertEqual(
+            _calcular_anticipo(Decimal("22500"), Decimal("0")),
+            Decimal("11250"),
+        )
+
+    def test_el_saldo_a_favor_baja_el_anticipo(self):
+        """$22.500 con $5.000 de saldo: se anticipa la mitad de $17.500."""
+        self.assertEqual(
+            _calcular_anticipo(Decimal("22500"), Decimal("5000")),
+            Decimal("8750"),
+        )
+
+    def test_coincide_con_lo_que_muestra_el_checkout(self):
+        """La web hace Math.ceil(totalFinal * 0.5); acá tiene que dar igual."""
+        import math
+
+        for total, credito in [
+            ("22500", "0"), ("22500", "5000"), ("22501", "0"),
+            ("100000", "40000"), ("33333", "11111"), ("50000", "49999"),
+        ]:
+            with self.subTest(total=total, credito=credito):
+                esperado = math.ceil(max(0, int(total) - int(credito)) * 0.5)
+                self.assertEqual(
+                    _calcular_anticipo(Decimal(total), Decimal(credito)),
+                    Decimal(esperado),
+                )
+
+    def test_redondea_hacia_arriba_para_no_cobrar_de_menos(self):
+        self.assertEqual(
+            _calcular_anticipo(Decimal("22501"), Decimal("0")),
+            Decimal("11251"),
+        )
+
+    def test_si_el_saldo_cubre_todo_no_queda_anticipo(self):
+        self.assertEqual(
+            _calcular_anticipo(Decimal("22500"), Decimal("22500")),
+            Decimal("0"),
+        )
+
+    def test_un_saldo_mayor_que_el_total_no_da_negativo(self):
+        self.assertEqual(
+            _calcular_anticipo(Decimal("10000"), Decimal("30000")),
+            Decimal("0"),
+        )
 
 
 if __name__ == "__main__":
