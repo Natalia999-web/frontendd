@@ -56,8 +56,22 @@ class FakeDB:
         self.added.append(obj)
 
 
-def item(id_producto, cantidad):
-    return type("VxP", (), {"ID_Producto": id_producto, "Cantidad": cantidad})()
+def item(id_producto, cantidad, preorden=None):
+    """Línea de una venta.
+
+    Lo que se fabrica es Cantidad_Preorden (el déficit contra el stock), no
+    Cantidad: de un pedido de 10 con 3 en stock se producen 7. Estos objetos se
+    habían quedado sin ese campo cuando se agregó, y los tests reventaban con
+    AttributeError contra código que estaba bien.
+
+    Por defecto el déficit es toda la cantidad, que es el caso de un producto
+    agotado y lo que asumían estos tests.
+    """
+    return type("VxP", (), {
+        "ID_Producto": id_producto,
+        "Cantidad": cantidad,
+        "Cantidad_Preorden": cantidad if preorden is None else preorden,
+    })()
 
 
 def producto(id_producto, requiere_produccion):
@@ -85,6 +99,17 @@ class CrearOrdenesTests(unittest.TestCase):
 
     def test_cantidad_cero_no_genera_orden(self):
         db = FakeDB([item(1, 0)], [producto(1, requiere_produccion=1)])
+        self.assertEqual(_crear_ordenes_produccion_para_venta(db, 10, None), 0)
+
+    def test_se_fabrica_el_deficit_no_lo_pedido(self):
+        """Con stock parcial solo se produce lo que falta."""
+        db = FakeDB([item(1, 10, preorden=7)], [producto(1, requiere_produccion=1)])
+        self.assertEqual(_crear_ordenes_produccion_para_venta(db, 10, None), 1)
+        self.assertEqual(db.added[0].Cantidad, 7)
+
+    def test_stock_suficiente_no_genera_orden(self):
+        """Sin déficit no hay nada que fabricar, aunque sea por encargo."""
+        db = FakeDB([item(1, 5, preorden=0)], [producto(1, requiere_produccion=1)])
         self.assertEqual(_crear_ordenes_produccion_para_venta(db, 10, None), 0)
 
     def test_cuenta_una_orden_por_producto_de_produccion(self):

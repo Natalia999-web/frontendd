@@ -56,7 +56,13 @@ class FakeDB:
 
 class OrdenesProduccionTests(unittest.TestCase):
     def test_crea_orden_para_producto_requiere_produccion(self):
-        venta_producto = type("VentaProducto", (), {"ID_Venta": 10, "ID_Producto": 6, "Cantidad": 2})()
+        # Cantidad_Preorden es lo que se fabrica (el déficit contra el stock);
+        # sin stock coincide con lo pedido. Faltaba en este objeto y el test
+        # reventaba con AttributeError contra código que estaba bien.
+        venta_producto = type("VentaProducto", (), {
+            "ID_Venta": 10, "ID_Producto": 6,
+            "Cantidad": 2, "Cantidad_Preorden": 2,
+        })()
         producto = type("Producto", (), {"ID_Producto": 6, "Requiere_Produccion": 1, "Stock": 0})()
         db = FakeDB([venta_producto], [producto])
 
