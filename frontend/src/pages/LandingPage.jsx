@@ -17,6 +17,7 @@ import {
   addToCartWithQty,
   getCart,
   getCartCount,
+  sanitizeCart,
   clearCart
 } from '../features/sales/orders/services/cartService';
 import { getLandingConfig } from '../services/landingConfigService';
@@ -310,22 +311,25 @@ const LandingPage = ({ hideNavbar = false }) => {
       });
       setCategoriasMap(map);
 
-      setProductos(
-        lista
-          .filter(p => p.Estado !== 0 && p.Publicado !== 0 && !p.lote_vencido && !p.Lote_Vencido)
-          .map(p => ({
-            id:                 p.ID_Producto,
-            nombre:             p.nombre,
-            precio:             p.Precio_venta,
-            stock:              p.Stock ?? 0,
-            idCategoria:        p.ID_Categoria,
-            imagen:             p.imagenes?.[0]?.url || null,
-            imagenes:           p.imagenes?.map(i => i.url) || [],
-            descripcion_corta:  p.Descripcion_Corta ?? "",
-            descripcion_larga:  p.Descripcion_Larga ?? "",
-            requiereProduccion: !!p.Requiere_Produccion,
-          }))
-      );
+      const vendibles = lista
+        .filter(p => p.Estado !== 0 && p.Publicado !== 0 && !p.lote_vencido && !p.Lote_Vencido)
+        .map(p => ({
+          id:                 p.ID_Producto,
+          nombre:             p.nombre,
+          precio:             p.Precio_venta,
+          stock:              p.Stock ?? 0,
+          idCategoria:        p.ID_Categoria,
+          imagen:             p.imagenes?.[0]?.url || null,
+          imagenes:           p.imagenes?.map(i => i.url) || [],
+          descripcion_corta:  p.Descripcion_Corta ?? "",
+          descripcion_larga:  p.Descripcion_Larga ?? "",
+          requiereProduccion: !!p.Requiere_Produccion,
+        }));
+      setProductos(vendibles);
+      // Lo que dejó de estar publicado sale del carrito de quien ya lo tenía:
+      // acá el catálogo se recarga al volver a la pestaña, así que el carrito
+      // se pone al día solo.
+      sanitizeCart(vendibles.map(p => p.id));
     } catch {
       // silent — show empty grid
     }

@@ -42,6 +42,28 @@ export const addToCart = (product: any): void => {
   window.dispatchEvent(new Event('cart-updated'));
 };
 
+/**
+ * Saca del carrito lo que ya no se vende.
+ *
+ * El carrito guarda una copia del producto en localStorage, así que un producto
+ * que el admin desactiva de la tienda seguía ahí: sumaba al total, contaba en
+ * el badge y viajaba dentro del pedido, aunque en el catálogo ya no apareciera.
+ * Quien tiene la lista de lo que se puede comprar es el catálogo, así que al
+ * cargarse limpia el carrito.
+ *
+ * Con la lista vacía no hace nada: eso pasa mientras los productos cargan o si
+ * la petición falla, y no prueba que el carrito sobre.
+ */
+export const sanitizeCart = (idsVendibles: number[]): void => {
+  if (!idsVendibles.length) return;
+  const permitidos = new Set(idsVendibles.map(Number));
+  const cart = getCart();
+  const limpio = cart.filter((item) => permitidos.has(Number(item.id)));
+  if (limpio.length === cart.length) return;
+  saveCart(limpio);
+  window.dispatchEvent(new Event('cart-updated'));
+};
+
 export const removeFromCart = (productId: number): void => {
   const cart = getCart().filter((item) => item.id !== productId);
   saveCart(cart);

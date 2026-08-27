@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { addToCart, getCart, getCartCount, clearCart } from './services/cartService';
+import { useNavigate } from 'react-router-dom';
+import { addToCart, getCart, getCartCount, clearCart, sanitizeCart } from './services/cartService';
 import { getProductos } from '../../../services/productosService';
 import { getCategorias } from '../../../services/categoriasProductosService';
 import ProductCard from './components/ProductCard';
@@ -16,6 +17,7 @@ import '../../../styles/Client.css';
 
 /* ─── OrdersPage principal ────────────────────────────── */
 const OrdersPage = () => {
+  const navigate = useNavigate();
   const [productos,   setProductos]   = useState([]);
   const [categorias,  setCategorias]  = useState([]);
   const [searchTerm,       setSearchTerm]       = useState('');
@@ -40,7 +42,10 @@ const OrdersPage = () => {
         imagen:             p.Imagen      || p.imagen      || null,
         requiereProduccion: !!p.Requiere_Produccion,
       }));
-      setProductos(lista.filter(p => p.publicado));
+      const vendibles = lista.filter(p => p.publicado);
+      setProductos(vendibles);
+      // Lo que dejó de estar publicado sale del carrito de quien ya lo tenía.
+      sanitizeCart(vendibles.map(p => p.id));
     }).catch(() => {});
     getCategorias({ porPagina: 100 }).then(data => {
       const lista = (data.categorias || data || []).map(c => ({
