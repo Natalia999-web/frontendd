@@ -204,6 +204,11 @@ function Toast({ toast }) {
 export default function PedidoActual() {
   const user = getUser();
   const [pedido, setPedido]     = useState(null);
+  // La cola completa del repartidor. Antes solo se cargaba la primera entrega
+  // y el resto era invisible: no había forma de saber cuántas quedaban ni de
+  // mirar la siguiente sin terminar la actual.
+  const [cola, setCola]         = useState([]);
+  const [idActivo, setIdActivo] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
@@ -223,11 +228,19 @@ export default function PedidoActual() {
       const activos = (doms.domicilios || []).filter(d => esDomicilioActivo(d.estadoId));
       activos.sort((a, b) => ESTADO_ORDEN.indexOf(a.estadoId) - ESTADO_ORDEN.indexOf(b.estadoId));
 
+      setCola(activos);
+
       if (activos.length === 0) {
         setPedido(null);
+        setIdActivo(null);
       } else {
+        // Se conserva la entrega que el repartidor estaba mirando; si ya se
+        // cerró, se pasa a la primera de la cola.
+        const sigue = activos.some(d => String(d.id) === String(idActivo));
+        const elegido = sigue ? idActivo : activos[0].id;
+        setIdActivo(elegido);
         // cargar detalle completo con productos
-        const detalle = await getDomicilio(activos[0].id);
+        const detalle = await getDomicilio(elegido);
         setPedido(detalle);
       }
     } catch {
@@ -235,7 +248,24 @@ export default function PedidoActual() {
     } finally {
       setLoading(false);
     }
+    // idActivo se lee para conservar la selección, pero no dispara la recarga:
+    // cambiar de entrega la hace por su cuenta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  /// Cambia a otra entrega de la cola sin recargar todo.
+  const verEntrega = async (id) => {
+    if (String(id) === String(idActivo)) return;
+    setIdActivo(id);
+    setLoading(true);
+    try {
+      setPedido(await getDomicilio(id));
+    } catch {
+      showToast("No se pudo abrir esa entrega", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -302,7 +332,9 @@ export default function PedidoActual() {
   return (
     <div className="page-wrapper">
       <div className="page-header">
-        <h1 className="page-header__title">Pedido Actual</h1>
+        <h1 className="page-header__title">
+          Mis entregas{cola.length > 0 ? ` · ${cola.length}` : ""}
+        </h1>
         <div className="page-header__line" />
       </div>
 
@@ -322,6 +354,43 @@ export default function PedidoActual() {
           </div>
         ) : (
           <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* ── Cola de entregas ──
+                Con más de una asignada hay que poder ver cuáles son y saltar
+                entre ellas: antes solo existía la primera y las demás eran
+                invisibles hasta cerrarla. */}
+            {cola.length > 1 && (
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                {cola.map((d, i) => {
+                  const activo = String(d.id) === String(idActivo);
+                  const faltaCobro = cobroEfectivoPendiente(d);
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => verEntrega(d.id)}
+                      aria-current={activo ? "true" : undefined}
+                      style={{
+                        flexShrink: 0, cursor: "pointer", textAlign: "left",
+                        padding: "8px 14px", borderRadius: 12,
+                        border: `2px solid ${activo ? "#2e7d32" : "#e0e0e0"}`,
+                        background: activo ? "#f1f8f1" : "#fff",
+                        display: "flex", flexDirection: "column", gap: 2,
+                      }}
+                    >
+                      <span style={{
+                        fontSize: 12, fontWeight: 800,
+                        color: activo ? "#2e7d32" : "#666",
+                      }}>
+                        {i + 1}. {d.numero || `#${d.id}`}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#9e9e9e", fontWeight: 600 }}>
+                        {d.estado}{faltaCobro ? " · cobrar" : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* ── Cabecera del pedido ── */}
             <div style={{
