@@ -117,14 +117,26 @@ class EvaluarLineasTests(unittest.TestCase):
 
         self.assertEqual(lineas[0]["preorden"], 3)
 
-    def test_producto_por_encargo_no_cuenta_como_preorden(self):
-        # Los productos con Requiere_Produccion ya tienen su flujo de orden de
-        # producción: el déficit no debe exigir anticipo por sobre stock.
+    def test_producto_por_encargo_tambien_cuenta_como_preorden(self):
+        # Decisión del negocio: todo lo que supere el stock lleva anticipo,
+        # también los productos por encargo. Antes este test pedía lo contrario
+        # y no coincidía ni con el servidor ni con lo que se cobra de verdad.
+        #
+        # El déficit tiene que quedar registrado igual porque es lo que la orden
+        # de producción usa para saber cuánto fabricar (Cantidad_Preorden).
         db = FakeDB([producto(1, stock=0, precio=8000, requiere_produccion=1)])
 
         lineas, _ = _evaluar_lineas_pedido(db, [linea(1, 4)])
 
-        self.assertEqual(lineas[0]["preorden"], 0)
+        self.assertEqual(lineas[0]["preorden"], 4)
+
+    def test_el_deficit_por_encargo_es_el_que_se_fabrica(self):
+        """Con stock parcial, solo las unidades que faltan van a producción."""
+        db = FakeDB([producto(1, stock=3, precio=8000, requiere_produccion=1)])
+
+        lineas, _ = _evaluar_lineas_pedido(db, [linea(1, 10)])
+
+        self.assertEqual(lineas[0]["preorden"], 7)
 
     def test_bloquea_la_fila_del_producto(self):
         # El bloqueo es lo que evita que dos pedidos simultáneos lean el mismo

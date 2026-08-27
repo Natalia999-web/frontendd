@@ -101,6 +101,14 @@ class CrearVentaBase(unittest.TestCase):
         ))
         self.db.commit()
 
+    def marcar_por_encargo(self, id_producto):
+        """El producto se fabrica bajo pedido (Requiere_Produccion = 1)."""
+        prod = self.db.query(Producto).filter(
+            Producto.ID_Producto == id_producto
+        ).first()
+        prod.Requiere_Produccion = 1
+        self.db.commit()
+
     def desactivar(self, id_producto):
         """El admin lo saca de la tienda (Publicado = 0)."""
         prod = self.db.query(Producto).filter(
@@ -428,6 +436,62 @@ class AnticipoTests(CrearVentaBase):
         v = self.venta_creada()
         self.assertEqual(v.Sobre_Stock, 1)
         self.assertEqual(v.Estado, 4)  # CONFIRMADO
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 3b. Productos por encargo
+# ══════════════════════════════════════════════════════════════════════════
+class ProductoPorEncargoTests(CrearVentaBase):
+    """Decisión del negocio: por encargo también lleva anticipo.
+
+    El checkout del cliente los excluía y el servidor no, así que quien pedía un
+    producto por encargo por encima del stock veía el aviso de producción, nunca
+    el bloque del anticipo, y al confirmar le rechazaban el pedido por un
+    anticipo que la pantalla jamás le había ofrecido pagar.
+    """
+
+    def por_encargo(self, cantidad=5, **kwargs):
+        self.marcar_por_encargo(ID_TORTA)
+        return self.pedido(
+            productos=[ProductoVentaInput(ID_Producto=ID_TORTA, Cantidad=cantidad)],
+            **kwargs,
+        )
+
+    def test_por_encima_del_stock_exige_anticipo(self):
+        with self.assertRaises(HTTPException) as ctx:
+            self.crear(self.por_encargo())
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("anticipo", ctx.exception.detail.lower())
+
+    def test_con_el_anticipo_registrado_el_pedido_entra(self):
+        self.crear(self.por_encargo(
+            Metodo_Pago="Transferencia",
+            requiere_anticipo=True,
+            anticipo_monto=25000.0,
+            anticipo_metodo_pago="Transferencia",
+            anticipo_comprobante_url="https://cloudinary.test/ant.jpg",
+            anticipo_registrado=True,
+        ))
+        v = self.venta_creada()
+        self.assertEqual(v.Sobre_Stock, 1)
+        self.assertEqual(v.Anticipo_Requerido, Decimal("25000"))
+        self.assertEqual(v.Estado_Pago, "anticipo_pagado")
+
+    def test_queda_marcado_para_producir(self):
+        """El anticipo no reemplaza la orden de producción: van juntos."""
+        self.crear(self.por_encargo(
+            Metodo_Pago="Transferencia",
+            comprobante_pago="https://cloudinary.test/comp.jpg",
+        ))
+        v = self.venta_creada()
+        self.assertEqual(v.Necesita_Produccion, 1)
+        self.assertEqual(v.Sobre_Stock, 1)
+
+    def test_dentro_del_stock_no_exige_nada(self):
+        self.crear(self.por_encargo(cantidad=2))
+        v = self.venta_creada()
+        self.assertEqual(v.Sobre_Stock, 0)
+        self.assertEqual(v.Necesita_Produccion, 0)
 
 
 # ══════════════════════════════════════════════════════════════════════════

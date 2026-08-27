@@ -174,13 +174,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
   // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
   // stock: es una preventa y hay que separar la plata. No depende del monto —
   // antes se pedía por pasar de $50.000 y caía en pedidos normales y grandes.
-  // Los productos por encargo no cuentan: su déficit lo cubre la orden de
-  // producción, no un anticipo.
+  //
+  // Cuenta TODO lo que supere el stock, incluidos los productos por encargo.
+  // Antes se los excluía, y como el servidor sí los cuenta el cliente quedaba
+  // en un callejón sin salida: veía el aviso de producción, nunca el bloque del
+  // anticipo, y al confirmar le rechazaban el pedido por un anticipo que la
+  // pantalla jamás le había ofrecido pagar.
   //
   // Se calcula acá arriba, antes del early return, porque el efecto de abajo
   // lo necesita y los hooks no pueden quedar detrás de un return.
   const requiereAnticipo = (orderDetails?.items || []).some(
-    (it: CartItem) => !it.requiereProduccion && it.cantidad > (it.stock ?? 0)
+    (it: CartItem) => it.cantidad > (it.stock ?? 0)
   );
 
   // Un pedido con anticipo no admite mixto: la parte en efectivo del mixto se
