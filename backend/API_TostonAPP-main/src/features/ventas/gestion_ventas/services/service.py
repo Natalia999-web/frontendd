@@ -99,6 +99,17 @@ def _partir_pago_mixto(total: Decimal, monto_efectivo) -> tuple[Decimal, Decimal
     return efectivo, total - efectivo
 
 
+def _productos_no_publicados(lineas: list[dict]) -> list[str]:
+    """Nombres de los productos del pedido que ya no están en la tienda.
+
+    El carrito vive en el dispositivo del cliente, así que un producto que el
+    admin desactiva desaparece del catálogo pero sigue en el carrito de quien
+    lo había agregado antes. Sin este control el pedido entraba igual y el
+    negocio quedaba comprometido a vender algo que había sacado de la venta.
+    """
+    return [l["nombre"] for l in lineas if not l.get("publicado")]
+
+
 def _evaluar_lineas_pedido(db: Session, productos_input) -> tuple[list[dict], Decimal]:
     """Valida los productos contra el stock REAL y calcula el subtotal.
 
@@ -136,6 +147,9 @@ def _evaluar_lineas_pedido(db: Session, productos_input) -> tuple[list[dict], De
             "cantidad":    cantidad,
             "stock":       stock,
             "preorden":    preorden,
+            # Si el admin lo sacó de la tienda ya no se le puede vender al
+            # cliente, aunque siga en su carrito. Lo decide quien llama.
+            "publicado":   int(getattr(producto, "Publicado", 0) or 0),
         })
 
     return lineas, subtotal
@@ -716,6 +730,22 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     lineas, subtotal_bruto = _evaluar_lineas_pedido(db, datos.productos)
     preorden_por_producto = {l["ID_Producto"]: l["preorden"] for l in lineas}
     sobre_stock = any(l["preorden"] > 0 for l in lineas)
+
+    # ── Nada que el admin haya sacado de la tienda ─────────────────────────
+    # El personal sí puede vender en mostrador algo fuera del catálogo público;
+    # el cliente solo compra lo publicado. Se avisa con el nombre para que
+    # sepa exactamente qué sacar del carrito.
+    if not datos.creado_por_admin:
+        no_publicados = _productos_no_publicados(lineas)
+        if no_publicados:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Ya no está disponible: {', '.join(no_publicados)}. "
+                    "Quítalo del carrito para continuar con el pedido."
+                ),
+            )
 
     # El pago mixto no sirve para anticipar: ver _mixto_bloqueado_por_anticipo.
     if _mixto_bloqueado_por_anticipo(
