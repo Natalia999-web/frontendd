@@ -354,6 +354,14 @@ export default function CrearPedido({ onClose, onSave }) {
     p => !p.stockOk || p.cantidad > p.stockActual
   );
 
+  // Un pedido con anticipo no admite mixto: la parte en efectivo del mixto se
+  // cobra AL ENTREGAR y el anticipo tiene que estar cubierto ANTES de producir,
+  // así que no respalda nada. El backend lo rechaza; acá se resuelve al leer y
+  // no tocando el estado, para que al bajar la cantidad se recupere el método
+  // que ya se había elegido.
+  const permiteMixto = !requiereAnticipo;
+  const esMixto      = permiteMixto && form.metodo_pago === "Mixto";
+
   /* ─── Validación por paso ─── */
   const validateStep = (s) => {
     const e = {};
@@ -388,7 +396,7 @@ export default function CrearPedido({ onClose, onSave }) {
         }
         // Un mixto tiene que tener las dos partes: si una queda en cero, lo
         // que corresponde es el otro método a secas.
-        if (form.metodo_pago === "Mixto") {
+        if (esMixto) {
           const enEfectivo = Number(efectivoMonto) || 0;
           if (enEfectivo <= 0) {
             e.pago_mixto = "Escribe cuánto se paga en efectivo";
@@ -462,7 +470,7 @@ export default function CrearPedido({ onClose, onSave }) {
       metodo_pago:       metodoPedido,
       // Solo se mira cuando el método es Mixto: cuánto se cobra en efectivo.
       // El backend lo recorta contra el total real.
-      pago_efectivo_monto: metodoPedido === "Mixto" ? (Number(efectivoMonto) || 0) : null,
+      pago_efectivo_monto: esMixto ? (Number(efectivoMonto) || 0) : null,
       comprobante:            comprobanteUrl,
       requiere_anticipo:      requiereAnticipo,
       anticipo_monto:         montoAnticipo,
@@ -799,7 +807,7 @@ export default function CrearPedido({ onClose, onSave }) {
                   Método de pago del pedido <span className="required">*</span>
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 8 }}>
-                  {METODOS_PAGO.map(m => (
+                  {METODOS_PAGO.filter(m => m !== "Mixto" || permiteMixto).map(m => (
                     <button
                       key={m}
                       onClick={() => set("metodo_pago", m)}
@@ -820,7 +828,7 @@ export default function CrearPedido({ onClose, onSave }) {
                 {errors.metodo_pago && <span className="field-error" style={{ marginTop: 8 }}>{errors.metodo_pago}</span>}
 
                 {/* Reparto entre las dos formas de pago */}
-                {form.metodo_pago === "Mixto" && (
+                {esMixto && (
                   <div style={{ marginTop: 14, background: "#fafafa", border: "1px solid #eee", borderRadius: 12, padding: "14px 16px" }}>
                     <p style={{ margin: "0 0 10px", fontSize: 12, color: "#666", fontWeight: 600 }}>
                       Una parte se transfiere y la otra se cobra en efectivo al entregar
@@ -890,6 +898,9 @@ export default function CrearPedido({ onClose, onSave }) {
                       <p style={{ margin: 0, fontWeight: 800, color: "#f57f17", fontSize: 15 }}>Anticipo requerido</p>
                       <p style={{ margin: 0, fontSize: 12, color: "#795548" }}>
                         El pedido lleva más unidades de las que hay en stock. Registra el anticipo antes de confirmar.
+                      </p>
+                      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#795548" }}>
+                        El pago mixto no aplica aquí: su parte en efectivo se cobra al entregar y el anticipo va antes.
                       </p>
                     </div>
                   </div>

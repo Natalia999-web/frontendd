@@ -171,6 +171,26 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     setTerminosAceptados(false);
   }, [isOpen]);
 
+  // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
+  // stock: es una preventa y hay que separar la plata. No depende del monto —
+  // antes se pedía por pasar de $50.000 y caía en pedidos normales y grandes.
+  // Los productos por encargo no cuentan: su déficit lo cubre la orden de
+  // producción, no un anticipo.
+  //
+  // Se calcula acá arriba, antes del early return, porque el efecto de abajo
+  // lo necesita y los hooks no pueden quedar detrás de un return.
+  const requiereAnticipo = (orderDetails?.items || []).some(
+    (it: CartItem) => !it.requiereProduccion && it.cantidad > (it.stock ?? 0)
+  );
+
+  // Un pedido con anticipo no admite mixto: la parte en efectivo del mixto se
+  // paga AL RECIBIR y el anticipo tiene que estar cubierto ANTES de producir,
+  // así que no respalda nada. El backend lo rechaza; acá se resuelve al leer y
+  // no tocando el estado, para que el cliente que baje la cantidad recupere el
+  // método que había elegido.
+  const permiteMixto = !requiereAnticipo;
+  const esMixto      = permiteMixto && paymentMethod === 'mixto';
+
   if (!isOpen || !orderDetails) return null;
 
   const itemsConDeficit = (orderDetails.items || []).filter(
@@ -201,14 +221,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     ? Math.min(Math.max(Number(creditoMonto) || 0, 0), creditoMaximo)
     : 0;
   const totalFinal       = Math.max(0, orderDetails.total + costoDomicilio - creditoAplicar);
-  // El anticipo del 50% lo exige el backend cuando el pedido va por encima del
-  // stock: es una preventa y hay que separar la plata. No depende del monto —
-  // antes se pedía por pasar de $50.000 y caía en pedidos normales y grandes.
-  // Los productos por encargo no cuentan: su déficit lo cubre la orden de
-  // producción, no un anticipo.
-  const requiereAnticipo = (orderDetails.items || []).some(
-    (it: CartItem) => !it.requiereProduccion && it.cantidad > (it.stock ?? 0)
-  );
   const montoAnticipo        = requiereAnticipo ? (pagarTodo ? totalFinal : Math.ceil(totalFinal * 0.5)) : 0;
   const creditoCubreAnticipo = requiereAnticipo && usarCredito && montoAnticipo > 0
     && creditoAplicar >= montoAnticipo;
@@ -227,7 +239,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     // (Con anticipo el comprobante que cuenta es el del anticipo, validado abajo.)
     // Un mixto tiene que tener las dos partes: si una queda en cero, lo que
     // el cliente quiere es el otro método a secas.
-    if (paymentMethod === 'mixto' && !requiereAnticipo) {
+    if (esMixto) {
       const enEfectivo = Number(efectivoMonto) || 0;
       if (enEfectivo <= 0) {
         setMixtoError('Escribe cuánto vas a pagar en efectivo.');
@@ -241,7 +253,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
     }
 
     // El mixto lleva una transferencia de verdad: también pide el comprobante.
-    const llevaTransferencia = paymentMethod === 'digital' || paymentMethod === 'mixto';
+    const llevaTransferencia = paymentMethod === 'digital' || esMixto;
     if (llevaTransferencia && !requiereAnticipo && !comprobante) {
       setComprobanteError('Adjunta el comprobante de la transferencia.');
       return;
@@ -510,7 +522,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 { id: 'digital',  icon: <CreditCard size={14} />, label: 'Transferencia' },
                 { id: 'efectivo', icon: <Banknote size={14} />,   label: 'Efectivo' },
                 { id: 'mixto',    icon: <Scale size={14} />,      label: 'Mixto' },
-              ].map(m => (
+              ].filter(m => m.id !== 'mixto' || permiteMixto).map(m => (
                 <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                   className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all text-[11px] font-black ${paymentMethod === m.id ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200'}`}>
                   <div className={`p-1.5 rounded-lg ${paymentMethod === m.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{m.icon}</div>
@@ -520,7 +532,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
             </div>
 
             {/* Reparto entre las dos formas de pago */}
-            {paymentMethod === 'mixto' && (
+            {esMixto && (
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-[10px] font-bold text-gray-500 mb-2">
                   Pagas una parte ahora por transferencia y el resto en efectivo al recibir
@@ -534,7 +546,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
               </div>
             )}
 
-            {(paymentMethod === 'digital' || paymentMethod === 'mixto') && (
+            {(paymentMethod === 'digital' || esMixto) && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                   <div className="space-y-1">
@@ -546,7 +558,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                     ))}
                   </div>
                 </div>
-                {paymentMethod === 'mixto' && (
+                {esMixto && (
                   <p className="text-[10px] font-bold text-blue-700 bg-blue-50 rounded-xl px-3 py-2">
                     Transfiere {COP(totalFinal - (Number(efectivoMonto) || 0))} y
                     ten listos {COP(Number(efectivoMonto) || 0)} en efectivo para la entrega.
@@ -586,6 +598,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, orderDet
                 <div>
                   <p className="text-xs font-black text-yellow-800">Anticipo requerido</p>
                   <p className="text-[10px] font-bold text-yellow-700">El pedido lleva más unidades de las que hay en stock. Registra un anticipo para apartarlas.</p>
+                  <p className="text-[10px] font-bold text-yellow-700 mt-1">El pago mixto no está disponible en estos pedidos: su parte en efectivo se paga al recibir y el anticipo va antes.</p>
                 </div>
               </div>
 

@@ -14,6 +14,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.features.ventas.gestion_ventas.services.service import (
     _es_mixto,
     _es_transferencia,
+    _mixto_bloqueado_por_anticipo,
     _partir_pago_mixto,
 )
 from src.features.ventas.pedidos.services.service import (
@@ -37,6 +38,45 @@ class EsMixtoTests(unittest.TestCase):
     def test_mixto_no_se_confunde_con_transferencia(self):
         """Son reglas distintas: la de transferencia sigue mirando su palabra."""
         self.assertFalse(_es_transferencia("Mixto"))
+
+
+class MixtoConAnticipoTests(unittest.TestCase):
+    """Un pedido con anticipo no se puede pagar en mixto.
+
+    La parte en efectivo del mixto se cobra al entregar, o sea después de
+    producir: no alcanza a respaldar el anticipo, que va antes.
+    """
+
+    def test_pedido_sobre_stock_rechaza_el_mixto(self):
+        self.assertTrue(
+            _mixto_bloqueado_por_anticipo("Mixto", sobre_stock=True, requiere_anticipo=False)
+        )
+
+    def test_anticipo_registrado_por_el_personal_rechaza_el_mixto(self):
+        self.assertTrue(
+            _mixto_bloqueado_por_anticipo("Mixto", sobre_stock=False, requiere_anticipo=True)
+        )
+
+    def test_pedido_normal_sigue_aceptando_el_mixto(self):
+        """Sin anticipo el mixto no se toca: es el caso de siempre."""
+        self.assertFalse(
+            _mixto_bloqueado_por_anticipo("Mixto", sobre_stock=False, requiere_anticipo=False)
+        )
+
+    def test_los_otros_metodos_pasan_aunque_haya_anticipo(self):
+        """Transferencia y efectivo conservan sus propias reglas de anticipo."""
+        for metodo in ["Transferencia", "Efectivo", "Créditos", None, ""]:
+            with self.subTest(metodo=metodo):
+                self.assertFalse(
+                    _mixto_bloqueado_por_anticipo(metodo, sobre_stock=True, requiere_anticipo=True)
+                )
+
+    def test_reconoce_el_mixto_escrito_de_cualquier_forma(self):
+        for metodo in ["mixto", "  MIXTO  ", "Pago Mixto"]:
+            with self.subTest(metodo=metodo):
+                self.assertTrue(
+                    _mixto_bloqueado_por_anticipo(metodo, sobre_stock=True, requiere_anticipo=False)
+                )
 
 
 class PartirPagoMixtoTests(unittest.TestCase):

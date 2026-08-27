@@ -53,6 +53,22 @@ def _es_mixto(metodo: str | None) -> bool:
     return "mixto" in (metodo or "").strip().lower()
 
 
+def _mixto_bloqueado_por_anticipo(
+    metodo: str | None, sobre_stock: bool, requiere_anticipo: bool
+) -> bool:
+    """True si el pedido pide anticipo y lo quieren pagar con el método mixto.
+
+    El anticipo existe para respaldar lo que hay que producir ANTES de
+    entregarlo. La parte en efectivo de un mixto se cobra AL ENTREGAR, o sea
+    después de producir: no respalda nada. Y su comprobante cubre solo la parte
+    transferida, que puede quedar muy por debajo del 50% exigido.
+
+    Cubre las dos formas de anticipo: el pedido por encima del stock (que
+    calcula el servidor) y el anticipo que registra el personal al crear.
+    """
+    return _es_mixto(metodo) and (bool(sobre_stock) or bool(requiere_anticipo))
+
+
 def _partir_pago_mixto(total: Decimal, monto_efectivo) -> tuple[Decimal, Decimal]:
     """Reparte el total entre efectivo y transferencia.
 
@@ -684,6 +700,21 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
     preorden_por_producto = {l["ID_Producto"]: l["preorden"] for l in lineas}
     sobre_stock = any(l["preorden"] > 0 for l in lineas)
 
+    # El pago mixto no sirve para anticipar: ver _mixto_bloqueado_por_anticipo.
+    if _mixto_bloqueado_por_anticipo(
+        datos.Metodo_Pago, sobre_stock, datos.requiere_anticipo
+    ):
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Este pedido requiere anticipo, así que no se puede pagar con el "
+                "método mixto: la parte en efectivo se paga al recibir y el "
+                "anticipo tiene que estar cubierto antes. Págalo por "
+                "transferencia, o con tu saldo a favor si alcanza."
+            ),
+        )
+
     ESTADO_PENDIENTE = 1
 
     _metodo_lower = (datos.Metodo_Pago or "").strip().lower()
@@ -798,8 +829,11 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
         tiene_soporte = (
             anticipo_declarado
             or bool(comprobante_anticipo)
-            or ((_es_transferencia(datos.Metodo_Pago) or _es_mixto(datos.Metodo_Pago))
-                and bool(comprobante_pedido))
+            # Solo transferencia PURA: el comprobante de un mixto respalda
+            # unicamente la parte transferida, que puede quedar corta contra el
+            # 50%. De todos modos el mixto ya se rechaza mas arriba; esto queda
+            # para que la regla no dependa de ese unico control.
+            or (_es_transferencia(datos.Metodo_Pago) and bool(comprobante_pedido))
         )
 
         # El pedido creado por el personal en el mostrador se cobra en el acto:
