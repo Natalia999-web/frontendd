@@ -6,9 +6,9 @@ export async function registrarSalida({ tipo, idInsumo, idProducto, cantidad, mo
     timeout: 150000,
     body: JSON.stringify({
       Tipo:        tipo,
-      ID_Insumo:   idInsumo   ?? null,
-      ID_Producto: idProducto ?? null,
-      Cantidad:    cantidad,
+      ID_Insumo:   idInsumo   != null ? Number(idInsumo)   : null,
+      ID_Producto: idProducto != null ? Number(idProducto) : null,
+      Cantidad:    Number(cantidad),
       Motivo:      motivo     ?? null,
     }),
   });
