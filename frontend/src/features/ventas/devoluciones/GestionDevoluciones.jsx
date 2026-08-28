@@ -422,7 +422,7 @@ export default function GestionDevoluciones() {
       const prods = productosModal.length > 0 ? productosModal : (dev.productos || []);
       for (const prod of prods) {
         await registrarSalida({
-          tipo:       "Producto",
+          tipo:       "devolución",
           idProducto: prod.idProducto,
           cantidad:   prod.cantidad,
           motivo:     `Devolución aprobada ${dev.numero} — pedido ${dev.numeroPedido}`,
