@@ -63,7 +63,28 @@ const ReturnsPage = () => {
     setShowModal(true);
   };
 
-  const deliveredOrders = pedidos.filter(p => p.estado === 'Entregado');
+  // Calcula cuánto puede devolver aún el cliente por producto,
+  // descontando devoluciones anteriores no rechazadas.
+  const calcRestantes = (order) => {
+    const devsDelPedido = returns.filter(
+      d => String(d.idVenta) === String(order.id) && d.estado !== 'Rechazada'
+    );
+    return (order.productosItems || [])
+      .map(p => {
+        const yaDevuelto = devsDelPedido.reduce((sum, dev) => {
+          const found = (dev.productos || []).find(
+            dp => String(dp.idProducto) === String(p.idProducto)
+          );
+          return sum + (found ? found.cantidad : 0);
+        }, 0);
+        return { ...p, cantidad: Math.max(0, p.cantidad - yaDevuelto) };
+      })
+      .filter(p => p.cantidad > 0);
+  };
+
+  const deliveredOrders = pedidos.filter(p =>
+    p.estado === 'Entregado' && calcRestantes(p).length > 0
+  );
 
   /* ── estilos inline compartidos ── */
   const card = {
@@ -270,7 +291,7 @@ const ReturnsPage = () => {
                   <ReturnForm
                     onSuccess={handleSuccess}
                     defaultIdVenta={selectedOrderForReturn.id}
-                    orderProducts={selectedOrderForReturn.productosItems}
+                    orderProducts={calcRestantes(selectedOrderForReturn)}
                   />
                 </div>
               </div>
