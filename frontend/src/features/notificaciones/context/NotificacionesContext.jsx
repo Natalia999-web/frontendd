@@ -121,6 +121,7 @@ const TIPOS_CLIENTE = new Set([
   TIPOS.DEVOLUCION_APROBADA,
   TIPOS.DEVOLUCION_RECHAZADA,
   TIPOS.FECHA_PROPUESTA,
+  TIPOS.PEDIDO_EN_PRODUCCION, // también llega al cliente como notif propia
 ]);
 
 // Tipos derivados por rol — efímeros, se rehidratan por polling
@@ -510,23 +511,16 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
           }
         }
       }
-      if (notif && TIPOS_CLIENTE.has(notif.tipo)) {
-        const vistas = loadFromLS('notif_cliente_vistas', []);
-        if (!vistas.includes(id)) {
-          localStorage.setItem('notif_cliente_vistas', JSON.stringify([...vistas, id]));
-        }
-      }
-      if (notif && TIPOS_COCINA.has(notif.tipo)) {
+      if (notif && notif.idDestinatario === 'produccion') {
         const vistas = loadFromLS('notif_cocina_vistas', []);
-        if (!vistas.includes(id)) {
-          localStorage.setItem('notif_cocina_vistas', JSON.stringify([...vistas, id]));
-        }
-      }
-      if (notif && TIPOS_DOMICILIARIO.has(notif.tipo)) {
+        if (!vistas.includes(id)) localStorage.setItem('notif_cocina_vistas', JSON.stringify([...vistas, id]));
+      } else if (notif && notif.idDestinatario === 'domiciliario') {
         const vistas = loadFromLS('notif_dom_vistas', []);
-        if (!vistas.includes(id)) {
-          localStorage.setItem('notif_dom_vistas', JSON.stringify([...vistas, id]));
-        }
+        if (!vistas.includes(id)) localStorage.setItem('notif_dom_vistas', JSON.stringify([...vistas, id]));
+      } else if (notif && notif.idDestinatario && notif.idDestinatario !== 'admin') {
+        // cliente (idDestinatario = String del id numérico)
+        const vistas = loadFromLS('notif_cliente_vistas', []);
+        if (!vistas.includes(id)) localStorage.setItem('notif_cliente_vistas', JSON.stringify([...vistas, id]));
       }
       return prev.map(n => n.id === id ? { ...n, leida: true } : n);
     });
@@ -562,7 +556,10 @@ export function NotificacionesProvider({ children, insumos = [], lotes = [], ped
       }
 
       // Sincronizar lecturas de cliente con el backend y localStorage
-      const clienteUnread = prev.filter(n => TIPOS_CLIENTE.has(n.tipo) && !n.leida);
+      const clienteUnread = prev.filter(n =>
+        TIPOS_CLIENTE.has(n.tipo) && !n.leida &&
+        n.idDestinatario !== 'admin' && n.idDestinatario !== 'produccion' && n.idDestinatario !== 'domiciliario'
+      );
       if (clienteUnread.length > 0) {
         clienteUnread.forEach(n => {
           if (n.id_backend) marcarLeidaAPI(n.id_backend).catch(() => {});
