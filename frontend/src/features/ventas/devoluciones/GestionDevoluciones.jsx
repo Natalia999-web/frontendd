@@ -264,7 +264,7 @@ function ModalAprobar({ dev, onClose, onConfirm }) {
           <button
             className="btn-approve"
             disabled={done}
-            onClick={() => { setDone(true); setTimeout(() => onConfirm(dev.id), 700); }}
+            onClick={() => { setDone(true); setTimeout(() => onConfirm(dev.id, dev.productos || []), 700); }}
           >
             {done ? "Aprobando…" : <><CheckCircle2 size={14} /> Aprobar y Reembolsar</>}
           </button>
@@ -412,13 +412,15 @@ export default function GestionDevoluciones() {
     }
   };
 
-  const handleAprobar = async (id) => {
+  const handleAprobar = async (id, productosModal = []) => {
     setActionSaving(true);
     try {
       const dev = await resolverDevolucion(id, "aprobar");
 
-      // Registrar salida por cada producto devuelto
-      for (const prod of dev.productos || []) {
+      // Usar los productos del modal (ya cargados) porque el PATCH
+      // no devuelve el array de productos en su respuesta.
+      const prods = productosModal.length > 0 ? productosModal : (dev.productos || []);
+      for (const prod of prods) {
         await registrarSalida({
           tipo:       "Producto",
           idProducto: prod.idProducto,

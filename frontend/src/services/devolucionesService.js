@@ -78,16 +78,16 @@ export const getMisDevoluciones = async ({ pagina = 1, porPagina = 20 } = {}) =>
 // Para admins: enviar idCliente (ID_Usuario del cliente)
 export const crearDevolucion = async (payload) => {
   const body = {
-    ID_Venta: payload.idPedido,
+    ID_Venta: Number(payload.idPedido),
     Motivo:   payload.motivo,
     productos: (payload.productos || []).map(p => ({
-      ID_Producto:    p.idProducto,
-      Cantidad:       p.cantidad,
-      PrecioUnitario: p.precioUnitario,
+      ID_Producto:    Number(p.idProducto),
+      Cantidad:       Number(p.cantidad),
+      PrecioUnitario: Number(p.precioUnitario),
     })),
   };
   if (payload.comentario)        body.Comentario = payload.comentario;
-  if (payload.idCliente != null) body.ID_Usuario = payload.idCliente;
+  if (payload.idCliente != null) body.ID_Usuario = Number(payload.idCliente);
   if (payload.evidencia?.base64) body.Comprobante_Imagen = payload.evidencia.base64;
   const data = await apiFetch("/devoluciones/", { method: "POST", body: JSON.stringify(body) });
   return adaptDevolucion(data);

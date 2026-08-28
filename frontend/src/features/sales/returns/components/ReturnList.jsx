@@ -1,9 +1,10 @@
 import { Eye, Package, Clock, CheckCircle2, XCircle, Calendar, Hash } from 'lucide-react';
 
 const STATUS_CONFIG = {
-  'Pendiente':  { icon: Clock,         color: 'amber',   bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  label: 'Pendiente'  },
-  'Aprobada':   { icon: CheckCircle2,  color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Aprobada'   },
-  'Rechazada':  { icon: XCircle,       color: 'red',     bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',    label: 'Rechazada'  },
+  'Pendiente':   { icon: Clock,         color: 'amber',   bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  label: 'Pendiente'   },
+  'Aprobada':    { icon: CheckCircle2,  color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Aprobada'    },
+  'Reembolsada': { icon: CheckCircle2,  color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: 'Reembolsada' },
+  'Rechazada':   { icon: XCircle,       color: 'red',     bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',    label: 'Rechazada'   },
 };
 
 const ReturnList = ({ returns, onViewDetails }) => {
