@@ -417,21 +417,29 @@ export default function GestionDevoluciones() {
     try {
       const dev = await resolverDevolucion(id, "aprobar");
 
-      // Usar los productos del modal (ya cargados) porque el PATCH
-      // no devuelve el array de productos en su respuesta.
+      // Registrar salidas de forma no bloqueante: si falla no interrumpe la aprobación
       const prods = productosModal.length > 0 ? productosModal : (dev.productos || []);
+      let salidasOk = true;
       for (const prod of prods) {
-        await registrarSalida({
-          tipo:       "devolución",
-          idProducto: prod.idProducto,
-          cantidad:   prod.cantidad,
-          motivo:     `Devolución aprobada ${dev.numero} — pedido ${dev.numeroPedido}`,
-        });
+        try {
+          await registrarSalida({
+            tipo:       "devolución",
+            idProducto: prod.idProducto,
+            cantidad:   prod.cantidad,
+            motivo:     `Devolución aprobada ${dev.numero} — pedido ${dev.numeroPedido}`,
+          });
+        } catch (_) {
+          salidasOk = false;
+        }
       }
 
       window.dispatchEvent(new Event('credito-updated'));
       await cargarDatos();
-      showToast("Devolución aprobada y reembolso procesado");
+      if (salidasOk) {
+        showToast("Devolución aprobada y reembolso procesado");
+      } else {
+        showToast("Devolución aprobada, pero hubo un error al registrar la salida de inventario", "warn");
+      }
       setModal(null);
     } catch (err) {
       showToast(err.message || "Error al aprobar devolución", "error");
