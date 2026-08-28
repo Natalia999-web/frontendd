@@ -677,7 +677,7 @@ export default function GestionDevoluciones() {
         </div>
       </div>
 
-      {modal?.type === "crear"    && <CrearDevolucion onClose={() => setModal(null)} onSave={handleCrear} saving={actionSaving} />}
+      {modal?.type === "crear"    && <CrearDevolucion onClose={() => setModal(null)} onSave={handleCrear} saving={actionSaving} devoluciones={devoluciones} />}
       {modal?.type === "ver"      && <ModalVerDevolucion dev={modal.dev} creditoCliente={creditoVer} onClose={() => setModal(null)} />}
       {modal?.type === "aprobar"  && <ModalAprobar  dev={modal.dev} onClose={() => setModal(null)} onConfirm={handleAprobar} />}
       {modal?.type === "rechazar" && <ModalRechazar dev={modal.dev} onClose={() => setModal(null)} onConfirm={handleRechazar} />}

@@ -95,7 +95,7 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
         <div style={{ maxHeight: 220, overflowY: "auto", borderTop: "1px solid #f0f0f0" }}>
           {filtered.length === 0 ? (
             <div style={{ padding: "14px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
-              {query ? `Sin resultados para "${query}"` : pedidos.length === 0 ? "Sin pedidos entregados disponibles" : "Escribe para buscar…"}
+              {query ? `Sin resultados para "${query}"` : pedidos.length === 0 ? "Sin pedidos con productos devolvibles" : "Escribe para buscar…"}
             </div>
           ) : filtered.map(p => (
             <button
@@ -261,7 +261,7 @@ function ProdItem({ item, idx, onSet }) {
 }
 
 /* ─── COMPONENTE PRINCIPAL ───────────────────────────────── */
-export default function CrearDevolucion({ onClose, onSave, saving }) {
+export default function CrearDevolucion({ onClose, onSave, saving, devoluciones = [] }) {
   const [pedidosEntregados, setPedidosEntregados] = useState([]);
   const [loadError,         setLoadError]         = useState("");
   const [loadingPedidos,    setLoadingPedidos]    = useState(true);
@@ -276,6 +276,28 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
   };
 
   useEffect(() => { cargarPedidos(); }, []);
+
+  // Calcula la cantidad aún devolvible por producto en un pedido,
+  // descontando lo que ya fue aprobado o está pendiente de aprobación.
+  const calcRestantes = (pedido) => {
+    const devsDelPedido = devoluciones.filter(
+      d => String(d.idVenta) === String(pedido.id) && d.estado !== "Rechazada"
+    );
+    return (pedido.productosItems || []).map(p => {
+      const yaDevuelto = devsDelPedido.reduce((sum, dev) => {
+        const encontrado = (dev.productos || []).find(
+          dp => String(dp.idProducto) === String(p.idProducto)
+        );
+        return sum + (encontrado ? encontrado.cantidad : 0);
+      }, 0);
+      return { ...p, cantMax: Math.max(0, p.cantidad - yaDevuelto) };
+    });
+  };
+
+  // Solo mostrar pedidos que tengan al menos 1 producto aún devolvible
+  const pedidosDisponibles = pedidosEntregados.filter(ped =>
+    calcRestantes(ped).some(p => p.cantMax > 0)
+  );
 
   const [idPedido,   setIdPedido]   = useState("");
   const [motivo,     setMotivo]     = useState("");
@@ -292,14 +314,17 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
     setErrors((e) => ({ ...e, idPedido: val ? "" : "Debes seleccionar un pedido" }));
     const ped = pedidosEntregados.find((p) => String(p.id) === String(val));
     if (ped) {
+      const restantes = calcRestantes(ped);
       setItems(
-        (ped.productosItems || []).map((p) => ({
-          idProducto: p.idProducto,
-          nombre:     p.nombre,
-          precio:     Number(p.precio) || 0,
-          cantMax:    p.cantidad,
-          cantidad:   0,
-        }))
+        restantes
+          .filter(p => p.cantMax > 0)  // ocultar productos ya totalmente devueltos
+          .map((p) => ({
+            idProducto: p.idProducto,
+            nombre:     p.nombre,
+            precio:     Number(p.precio) || 0,
+            cantMax:    p.cantMax,
+            cantidad:   0,
+          }))
       );
     } else {
       setItems([]);
@@ -411,7 +436,7 @@ export default function CrearDevolucion({ onClose, onSave, saving }) {
                 </label>
                 <PedidoSelect
                   value={idPedido}
-                  pedidos={pedidosEntregados}
+                  pedidos={pedidosDisponibles}
                   error={errors.idPedido}
                   disabled={loadingPedidos}
                   onChange={handleSelectPedido}
