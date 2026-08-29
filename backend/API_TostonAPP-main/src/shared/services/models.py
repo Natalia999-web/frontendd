@@ -459,6 +459,9 @@ class Domicilio(Base):
     Fecha_asignacion     = Column(DateTime)
     Fecha_entrega        = Column(DateTime)
     Observaciones        = Column(Text)
+    # Quién registró el cobro en efectivo, cuándo y por cuánto. Vive aparte de
+    # Observaciones porque eso es texto que el cliente escribe y lee.
+    Cobro_Auditoria      = Column(Text, nullable=True)
     Estado               = Column(Integer, ForeignKey("Estados.ID_Estados"))
     Direccion_entrega    = Column(String(50))
     Municipio_entrega    = Column(String(25))

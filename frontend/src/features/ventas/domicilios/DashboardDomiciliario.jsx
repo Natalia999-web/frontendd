@@ -10,12 +10,6 @@ import {
 } from "lucide-react";
 
 
-const DISPONIBILIDAD = {
-  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", dot: "#2e7d32" },
-  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", dot: "#e65100" },
-  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", dot: "#616161" },
-};
-
 // Prioridad para elegir el pedido en curso: primero el que ya va en ruta.
 const ESTADO_ORDEN = [
   ESTADO_DOMICILIO.EN_CAMINO,
@@ -38,18 +32,10 @@ const esHoy = (iso) => {
 
 export default function DashboardDomiciliario() {
   const user = getUser();
-  const [status, setStatus] = useState(
-    localStorage.getItem("domiciliario_status") || "disponible"
-  );
   const [resumen, setResumen]       = useState({ activos: 0, entregados_hoy: 0, total_hoy: 0 });
   const [ordenActiva, setOrdenActiva] = useState(null);
   const [loading, setLoading]       = useState(true);
   const [efectivoHoy, setEfectivoHoy] = useState(0);
-
-  const cambiarStatus = (val) => {
-    setStatus(val);
-    localStorage.setItem("domiciliario_status", val);
-  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -131,30 +117,6 @@ export default function DashboardDomiciliario() {
             </div>
           </div>
 
-          <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "14px 18px", minWidth: 220 }}>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 10, fontWeight: 700, letterSpacing: "0.05em" }}>
-              MI ESTADO
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {Object.entries(DISPONIBILIDAD).map(([key, cfg]) => (
-                <button
-                  key={key}
-                  onClick={() => cambiarStatus(key)}
-                  style={{
-                    padding: "6px 12px", borderRadius: 20, border: "none",
-                    background: status === key ? "#fff" : "rgba(255,255,255,0.2)",
-                    color: status === key ? cfg.color : "rgba(255,255,255,0.9)",
-                    fontWeight: 700, fontSize: 12, cursor: "pointer",
-                    transition: "all 0.15s",
-                    display: "flex", alignItems: "center", gap: 6,
-                  }}
-                >
-                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: cfg.dot }} />
-                  {cfg.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* ── Stats del día ── */}

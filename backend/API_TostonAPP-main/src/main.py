@@ -76,6 +76,11 @@ def migrate_db():
             # Pago mixto: cuánto del pedido va en efectivo y cuánto por transferencia
             "ALTER TABLE Ventas ADD COLUMN Monto_Efectivo DECIMAL(30,2) NULL",
             "ALTER TABLE Ventas ADD COLUMN Monto_Transferencia DECIMAL(30,2) NULL",
+            # La auditoría del cobro en efectivo se escribía dentro de
+            # Domicilios.Observaciones, que es texto que lee el cliente: las
+            # indicaciones de entrega terminaban mezcladas con líneas
+            # [COBRO|...]. Ahora tiene su propio campo.
+            "ALTER TABLE Domicilios ADD COLUMN Cobro_Auditoria TEXT NULL",
             """CREATE TABLE IF NOT EXISTS Lote_Producto (
                 ID_Lote_Producto    INT AUTO_INCREMENT PRIMARY KEY,
                 ID_Orden_Produccion INT,

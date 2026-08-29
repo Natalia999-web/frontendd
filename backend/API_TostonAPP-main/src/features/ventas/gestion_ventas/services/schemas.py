@@ -82,6 +82,11 @@ class VentaResponse(BaseModel):
     ID_Venta:               int
     ID_Usuario:             Optional[int]      = None
     nombre_cliente:         Optional[str]      = None
+    # El service los arma desde hace rato, pero sin declararlos acá Pydantic
+    # los borraba de la respuesta y las vistas mostraban el cliente sin datos
+    # de contacto.
+    correo_cliente:         Optional[str]      = None
+    telefono_cliente:       Optional[str]      = None
     Total:                  Optional[Decimal]  = None
     subtotal_bruto:         Optional[Decimal]  = None
     credito_aplicado:       Optional[Decimal]  = None
