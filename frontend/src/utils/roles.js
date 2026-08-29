@@ -19,6 +19,24 @@ export const esRolRepartidor = (rol) => {
 };
 
 /**
+ * ¿Este empleado puede llevar un domicilio?
+ *
+ * Los paneles armaban su propia lista a mano y metían a los administradores
+ * (`idRol === 1`, "admin", "administrador"), así que "Administrador Toston"
+ * aparecía como opción al asignar repartidor. Además no coincidían entre sí en
+ * el id del rol de reparto: uno usaba 4 y el otro 3, que es otro rol.
+ *
+ * El 4 es el rol de reparto que trae el sistema, pero se pueden crear otros
+ * desde Configuración → Roles, así que también se reconoce por el nombre —
+ * misma regla que el backend en domicilios/services/router.py.
+ */
+export const esEmpleadoRepartidor = (u) =>
+  !!u &&
+  u.tipo === "empleado" &&
+  !!u.estado &&
+  (u.idRol === 4 || esRolRepartidor(u.rol));
+
+/**
  * Lo único que un repartidor puede abrir dentro de /admin: su propio panel.
  * Fuera de aquí no tiene nada que ver — ni pedidos ajenos, ni los domicilios
  * de sus compañeros.
