@@ -29,6 +29,7 @@ from src.features.ventas.pedidos.services.estados import (
     EstadoPedido, ESTADOS_STOCK_DESCONTADO_PICKUP, validar_transicion,
 )
 from .schemas import VentaCreate, DomicilioVentaInput
+from src.shared.services.observaciones_utils import observaciones_limpias
 
 # Costo fijo de domicilio (COP)
 COSTO_DOMICILIO = Decimal("5000")
@@ -281,7 +282,9 @@ def _formato_venta(venta: Venta, db: Session, *, dxv_map=None) -> dict:
         "direccion_entrega":            domicilio.Direccion_entrega      if domicilio else None,
         "municipio_entrega":            domicilio.Municipio_entrega      if domicilio else None,
         "departamento_entrega":         domicilio.Departamento_entrega   if domicilio else None,
-        "observaciones_domicilio":      domicilio.Observaciones          if domicilio else None,
+        # Mismo filtro que en domicilios: el resumen del pedido mostraba la
+        # línea [COBRO|...] pegada a las notas del cliente.
+        "observaciones_domicilio":      observaciones_limpias(domicilio.Observaciones) if domicilio else None,
         "nombre_domiciliario":          domiciliario,
         "ID_Empleado":                  domicilio.ID_Empleado if domicilio else None,
         "ordenes_produccion_pendientes": ordenes_pendientes,
@@ -543,7 +546,7 @@ def _batch_ventas(ventas: list, db: Session) -> list:
             "direccion_entrega":            dom.Direccion_entrega    if dom else None,
             "municipio_entrega":            dom.Municipio_entrega    if dom else None,
             "departamento_entrega":         dom.Departamento_entrega if dom else None,
-            "observaciones_domicilio":      dom.Observaciones        if dom else None,
+            "observaciones_domicilio":      observaciones_limpias(dom.Observaciones) if dom else None,
             "nombre_domiciliario":          domiciliario,
             "ID_Empleado":                  dom.ID_Empleado if dom else None,
             "ordenes_produccion_pendientes": ordenes_counts.get(venta.ID_Venta, 0),

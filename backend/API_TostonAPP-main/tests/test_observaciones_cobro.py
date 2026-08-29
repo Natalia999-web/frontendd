@@ -16,7 +16,7 @@ for k, v in [("DB_USER", "u"), ("DB_PASSWORD", "p"), ("DB_HOST", "localhost"),
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.features.ventas.domicilios.services.service import _observaciones_limpias
+from src.shared.services.observaciones_utils import observaciones_limpias as _observaciones_limpias
 
 COBRO = "[COBRO|2026-08-27T15:00:00|usuario:4|recibido:true|monto:22500.0]"
 NO_COBRO = "[COBRO|2026-08-27T15:00:00|usuario:4|recibido:false|motivo:no estaba]"
@@ -64,6 +64,29 @@ class ObservacionesLimpiasTests(unittest.TestCase):
     def test_vacio_y_nulo(self):
         self.assertIsNone(_observaciones_limpias(None))
         self.assertEqual(_observaciones_limpias(""), "")
+
+
+class TodasLasLecturasFiltranTests(unittest.TestCase):
+    """El filtro tiene que estar en TODAS las respuestas que sirven el campo.
+
+    La primera vez se aplicó solo en el módulo de domicilios y el resumen del
+    pedido —que arma su propio diccionario en gestion_ventas— siguió mostrando
+    la línea. Por eso el helper vive en shared: para que no haya dos copias que
+    se puedan desincronizar.
+    """
+
+    def test_los_dos_modulos_usan_el_mismo_helper(self):
+        from src.features.ventas.domicilios.services import service as dom
+        from src.features.ventas.gestion_ventas.services import service as gv
+
+        esperado = "src.shared.services.observaciones_utils"
+        self.assertEqual(dom.observaciones_limpias.__module__, esperado)
+        self.assertEqual(gv.observaciones_limpias.__module__, esperado)
+
+    def test_el_caso_reportado(self):
+        """Lo que se veía en el resumen del pedido."""
+        sucio = f"NO olvidar cobrar\n{COBRO}"
+        self.assertEqual(_observaciones_limpias(sucio), "NO olvidar cobrar")
 
 
 if __name__ == "__main__":

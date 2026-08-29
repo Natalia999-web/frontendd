@@ -81,6 +81,15 @@ def migrate_db():
             # indicaciones de entrega terminaban mezcladas con líneas
             # [COBRO|...]. Ahora tiene su propio campo.
             "ALTER TABLE Domicilios ADD COLUMN Cobro_Auditoria TEXT NULL",
+            # Y se limpia de una vez lo que quedó guardado antes, para que
+            # no dependa de que todas las lecturas acuerden filtrarlo.
+            # REGEXP_REPLACE es de MySQL 8; si el motor es más viejo esta
+            # sentencia se salta y el filtro de lectura sigue cubriendo.
+            r"""UPDATE Domicilios
+               SET Observaciones = NULLIF(TRIM(
+                     REGEXP_REPLACE(Observaciones, '\\n?\\[COBRO\\|[^]]*\\]', '')
+                   ), '')
+               WHERE Observaciones LIKE '%[COBRO|%'""",
             """CREATE TABLE IF NOT EXISTS Lote_Producto (
                 ID_Lote_Producto    INT AUTO_INCREMENT PRIMARY KEY,
                 ID_Orden_Produccion INT,
