@@ -44,14 +44,22 @@
   position: relative;
   z-index: 100;
 }
-.search-wrap { flex:1; min-width:200px; position:relative; }
-.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#9e9e9e; font-size:16px; pointer-events:none; display:flex; align-items:center; }
-.search-input {
-  width:100%; padding:12px 14px 12px 42px; border-radius:10px; border:1.5px solid #e0e0e0;
-  font-size:14px; outline:none; font-family:inherit; color:#1a1a1a; background:#fff;
-  transition:border 0.18s; box-sizing:border-box;
+/* El CSS de este proyecto es global y hay 13 definiciones de .search-input
+   repartidas por los módulos, con paddings distintos (40px, 42px, 48px).
+   Gana la hoja que cargue de último, así que el icono quedaba pegado al texto
+   según por dónde hubiera entrado el usuario. Estas reglas van dentro de
+   .mod-domicilios: por especificidad siempre ganan, sin tocar otros módulos. */
+.mod-domicilios .search-wrap { flex:1; min-width:200px; position:relative; }
+.mod-domicilios .search-icon {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  color:#9e9e9e; pointer-events:none; display:flex; align-items:center;
 }
-.search-input:focus { border-color:var(--gb); }
+.mod-domicilios .search-input {
+  width:100%; padding:12px 14px 12px 44px; border-radius:10px; border:1.5px solid #e0e0e0;
+  font-size:14px; outline:none; font-family:inherit; color:#1a1a1a; background:#fff;
+  transition:border 0.18s; box-sizing:border-box; text-overflow:ellipsis;
+}
+.mod-domicilios .search-input:focus { border-color:var(--gb); }
 
 /* ═══════════════════════════════════════════════════
    TABLA

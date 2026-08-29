@@ -1,3 +1,4 @@
+import { esEmpleadoRepartidor } from "../../../utils/roles.js";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fmtFecha, getRecordDate } from "../../../utils/dateUtils.js";
@@ -965,7 +966,7 @@ function ModalErrorEstadoPedido({ mensaje, onClose }) {
   );
 }
 
-function ModalAsignarDomiciliario({ pedido, empleados, onClose, onConfirm }) {
+function ModalAsignarDomiciliario({ pedido, empleados, repartidores, onClose, onConfirm }) {
   const [empId, setEmpId] = useState(pedido.idEmpleado || "");
   const [error, setError] = useState("");
   const empActual = empleados.find(e => e.id === pedido.idEmpleado);
@@ -1028,7 +1029,7 @@ function ModalAsignarDomiciliario({ pedido, empleados, onClose, onConfirm }) {
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Seleccionar Nuevo Repartidor <span className="text-red-500">*</span></label>
             <SearchableSelect
-              options={empleados}
+              options={repartidores}
               value={empId}
               onChange={e => { setEmpId(e.target.value); setError(""); }}
               getValue={e => e.id}
@@ -1404,12 +1405,18 @@ function SkeletonRows({ cols = 8, rows = 5 }) {
    ═══════════════════════════════════════════════════════════ */
 export default function GestionPedidos() {
   const [usuarios, setUsuarios] = useState([]);
+  // Lista amplia: sirve para resolver el nombre de quien ya está asignado,
+  // incluso si es alguien que hoy no podría recibir una asignación nueva.
   const empleados = (usuarios || []).filter(u =>
     u.tipo === "empleado" && u.estado && (
       u.idRol === 1 || u.idRol === 4 ||
       ["admin", "administrador", "domiciliario"].includes((u.rol || "").toLowerCase())
     )
   );
+  // A quién SÍ se le puede asignar un domicilio. La lista de arriba incluye a
+  // los administradores a propósito, y por eso "Administrador Toston" salía
+  // como opción al elegir repartidor.
+  const repartidores = (usuarios || []).filter(esEmpleadoRepartidor);
 
   const [pedidos,      setPedidos]      = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -2183,7 +2190,7 @@ export default function GestionPedidos() {
       {modal?.type === "ver" && <ModalVerPedido pedido={modal.pedido} empleados={empleados} onClose={() => setModal(null)} onEdit={(ped) => setModal({ type: "editar", pedido: ped })} />}
       {modal?.type === "confirmarEstado" && <ModalConfirmarEstado pedido={modal.pedido} nuevoEstado={modal.nuevoEstado} onClose={() => setModal(null)} onConfirm={handleConfirmarCambioEstado} />}
       {modal?.type === "cancelar" && <ModalCancelarPedido pedido={modal.pedido} saving={actionSaving} onClose={() => setModal(null)} onConfirm={handleConfirmarCancelacion} />}
-      {modal?.type === "asignarDomiciliario" && <ModalAsignarDomiciliario pedido={modal.pedido} empleados={empleados} onClose={() => setModal(null)} onConfirm={handleAsignarDomiciliario} />}
+      {modal?.type === "asignarDomiciliario" && <ModalAsignarDomiciliario pedido={modal.pedido} empleados={empleados} repartidores={repartidores} onClose={() => setModal(null)} onConfirm={handleAsignarDomiciliario} />}
       {modal?.type === "crear" && <CrearPedido onClose={() => setModal(null)} onSave={handleCrearPedido} />}
       {modal?.type === "editar" && <EditarPedido pedido={modal.pedido} onClose={() => setModal(null)} onSave={handleEditarPedido} />}
       {modal?.type === "eliminar" && <ModalEliminarPedido pedido={modal.pedido} onClose={() => setModal(null)} onConfirm={handleEliminarPedido} />}

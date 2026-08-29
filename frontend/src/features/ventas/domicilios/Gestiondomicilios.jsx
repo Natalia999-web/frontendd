@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { esEmpleadoRepartidor } from "../../../utils/roles.js";
 import { useNavigate, Navigate } from "react-router-dom";
 import {
   Search, Bike, Package, CheckCircle2, XCircle, Clock,
@@ -785,7 +786,7 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
 /* ═══════════════════════════════════════════════════════════
    MODAL REASIGNAR DOMICILIARIO
    ═══════════════════════════════════════════════════════════ */
-function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
+function ModalReasignar({ pedido, empleados, repartidores, onClose, onConfirm }) {
   const [empId, setEmpId] = useState(pedido.idEmpleado || "");
   const [error, setError] = useState("");
   const empActual = empleados.find(e => e.id === pedido.idEmpleado);
@@ -830,7 +831,7 @@ function ModalReasignar({ pedido, empleados, onClose, onConfirm }) {
             <label className="form-label">Nuevo domiciliario <span className="required">*</span></label>
             <SearchableSelect
               className={`field-select${error ? " error" : ""}`}
-              options={empleados}
+              options={repartidores}
               value={empId}
               onChange={e => { setEmpId(e.target.value); setError(""); }}
               getValue={e => e.id}
@@ -1004,6 +1005,7 @@ function HistorialDomiciliario({ domicilios, empleados, onDesactivar }) {
 export default function GestionDomicilios() {
   const [domicilios,   setDomicilios]   = useState([]);
   const [empleados,    setEmpleados]    = useState([]);
+  const [repartidores, setRepartidores] = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [errorCarga,   setErrorCarga]   = useState(null);
   const [actionSaving, setActionSaving] = useState(false);
@@ -1032,12 +1034,17 @@ export default function GestionDomicilios() {
         getUsuarios({ porPagina: 100 }).catch(() => []),
       ]);
       setDomicilios(dData.domicilios);
+      // Lista amplia: resuelve el nombre de quien ya está asignado.
       setEmpleados((uData || []).filter(u =>
         u.tipo === "empleado" && u.estado && (
-          u.idRol === 1 || u.idRol === 3 ||
+          u.idRol === 1 || u.idRol === 4 ||
           ["admin", "administrador", "domiciliario"].includes((u.rol || "").toLowerCase())
         )
       ));
+      // A quién SÍ se le puede asignar: sin administradores. Antes la lista
+      // de arriba alimentaba el selector, así que salía "Administrador Toston"
+      // como opción, y además filtraba por idRol 3, que es otro rol.
+      setRepartidores((uData || []).filter(esEmpleadoRepartidor));
     } catch (err) {
       // Antes solo salía un toast y la tabla mostraba "No hay domicilios
       // registrados", que es falso cuando lo que falló fue la carga.
@@ -1564,6 +1571,7 @@ export default function GestionDomicilios() {
         <ModalReasignar
           pedido={modal.pedido}
           empleados={empleados}
+          repartidores={repartidores}
           onClose={() => setModal(null)}
           onConfirm={handleReasignar}
         />
