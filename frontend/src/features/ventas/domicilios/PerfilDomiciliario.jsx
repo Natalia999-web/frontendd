@@ -3,12 +3,6 @@ import { apiFetch } from "../../../utils/api";
 import "./Domicilios.css";
 import { X, Check, Clock } from "lucide-react";
 
-const DISPONIBILIDAD = {
-  disponible:   { label: "Disponible",   color: "#2e7d32", bg: "#e8f5e9", dot: "#2e7d32" },
-  ocupado:      { label: "Ocupado",      color: "#e65100", bg: "#fff3e0", dot: "#e65100" },
-  desconectado: { label: "Desconectado", color: "#616161", bg: "#f5f5f5", dot: "#616161" },
-};
-
 function Toast({ toast }) {
   if (!toast) return null;
   return (
@@ -25,10 +19,6 @@ export default function PerfilDomiciliario() {
   const [saving,   setSaving]   = useState(false);
   const [editando, setEditando] = useState(false);
   const [toast,    setToast]    = useState(null);
-  const [status,   setStatus]   = useState(
-    localStorage.getItem("domiciliario_status") || "disponible"
-  );
-
   const [form, setForm] = useState({ Telefono: "" });
 
   const showToast = (msg, type = "success") => {
@@ -50,11 +40,6 @@ export default function PerfilDomiciliario() {
   };
 
   useEffect(() => { cargar(); }, []);
-
-  const cambiarStatus = (val) => {
-    setStatus(val);
-    localStorage.setItem("domiciliario_status", val);
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -80,7 +65,6 @@ export default function PerfilDomiciliario() {
 
   const fotoUrl = perfil?.Foto_perfil;
   const iniciales = perfil ? `${perfil.Nombre?.[0] || ""}${perfil.Apellidos?.[0] || ""}`.toUpperCase() : "?";
-  const statusInfo = DISPONIBILIDAD[status] || DISPONIBILIDAD.disponible;
 
   if (loading) return (
     <div className="page-wrapper">
@@ -125,40 +109,6 @@ export default function PerfilDomiciliario() {
                 {perfil?.Nombre} {perfil?.Apellidos}
               </div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>Domiciliario</div>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                marginTop: 10, padding: "5px 12px", borderRadius: 20,
-                background: "rgba(255,255,255,0.2)", fontSize: 12, fontWeight: 700,
-              }}>
-                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: statusInfo.dot }} />
-                {statusInfo.label}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Estado de disponibilidad ── */}
-          <div style={{ background: "#fff", borderRadius: 16, padding: "20px 22px", border: "1.5px solid #f0f0f0" }}>
-            <div style={{ fontSize: 11, color: "#9e9e9e", fontWeight: 700, marginBottom: 14, letterSpacing: "0.05em" }}>
-              ESTADO DE DISPONIBILIDAD
-            </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {Object.entries(DISPONIBILIDAD).map(([key, cfg]) => (
-                <button
-                  key={key}
-                  onClick={() => cambiarStatus(key)}
-                  style={{
-                    flex: 1, minWidth: 110, padding: "10px 12px", borderRadius: 10,
-                    border: status === key ? `2px solid ${cfg.color}` : "1.5px solid #e0e0e0",
-                    background: status === key ? cfg.bg : "#fafafa",
-                    color: status === key ? cfg.color : "#616161",
-                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  }}
-                >
-                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: cfg.dot }} />
-                  {cfg.label}
-                </button>
-              ))}
             </div>
           </div>
 
