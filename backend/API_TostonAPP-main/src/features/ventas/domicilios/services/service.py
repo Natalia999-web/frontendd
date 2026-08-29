@@ -12,6 +12,7 @@ from src.shared.services.models import (
 )
 from src.shared.services.notificaciones_utils import notificar, notificar_stock_producto
 from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
+from src.shared.services.observaciones_utils import observaciones_limpias
 from .estados import (
     EstadoDomicilio, ESTADO_DOM_A_VENTA, normalizar_estado, puede_reasignarse,
     validar_cambio,
@@ -44,26 +45,6 @@ def _otp_nuevo() -> str:
 def _label_estado(db: Session, id_estado: int) -> str:
     estado = db.query(Estado).filter(Estado.ID_Estados == id_estado).first()
     return estado.Estado if estado else None
-
-
-_LINEA_COBRO = re.compile(r"^\s*\[COBRO\|.*?\]\s*$", re.MULTILINE)
-
-
-def _observaciones_limpias(texto: str | None) -> str | None:
-    """Las observaciones del cliente, sin las líneas de auditoría del cobro.
-
-    Hasta ahora el registro del cobro se guardaba dentro de este mismo campo,
-    así que las entregas ya cobradas tienen pegado un `[COBRO|fecha|usuario:…]`
-    que el cliente y el repartidor ven como si fuera parte de las indicaciones.
-    Los registros nuevos ya no lo escriben acá; esto limpia los viejos al
-    leerlos, sin tener que tocar la base.
-    """
-    if not texto:
-        return texto
-    limpio = _LINEA_COBRO.sub("", texto)
-    # Sacar la línea deja un renglón vacío en medio del texto del cliente.
-    limpio = re.sub(r"\n{2,}", "\n", limpio).strip()
-    return limpio or None
 
 
 def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
@@ -118,7 +99,7 @@ def _formato_domicilio(dom: Domicilio, db: Session) -> dict:
         "nombre_repartidor":    f"{repartidor.Nombre} {repartidor.Apellidos}" if repartidor else None,
         "Fecha_asignacion":     dom.Fecha_asignacion,
         "Fecha_entrega":        dom.Fecha_entrega,
-        "Observaciones":        _observaciones_limpias(dom.Observaciones),
+        "Observaciones":        observaciones_limpias(dom.Observaciones),
         # Indicaciones de entrega tomadas del perfil del cliente (Usuarios.Indicaciones),
         # que es donde el cliente las registra. Separado de Observaciones (nota por-entrega).
         "indicaciones_cliente": cliente.Indicaciones if cliente else None,
@@ -322,7 +303,7 @@ def obtener_domicilios(
             "nombre_repartidor":    f"{repartidor.Nombre} {repartidor.Apellidos}" if repartidor else None,
             "Fecha_asignacion":     dom.Fecha_asignacion,
             "Fecha_entrega":        dom.Fecha_entrega,
-            "Observaciones":        _observaciones_limpias(dom.Observaciones),
+            "Observaciones":        observaciones_limpias(dom.Observaciones),
             "indicaciones_cliente": cliente.Indicaciones if cliente else None,
             "Estado":               estado_canonico,
             "estado_label":         estado_obj.Estado if estado_obj else None,
