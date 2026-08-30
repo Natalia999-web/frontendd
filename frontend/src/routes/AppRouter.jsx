@@ -78,6 +78,14 @@ function CocinaRoute() {
   return <DashboardCocina />;
 }
 
+function ReportesRoute() {
+  const user = getUser();
+  if (user?.rol?.toLowerCase() === "cocinero") {
+    return <Reportes />;
+  }
+  return <PR clave="Dashboard_ver" el={<Reportes />} />;
+}
+
 /* Redirige domiciliarios a su dashboard; el resto ve el Dashboard general */
 function DashboardIndex() {
   const user = getUser();
@@ -127,7 +135,7 @@ const AppRouter = () => {
             <Route path="clientes"      element={<PR clave="Pedidos_ver"      el={<GestionClientes />} />} />
             <Route path="pedidos"       element={<PR clave="Pedidos_ver"      el={<GestionPedidos />} />} />
             <Route path="liquidaciones" element={<PR clave="Domicilios_ver"   el={<GestionLiquidaciones />} />} />
-            <Route path="reportes"      element={<PR clave="Dashboard_ver"    el={<Reportes />} />} />
+            <Route path="reportes"      element={<ReportesRoute />} />
             <Route path="devoluciones"  element={<PR clave="Devoluciones_ver" el={<GestionDevoluciones />} />} />
             <Route path="domicilios"           element={<PR clave="Domicilios_ver"            el={<GestionDomicilios />} />} />
             {/* Panel propio del repartidor: entra por rol, no por privilegio
