@@ -160,7 +160,6 @@ export default function Reportes() {
     <div className="rep-wrapper">
       <div className="rep-header">
         <h1 className="rep-title">Reportes e Indicadores</h1>
-        <div className="rep-line" />
       </div>
 
       <div className="rep-inner">
@@ -168,7 +167,7 @@ export default function Reportes() {
         {/* Selector de período */}
         <div className="rep-period-row">
           <span style={{ fontSize: 11, fontWeight: 700, color: "#9e9e9e", letterSpacing: ".06em", textTransform: "uppercase" }}>Período</span>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {PERIODOS.map((p) => (
               <button
                 key={p.id}

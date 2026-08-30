@@ -61,6 +61,7 @@ const adminMenuItems = [
       { label: "Gestión de Productos",   Icon: Box,           link: "/admin/products",             privilegioKey: "GestionProductos" },
       { label: "Órdenes de Producción",  Icon: ClipboardList, link: "/admin/ordenes-produccion",   privilegioKey: "OrdenesProduccion" },
       { label: "Cocina",                 Icon: Utensils,      link: "/admin/cocina",               roleRequired: "Cocinero" },
+      { label: "Reportes",               Icon: BarChart2,     link: "/admin/reportes",             roleRequired: "Cocinero" },
     ],
   },
   {
