@@ -6,7 +6,7 @@ import { getPedidos, cambiarEstadoVenta, cancelarPedido } from "../../../service
 import { getOrdenes, cambiarEstadoOrden } from "../../../services/ordenesProduccionService.js";
 import { getInsumos } from "../../../services/insumosService.js";
 import "./DashboardCocina.css";
-import { Search, Check, X, Clock, Package, Flame } from "lucide-react";
+import { Search, Check, X, Clock, Package, Flame, AlertTriangle } from "lucide-react";
 
 // Pendiente aparece en la lista (el cocinero ve que viene) pero sin botón de acción;
 // el botón "Iniciar preparación" solo se activa desde Confirmado (la transición 1→13
@@ -14,7 +14,6 @@ import { Search, Check, X, Clock, Package, Flame } from "lucide-react";
 const ESTADOS_ACTIVOS_COCINA  = ["Pendiente", "Confirmado", "En producción", "Listo"];
 const ESTADOS_ORDENES_ACTIVAS = ["Pendiente", "En proceso"];
 
-// Mapa explícito para evitar problemas con tildes y espacios en class names
 const ESTADO_BADGE_CLASS = {
   "Pendiente":     "state--pendiente",
   "Confirmado":    "state--confirmado",
@@ -66,15 +65,15 @@ export default function DashboardCocina() {
   const { notificaciones } = useNotificaciones();
   const detalleRef = useRef(null);
 
-  const [pedidos,       setPedidos]       = useState([]);
-  const [ordenes,       setOrdenes]       = useState([]);
-  const [insumos,       setInsumos]       = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [errorCarga,    setErrorCarga]    = useState(null);
-  const [errorAccion,   setErrorAccion]   = useState(null);
+  const [pedidos,        setPedidos]        = useState([]);
+  const [ordenes,        setOrdenes]        = useState([]);
+  const [insumos,        setInsumos]        = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [errorCarga,     setErrorCarga]     = useState(null);
+  const [errorAccion,    setErrorAccion]    = useState(null);
   const [selectedPedido, setSelectedPedido] = useState(null);
-  const [search,        setSearch]        = useState("");
-  const [filterEstado,  setFilterEstado]  = useState("todos");
+  const [search,         setSearch]         = useState("");
+  const [filterEstado,   setFilterEstado]   = useState("todos");
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -98,11 +97,10 @@ export default function DashboardCocina() {
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   const cocinaPedidos        = pedidos.filter(p => ESTADOS_ACTIVOS_COCINA.includes(p.estado));
-
-  const q = search.trim().toLowerCase();
-  const pedidosFiltrados = cocinaPedidos.filter(p => {
-    const matchEstado  = filterEstado === "todos" || p.estado === filterEstado;
-    const matchSearch  = !q
+  const q                    = search.trim().toLowerCase();
+  const pedidosFiltrados     = cocinaPedidos.filter(p => {
+    const matchEstado = filterEstado === "todos" || p.estado === filterEstado;
+    const matchSearch = !q
       || String(p.numero || "").toLowerCase().includes(q)
       || (p.cliente?.nombre || "").toLowerCase().includes(q);
     return matchEstado && matchSearch;
@@ -137,8 +135,10 @@ export default function DashboardCocina() {
 
   // Solo Confirmado→13 y En producción→11 son transiciones válidas en el backend
   const handleAvanzarPedido = async (pedido) => {
-    const siguienteId = pedido.estado === "Confirmado"     ? 13
-      : pedido.estado === "En producción" ? 11
+    const siguienteId = pedido.estado === "Confirmado"
+      ? 13
+      : pedido.estado === "En producción"
+      ? 11
       : null;
     if (!siguienteId) return;
     setErrorAccion(null);
@@ -194,354 +194,335 @@ export default function DashboardCocina() {
 
   return (
     <div className="cocina-wrapper">
-      <header className="cocina-header">
-        <div>
-          <p className="cocina-eyebrow">Panel de cocina</p>
-          <h1 className="cocina-title">Bienvenido, {user?.nombre || "Cocinero"}</h1>
-        </div>
-        <div className="cocina-top-badge">
-          <span className="cocina-top-badge__label">Pedidos activos</span>
-          <strong className="cocina-top-badge__num">{cocinaPedidos.length}</strong>
-        </div>
-      </header>
-
-      {/* ── Banner de error de acción (visible, persistente hasta que se cierre) ── */}
       {errorAccion && (
         <div className="cocina-error-banner" role="alert">
           <span>{errorAccion}</span>
-          <button className="cocina-error-close" onClick={() => setErrorAccion(null)} aria-label="Cerrar"><X size={16} /></button>
+          <button className="cocina-error-close" onClick={() => setErrorAccion(null)} aria-label="Cerrar">
+            <X size={16} />
+          </button>
         </div>
       )}
 
-      {/* ── Estadísticas rápidas ── */}
-      <section className="cocina-stats-grid">
-        <article className="ck-stat ck-stat--pending">
-          <div className="ck-stat__icon"><Clock size={20} /></div>
-          <div className="ck-stat__body">
-            <strong className="ck-stat__num">{pedidosPendientes.length}</strong>
-            <span className="ck-stat__label">Pendientes</span>
-          </div>
-        </article>
-        <article className="ck-stat ck-stat--confirmed">
-          <div className="ck-stat__icon"><Check size={20} /></div>
-          <div className="ck-stat__body">
-            <strong className="ck-stat__num">{pedidosConfirmados.length}</strong>
-            <span className="ck-stat__label">Confirmados</span>
-          </div>
-        </article>
-        <article className="ck-stat ck-stat--progress">
-          <div className="ck-stat__icon"><Flame size={20} /></div>
-          <div className="ck-stat__body">
-            <strong className="ck-stat__num">{pedidosEnPreparacion.length}</strong>
-            <span className="ck-stat__label">En preparación</span>
-          </div>
-        </article>
-        <article className="ck-stat ck-stat--ready">
-          <div className="ck-stat__icon"><Package size={20} /></div>
-          <div className="ck-stat__body">
-            <strong className="ck-stat__num">{pedidosListos.length}</strong>
-            <span className="ck-stat__label">Listos</span>
-          </div>
-        </article>
-        <article className="ck-stat ck-stat--avg-time">
-          <div className="ck-stat__icon"><Clock size={20} /></div>
-          <div className="ck-stat__body">
-            <strong className={`ck-stat__num${tiempoPromedio == null ? " ck-stat__num--empty" : ""}`}>
-              {tiempoPromedio != null ? formatDuration(tiempoPromedio) : "—"}
-            </strong>
-            <span className="ck-stat__label">Tiempo prom.</span>
-          </div>
-        </article>
-      </section>
+      <div className="cocina-layout">
+        {/* ── Área principal ── */}
+        <div className="cocina-main">
+          <header className="cocina-header">
+            <h1 className="cocina-title">Bienvenido, {user?.nombre || "Cocinero"}</h1>
+          </header>
 
-      {/* ── Pedidos de cocina ── */}
-      <section className="ck-section">
-        <div className="ck-section__header">
-          <div>
-            <h2 className="ck-section__title">Pedidos de cocina</h2>
-            <p className="ck-section__sub">Revisa pedidos listos para comenzar o continuar la preparación.</p>
-          </div>
-          <span className="ck-tag">Total {cocinaPedidos.length}</span>
-        </div>
-
-        {/* Barra de búsqueda y filtro de estado */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9e9e9e", pointerEvents: "none", display: "flex" }}><Search size={14} /></span>
-            <input
-              type="text"
-              placeholder="Buscar pedido o cliente…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: "100%", padding: "8px 10px 8px 30px",
-                border: "1.5px solid #e0e0e0", borderRadius: 8,
-                fontSize: 13, fontFamily: "inherit", outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-          {["todos", "Pendiente", "Confirmado", "En producción", "Listo"].map(est => (
-            <button
-              key={est}
-              onClick={() => setFilterEstado(est)}
-              style={{
-                padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-                border: filterEstado === est ? "1.5px solid #4caf50" : "1.5px solid #e0e0e0",
-                background: filterEstado === est ? "#e8f5e9" : "#fafafa",
-                color: filterEstado === est ? "#2e7d32" : "#616161",
-                cursor: "pointer", whiteSpace: "nowrap",
-              }}
-            >
-              {est === "todos" ? "Todos" : est}
-            </button>
-          ))}
-        </div>
-
-        <div className="pedido-cards-grid">
-          {pedidosFiltrados.length === 0 ? (
-            <div className="cocina-empty-state">
-              {cocinaPedidos.length === 0 ? "No hay pedidos activos en cocina." : "Sin resultados para esa búsqueda."}
-            </div>
-          ) : pedidosFiltrados.map(pedido => (
-            <article
-              key={pedido.id}
-              className={`pedido-card ${ESTADO_CARD_CLASS[pedido.estado] || ""}`}
-            >
-              <div className="pedido-card__header">
-                <div>
-                  <span className="pedido-number">#{pedido.numero}</span>
-                  <span className={`estado-badge ${ESTADO_BADGE_CLASS[pedido.estado] || ""}`}>
-                    {pedido.estado}
-                  </span>
-                </div>
-                <button className="ck-btn ck-btn--link" onClick={() => handleVerPedido(pedido.id)}>Ver</button>
-              </div>
-              <div className="pedido-card__body">
-                <p><strong>Cliente:</strong> {pedido.cliente?.nombre || "Cliente anónimo"}</p>
-                <p><strong>Hora:</strong> {fmtFecha(pedido.fecha_pedido)}</p>
-                <p><strong>Prioridad:</strong> {buildPriority(pedido)}</p>
-                <p><strong>Productos:</strong> {pedido.productosItems?.length || 0}</p>
-              </div>
-              <div className="pedido-card__actions">
-                {pedido.estado === "Confirmado" && (
-                  <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(pedido)}>
-                    Iniciar preparación
-                  </button>
-                )}
-                {pedido.estado === "En producción" && (
-                  <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(pedido)}>
-                    Marcar como listo
-                  </button>
-                )}
-                {pedido.estado === "Pendiente" && (
-                  <span className="ck-await-label">Esperando confirmación</span>
-                )}
-                {pedido.estado !== "Cancelado" && (
-                  <button className="ck-btn ck-btn--danger" onClick={() => handleCancelarPedido(pedido)}>
-                    Cancelar
-                  </button>
-                )}
+          {/* ── Estadísticas rápidas ── */}
+          <div className="cocina-stats-grid">
+            <article className="ck-stat ck-stat--pending">
+              <div className="ck-stat__icon"><Clock size={20} /></div>
+              <div className="ck-stat__body">
+                <strong className="ck-stat__num">{pedidosPendientes.length}</strong>
+                <span className="ck-stat__label">Pendientes</span>
               </div>
             </article>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Órdenes de producción + Alertas de inventario ── */}
-      <div className="cocina-two-col">
-        <section className="ck-section">
-          <div className="ck-section__header">
-            <div>
-              <h2 className="ck-section__title">Órdenes de producción</h2>
-              <p className="ck-section__sub">Controla insumos y completa las órdenes activas.</p>
-            </div>
-            <span className="ck-tag">{ordenesActivas.length} activas</span>
+            <article className="ck-stat ck-stat--confirmed">
+              <div className="ck-stat__icon"><Check size={20} /></div>
+              <div className="ck-stat__body">
+                <strong className="ck-stat__num">{pedidosConfirmados.length}</strong>
+                <span className="ck-stat__label">Confirmados</span>
+              </div>
+            </article>
+            <article className="ck-stat ck-stat--progress">
+              <div className="ck-stat__icon"><Flame size={20} /></div>
+              <div className="ck-stat__body">
+                <strong className="ck-stat__num">{pedidosEnPreparacion.length}</strong>
+                <span className="ck-stat__label">En preparación</span>
+              </div>
+            </article>
+            <article className="ck-stat ck-stat--ready">
+              <div className="ck-stat__icon"><Package size={20} /></div>
+              <div className="ck-stat__body">
+                <strong className="ck-stat__num">{pedidosListos.length}</strong>
+                <span className="ck-stat__label">Listos</span>
+              </div>
+            </article>
+            <article className="ck-stat ck-stat--avg-time">
+              <div className="ck-stat__icon"><Clock size={20} /></div>
+              <div className="ck-stat__body">
+                <strong className={`ck-stat__num${tiempoPromedio == null ? " ck-stat__num--empty" : ""}`}>
+                  {tiempoPromedio != null ? formatDuration(tiempoPromedio) : "—"}
+                </strong>
+                <span className="ck-stat__label">Tiempo prom.</span>
+              </div>
+            </article>
           </div>
-          {ordenesActivas.length === 0 ? (
-            <div className="cocina-empty-state">No hay órdenes de producción activas.</div>
-          ) : (
-            <div className="ordenes-grid">
-              {ordenesActivas.map(orden => (
-                <article key={orden.id} className="orden-card">
-                  <div className="orden-card__header">
+
+          {/* ── Pedidos de cocina ── */}
+          <section className="ck-section">
+            <div className="ck-section__header">
+              <div>
+                <h2 className="ck-section__title">Pedidos de cocina</h2>
+                <p className="ck-section__sub">Revisa pedidos listos para comenzar o continuar la preparación.</p>
+              </div>
+            </div>
+
+            <div className="ck-filter-bar">
+              <div className="ck-search-wrap">
+                <Search size={14} className="ck-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Buscar pedido o cliente…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="ck-search-input"
+                />
+              </div>
+              {["todos", "Pendiente", "Confirmado", "En producción", "Listo"].map(est => (
+                <button
+                  key={est}
+                  onClick={() => setFilterEstado(est)}
+                  className={`ck-filter-chip${filterEstado === est ? " ck-filter-chip--active" : ""}`}
+                >
+                  {est === "todos" ? "Todos" : est}
+                </button>
+              ))}
+            </div>
+
+            <div className="pedido-cards-grid">
+              {pedidosFiltrados.length === 0 ? (
+                <div className="cocina-empty-state" style={{ gridColumn: "1 / -1" }}>
+                  {cocinaPedidos.length === 0 ? "No hay pedidos activos en cocina." : "Sin resultados para esa búsqueda."}
+                </div>
+              ) : pedidosFiltrados.map(pedido => (
+                <article key={pedido.id} className={`pedido-card ${ESTADO_CARD_CLASS[pedido.estado] || ""}`}>
+                  <div className="pedido-card__header">
                     <div>
+                      <span className="pedido-number">#{pedido.numero}</span>
+                      <span className={`estado-badge ${ESTADO_BADGE_CLASS[pedido.estado] || ""}`}>
+                        {pedido.estado}
+                      </span>
+                    </div>
+                    <button className="ck-btn ck-btn--link" onClick={() => handleVerPedido(pedido.id)}>Ver</button>
+                  </div>
+                  <div className="pedido-card__body">
+                    <p><strong>Cliente:</strong> {pedido.cliente?.nombre || "Cliente anónimo"}</p>
+                    <p><strong>Hora:</strong> {fmtFecha(pedido.fecha_pedido)}</p>
+                    <p><strong>Prioridad:</strong> {buildPriority(pedido)}</p>
+                    <p><strong>Productos:</strong> {pedido.productosItems?.length || 0}</p>
+                  </div>
+                  <div className="pedido-card__actions">
+                    {pedido.estado === "Confirmado" && (
+                      <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(pedido)}>
+                        Iniciar preparación
+                      </button>
+                    )}
+                    {pedido.estado === "En producción" && (
+                      <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(pedido)}>
+                        Marcar como listo
+                      </button>
+                    )}
+                    {pedido.estado === "Pendiente" && (
+                      <span className="ck-await-label">Esperando confirmación</span>
+                    )}
+                    {pedido.estado !== "Cancelado" && (
+                      <button className="ck-btn ck-btn--danger" onClick={() => handleCancelarPedido(pedido)}>
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Fila inferior: Detalle + Historial + Notificaciones ── */}
+          <div className="cocina-three-col">
+            <section ref={detalleRef} className="ck-section">
+              <div className="ck-section__header">
+                <div>
+                  <h2 className="ck-section__title">Detalle del pedido</h2>
+                  <p className="ck-section__sub">Ver los productos, cantidades y notas de preparación.</p>
+                </div>
+              </div>
+              {selectedPedidoData ? (
+                <div className="detalle-pedido-card">
+                  <div className="detalle-pedido-row">
+                    <div>
+                      <p className="detalle-label">Pedido</p>
+                      <h3 className="detalle-pedido-num">#{selectedPedidoData.numero}</h3>
+                    </div>
+                    <div>
+                      <p className="detalle-label">Estado</p>
+                      <span className={`estado-badge ${ESTADO_BADGE_CLASS[selectedPedidoData.estado] || ""}`}>
+                        {selectedPedidoData.estado}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="detalle-pedido-grid">
+                    <div className="detalle-block">
+                      <p className="detalle-label">Cliente</p>
+                      <p>{selectedPedidoData.cliente?.nombre || "—"}</p>
+                      <p className="detalle-small">{selectedPedidoData.cliente?.telefono || ""}</p>
+                    </div>
+                    <div className="detalle-block">
+                      <p className="detalle-label">Código</p>
+                      <p>{selectedPedidoData.numero}</p>
+                    </div>
+                    <div className="detalle-block">
+                      <p className="detalle-label">Observaciones</p>
+                      <p>{selectedPedidoData.notas || "Sin observaciones"}</p>
+                    </div>
+                  </div>
+                  <div className="detalle-pedido-table-wrap">
+                    <table className="detalle-pedido-table">
+                      <thead>
+                        <tr>
+                          <th>Producto</th>
+                          <th>Cantidad</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedPedidoData.productosItems?.map((item, idx) => (
+                          <tr key={item.idProducto ?? idx}>
+                            <td>{item.nombre}</td>
+                            <td>{item.cantidad}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="detalle-pedido-actions">
+                    {selectedPedidoData.estado === "Confirmado" && (
+                      <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(selectedPedidoData)}>
+                        Iniciar preparación
+                      </button>
+                    )}
+                    {selectedPedidoData.estado === "En producción" && (
+                      <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(selectedPedidoData)}>
+                        Marcar como listo
+                      </button>
+                    )}
+                    {selectedPedidoData.estado === "Pendiente" && (
+                      <span className="ck-await-label">Esperando confirmación del administrador</span>
+                    )}
+                    {selectedPedidoData.estado !== "Cancelado" && (
+                      <button className="ck-btn ck-btn--danger" onClick={() => handleCancelarPedido(selectedPedidoData)}>
+                        Cancelar pedido
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="cocina-empty-state">Selecciona un pedido para ver sus detalles.</div>
+              )}
+            </section>
+
+            <section className="ck-section">
+              <div className="ck-section__header">
+                <div>
+                  <h2 className="ck-section__title">Historial de preparación</h2>
+                  <p className="ck-section__sub">Pedidos preparados, cancelados y tiempos registrados.</p>
+                </div>
+              </div>
+              <div className="history-list">
+                {historial.length === 0 ? (
+                  <div className="cocina-empty-state">Aún no hay historial de cocina.</div>
+                ) : historial.slice(0, 6).map(p => (
+                  <div key={p.id} className="history-item">
+                    <div>
+                      <strong>#{p.numero}</strong>
+                      <span className={`estado-badge ${ESTADO_BADGE_CLASS[p.estado] || ""}`}>
+                        {p.estado}
+                      </span>
+                    </div>
+                    <div>
+                      <span>{fmtFecha(p.fecha_pedido)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="ck-section">
+              <div className="ck-section__header">
+                <div>
+                  <h2 className="ck-section__title">Notificaciones de cocina</h2>
+                  <p className="ck-section__sub">Pedidos nuevos, cambios de estado y cancelaciones.</p>
+                </div>
+              </div>
+              {cocinaNotificaciones.length === 0 ? (
+                <div className="cocina-empty-state">No hay notificaciones nuevas.</div>
+              ) : (
+                <ul className="notifications-list">
+                  {cocinaNotificaciones.slice(0, 8).map(n => (
+                    <li key={n.id}>
+                      <p className="notif-title">{n.titulo}</p>
+                      <p className="notif-message">{n.mensaje}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        </div>
+
+        {/* ── Sidebar derecho ── */}
+        <aside className="cocina-sidebar">
+          <section className="ck-section">
+            <div className="ck-section__header">
+              <div>
+                <h2 className="ck-section__title">Ordenes de producción</h2>
+                <p className="ck-section__sub">Controla insumos y completa las órdenes activas.</p>
+              </div>
+              <span className="ck-tag">{ordenesActivas.length} activas</span>
+            </div>
+            {ordenesActivas.length === 0 ? (
+              <div className="cocina-empty-state">No hay órdenes de producción activas.</div>
+            ) : (
+              <div className="ordenes-grid">
+                {ordenesActivas.map(orden => (
+                  <article key={orden.id} className="orden-card">
+                    <div className="orden-card__header">
                       <span className="orden-id">Orden #{orden.id}</span>
                       <span className={`estado-badge ${ESTADO_BADGE_CLASS[orden.estado] || ""}`}>
                         {orden.estado}
                       </span>
                     </div>
-                    <button className="ck-btn ck-btn--link" onClick={() => handleCompletarOrden(orden)}>
-                      Marcar completada
-                    </button>
-                  </div>
-                  <p><strong>Producto:</strong> {orden.nombreProducto || "—"} x{orden.cantidad}</p>
-                  <p><strong>Insumo:</strong> {orden.nombreInsumo || "—"}</p>
-                  <div className="orden-card__footer">
-                    <span>Entrega: {orden.fechaEntrega || "—"}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                    <p><strong>Producto:</strong> {orden.nombreProducto || "—"} x{orden.cantidad}</p>
+                    <p><strong>Insumo:</strong> {orden.nombreInsumo || "—"}</p>
+                    <p><strong>Entrega:</strong> {orden.fechaEntrega || "—"}</p>
+                    <div className="orden-card__footer">
+                      <button className="ck-btn ck-btn--primary ck-btn--sm" onClick={() => handleCompletarOrden(orden)}>
+                        Marcar completada
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
-        <section className="ck-section">
-          <div className="ck-section__header">
-            <div>
-              <h2 className="ck-section__title">Alertas de inventario</h2>
-              <p className="ck-section__sub">Insumos próximos a mínimo o agotados.</p>
-            </div>
-            <span className="ck-tag">{alertasInventario.length}</span>
-          </div>
-          {alertasInventario.length === 0 ? (
-            <div className="cocina-empty-state">No hay alertas de inventario.</div>
-          ) : (
-            <ul className="alerts-list">
-              {alertasInventario.map(insumo => (
-                <li key={insumo.id}>
-                  <strong>{insumo.nombre}</strong>
-                  <span>
-                    {insumo.stockActual === 0
-                      ? `${insumo.stockActual} (agotado)`
-                      : `${insumo.stockActual} (mín. ${insumo.stockMinimo})`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      {/* ── Detalle del pedido ── */}
-      <section ref={detalleRef} className="ck-section">
-        <div className="ck-section__header">
-          <div>
-            <h2 className="ck-section__title">Detalle del pedido</h2>
-            <p className="ck-section__sub">Ver los productos, cantidades y notas de preparación.</p>
-          </div>
-        </div>
-        {selectedPedidoData ? (
-          <div className="detalle-pedido-card">
-            <div className="detalle-pedido-row">
+          <section className="ck-section">
+            <div className="ck-section__header">
               <div>
-                <p className="detalle-label">Pedido</p>
-                <h3 className="detalle-pedido-num">#{selectedPedidoData.numero}</h3>
+                <h2 className="ck-section__title">Alertas de inventario</h2>
+                <p className="ck-section__sub">Insumos próximos a mínimo o agotados.</p>
               </div>
-              <div>
-                <p className="detalle-label">Estado</p>
-                <span className={`estado-badge ${ESTADO_BADGE_CLASS[selectedPedidoData.estado] || ""}`}>
-                  {selectedPedidoData.estado}
-                </span>
-              </div>
+              <span className="ck-tag">{alertasInventario.length}</span>
             </div>
-            <div className="detalle-pedido-grid">
-              <div className="detalle-block">
-                <p className="detalle-label">Cliente</p>
-                <p>{selectedPedidoData.cliente?.nombre || "—"}</p>
-                <p className="detalle-small">{selectedPedidoData.cliente?.telefono || ""}</p>
-              </div>
-              <div className="detalle-block">
-                <p className="detalle-label">Código</p>
-                <p>{selectedPedidoData.numero}</p>
-              </div>
-              <div className="detalle-block">
-                <p className="detalle-label">Observaciones</p>
-                <p>{selectedPedidoData.notas || "Sin observaciones"}</p>
-              </div>
-            </div>
-            <div className="detalle-pedido-table-wrap">
-              <table className="detalle-pedido-table">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedPedidoData.productosItems?.map((item, idx) => (
-                    <tr key={item.idProducto ?? idx}>
-                      <td>{item.nombre}</td>
-                      <td>{item.cantidad}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="detalle-pedido-actions">
-              {selectedPedidoData.estado === "Confirmado" && (
-                <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(selectedPedidoData)}>
-                  Iniciar preparación
-                </button>
-              )}
-              {selectedPedidoData.estado === "En producción" && (
-                <button className="ck-btn ck-btn--primary" onClick={() => handleAvanzarPedido(selectedPedidoData)}>
-                  Marcar como listo
-                </button>
-              )}
-              {selectedPedidoData.estado === "Pendiente" && (
-                <span className="ck-await-label">Esperando confirmación del administrador</span>
-              )}
-              {selectedPedidoData.estado !== "Cancelado" && (
-                <button className="ck-btn ck-btn--danger" onClick={() => handleCancelarPedido(selectedPedidoData)}>
-                  Cancelar pedido
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="cocina-empty-state">Selecciona un pedido para ver sus detalles.</div>
-        )}
-      </section>
-
-      {/* ── Historial + Notificaciones ── */}
-      <div className="cocina-two-col">
-        <section className="ck-section">
-          <div className="ck-section__header">
-            <div>
-              <h2 className="ck-section__title">Historial de preparación</h2>
-              <p className="ck-section__sub">Pedidos preparados, cancelados y tiempos registrados.</p>
-            </div>
-          </div>
-          <div className="history-list">
-            {historial.length === 0 ? (
-              <div className="cocina-empty-state">Aún no hay historial de cocina.</div>
-            ) : historial.slice(0, 6).map(p => (
-              <div key={p.id} className="history-item">
-                <div>
-                  <strong>#{p.numero}</strong>
-                  <span className={`estado-badge ${ESTADO_BADGE_CLASS[p.estado] || ""}`}>
-                    {p.estado}
-                  </span>
-                </div>
-                <div>
-                  <span>{fmtFecha(p.fecha_pedido)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="ck-section">
-          <div className="ck-section__header">
-            <div>
-              <h2 className="ck-section__title">Notificaciones de cocina</h2>
-              <p className="ck-section__sub">Pedidos nuevos, cambios de estado y cancelaciones.</p>
-            </div>
-          </div>
-          {cocinaNotificaciones.length === 0 ? (
-            <div className="cocina-empty-state">No hay notificaciones nuevas.</div>
-          ) : (
-            <ul className="notifications-list">
-              {cocinaNotificaciones.slice(0, 8).map(n => (
-                <li key={n.id}>
-                  <p className="notif-title">{n.titulo}</p>
-                  <p className="notif-message">{n.mensaje}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+            {alertasInventario.length === 0 ? (
+              <div className="cocina-empty-state">No hay alertas de inventario.</div>
+            ) : (
+              <ul className="alerts-list">
+                {alertasInventario.map(insumo => (
+                  <li key={insumo.id}>
+                    <strong>{insumo.nombre}</strong>
+                    <span className="alerts-list__right">
+                      {insumo.stockActual === 0
+                        ? `${insumo.stockActual} (agotado)`
+                        : `${insumo.stockActual} (mín. ${insumo.stockMinimo})`}
+                      <AlertTriangle size={14} className="alerts-list__warn" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </aside>
       </div>
     </div>
   );
