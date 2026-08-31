@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { crearDevolucion } from '../../../../services/devolucionesService.js';
+import { subirImagenCloudinary } from '../../../../utils/cloudinary.js';
 import { PackageMinus, AlertCircle, Image, X, Check } from 'lucide-react';
 
 const MOTIVOS = [
@@ -115,12 +116,21 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
       [id]: { ...prev[id], motivo },
     }));
 
-  const handleFile = (file) => {
+  const [uploadingEvidencia, setUploadingEvidencia] = useState(false);
+  const [uploadError,        setUploadError]        = useState('');
+
+  const handleFile = async (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) =>
-      setEvidencia({ nombre: file.name, base64: ev.target.result, tipo: file.type });
-    reader.readAsDataURL(file);
+    setUploadError('');
+    setUploadingEvidencia(true);
+    try {
+      const url = await subirImagenCloudinary(file);
+      setEvidencia({ nombre: file.name, url, tipo: file.type });
+    } catch (err) {
+      setUploadError(err?.message || 'Error al subir el archivo. Intenta de nuevo.');
+    } finally {
+      setUploadingEvidencia(false);
+    }
   };
 
   /* productos seleccionados con todos sus datos */
@@ -235,7 +245,15 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
         }}>
           Evidencia <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', color: '#9ca3af' }}>(opcional · foto del producto)</span>
         </p>
-        {evidencia ? (
+        {uploadingEvidencia ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: '#f0fdf4', border: '1.5px solid #a7f3d0',
+            borderRadius: 12, padding: '10px 12px', color: '#065f46', fontSize: 12, fontWeight: 600,
+          }}>
+            Subiendo imagen…
+          </div>
+        ) : evidencia ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             background: '#f0fdf4', border: '1.5px solid #a7f3d0',
@@ -275,6 +293,9 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
               onChange={e => handleFile(e.target.files[0])}
             />
           </div>
+        )}
+        {uploadError && (
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ef4444', fontWeight: 600 }}>{uploadError}</p>
         )}
       </div>
 
@@ -322,7 +343,7 @@ const ReturnForm = ({ onSuccess, defaultIdVenta = '', orderProducts = [] }) => {
 
       <button
         type="submit"
-        disabled={loading || seleccionados.length === 0}
+        disabled={loading || uploadingEvidencia || seleccionados.length === 0}
         style={{
           width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
           background: seleccionados.length === 0 ? '#d1d5db' : '#065f46',

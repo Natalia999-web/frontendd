@@ -43,9 +43,15 @@ const adaptDevolucion = (d) => {
       precioUnitario: parseFloat(p.PrecioUnitario || 0),
       subtotal:       parseFloat(p.Subtotal       || 0),
     })),
-    evidencia: d.Comprobante_Imagen
-      ? { base64: d.Comprobante_Imagen, nombre: "comprobante", tipo: "image/jpeg" }
-      : null,
+    evidencia: (() => {
+      const raw = d.Comprobante_Imagen;
+      if (!raw) return null;
+      const lc = raw.toLowerCase();
+      let tipo = "image/jpeg";
+      if (lc.match(/\.(mp4|webm|mov|avi)($|\?)/)) tipo = "video/mp4";
+      else if (lc.match(/\.pdf($|\?)/))           tipo = "application/pdf";
+      return { url: raw, nombre: "comprobante", tipo };
+    })(),
   };
 };
 
@@ -94,7 +100,7 @@ export const crearDevolucion = async (payload) => {
   };
   if (payload.comentario)        body.Comentario = payload.comentario;
   if (payload.idCliente != null) body.ID_Usuario = Number(payload.idCliente);
-  if (payload.evidencia) body.Comprobante_Imagen = payload.evidencia;
+  if (payload.evidencia) body.Comprobante_Imagen = payload.evidencia?.url ?? payload.evidencia;
   const data = await apiFetch("/devoluciones/", { method: "POST", body: JSON.stringify(body) });
   return adaptDevolucion(data);
 };

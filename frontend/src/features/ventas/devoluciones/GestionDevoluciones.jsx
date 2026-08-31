@@ -53,7 +53,7 @@ function EvidenciaVer({ evidencia }) {
     <div className="evidencia-ver">
       {isImage ? (
         <>
-          <img src={evidencia.base64} alt="evidencia" className="evidencia-ver__img" />
+          <img src={evidencia.url} alt="evidencia" className="evidencia-ver__img" />
           <div className="evidencia-ver__footer">
             <Image size={14} className="evidencia-ver__icon" />
             <span className="evidencia-ver__name">{evidencia.nombre}</span>
@@ -62,7 +62,7 @@ function EvidenciaVer({ evidencia }) {
       ) : isVideo ? (
         <>
           <video
-            src={evidencia.base64}
+            src={evidencia.url}
             controls
             style={{ width: "100%", maxHeight: 200, display: "block", background: "#000" }}
           />
