@@ -196,6 +196,27 @@ def _descontar_fefo_producto(db: Session, id_producto: int, cantidad: int) -> No
         restante -= tomar
 
 
+def _restaurar_fefo_producto(db: Session, id_producto: int, cantidad: int) -> None:
+    """Devuelve `cantidad` a los lotes del producto en orden FEFO inverso (último en vencer = primero en recibir)."""
+    from sqlalchemy import case as _case
+    lotes = (
+        db.query(LoteProducto)
+        .filter(LoteProducto.ID_Producto == id_producto)
+        .order_by(
+            _case((LoteProducto.Fecha_Vencimiento.is_(None), 0), else_=1),
+            LoteProducto.Fecha_Vencimiento.desc(),
+        )
+        .with_for_update()
+        .all()
+    )
+    restante = int(cantidad)
+    for lote in lotes:
+        if restante <= 0:
+            break
+        lote.Cantidad = (lote.Cantidad or 0) + restante
+        restante = 0
+
+
 def _descontar_stock_venta(db: Session, id_venta: int) -> None:
     """Descuenta del stock lo vendido en la venta, bloqueando cada producto.
 
@@ -1208,6 +1229,7 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
                 _prod_op.Stock = max(0, (_prod_op.Stock or 0) - _preorden)
                 _actualizar_estado_producto(_prod_op)
                 notificar_stock_producto(db, _prod_op)
+                _descontar_fefo_producto(db, _it.ID_Producto, _preorden)
 
     # Al cancelar: restaurar stock si ya fue descontado
     # - pickup: stock se descuenta en CONFIRMADO; se restaura desde confirmado/preparando/listo
@@ -1235,6 +1257,8 @@ def cambiar_estado(db: Session, id_venta: int, nuevo_estado: int) -> dict:
                     producto.Stock = (producto.Stock or 0) + a_restaurar
                     _actualizar_estado_producto(producto)
                     notificar_stock_producto(db, producto)
+                    if a_restaurar > 0:
+                        _restaurar_fefo_producto(db, item.ID_Producto, a_restaurar)
 
         # Devolver crédito si se usó al crear el pedido
         detalle = db.query(DetalleVenta).filter(DetalleVenta.ID_Venta == id_venta).first()

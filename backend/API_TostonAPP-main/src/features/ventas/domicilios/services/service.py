@@ -11,7 +11,7 @@ from src.shared.services.models import (
     VentaXProducto, Rol, MensajeChat,
 )
 from src.shared.services.notificaciones_utils import notificar, notificar_stock_producto
-from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto
+from src.features.ventas.gestion_ventas.services.service import _actualizar_estado_producto, _descontar_fefo_producto
 from src.shared.services.observaciones_utils import observaciones_limpias
 from .estados import (
     EstadoDomicilio, ESTADO_DOM_A_VENTA, normalizar_estado, puede_reasignarse,
@@ -633,13 +633,16 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
                     VentaXProducto.ID_Venta == dom.ID_Venta
                 ).all()
                 for item in items:
+                    cantidad = item.Cantidad or 0
                     producto = db.query(Producto).filter(
                         Producto.ID_Producto == item.ID_Producto
                     ).with_for_update().first()
                     if producto:
-                        producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
+                        producto.Stock = max(0, (producto.Stock or 0) - cantidad)
                         _actualizar_estado_producto(producto)
                         notificar_stock_producto(db, producto)
+                        if cantidad > 0:
+                            _descontar_fefo_producto(db, item.ID_Producto, cantidad)
             venta.Estado = nuevo_estado_venta
 
     dom.Estado = nuevo_estado
