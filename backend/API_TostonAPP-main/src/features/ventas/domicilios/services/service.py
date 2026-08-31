@@ -135,7 +135,7 @@ def obtener_repartidores(db: Session) -> list:
 
 
 def obtener_resumen_dia(db: Session, id_empleado: int) -> dict:
-    hoy_inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy_inicio = _now().replace(hour=0, minute=0, second=0, microsecond=0)
     hoy_fin    = hoy_inicio + timedelta(days=1)
 
     base = db.query(Domicilio).filter(Domicilio.ID_Empleado == id_empleado)
@@ -409,6 +409,7 @@ def crear_domicilio(db: Session, datos: DomicilioCreate) -> dict:
         Municipio_entrega    = datos.Municipio_entrega,
         Departamento_entrega = datos.Departamento_entrega,
         OTP                  = _otp_nuevo(),
+        OTP_Expira           = _now() + timedelta(hours=48),
     )
     db.add(nuevo)
     db.commit()
@@ -485,14 +486,39 @@ def asignar_repartidor(db: Session, id_domicilio: int, id_empleado: int) -> dict
 
 
 def verificar_otp(db: Session, id_domicilio: int, codigo: str) -> bool:
-    """Verifica el OTP contra el valor almacenado en BD. Sin expiración fija."""
+    """Verifica el OTP contra el valor almacenado en BD. Expira a las 48 h de creación."""
     dom = db.query(Domicilio).filter(Domicilio.ID_Domicilio == id_domicilio).first()
     if not dom:
         return False
     otp_db = getattr(dom, "OTP", None)
     if not otp_db:
         return False
+    expira = getattr(dom, "OTP_Expira", None)
+    if expira and _now() > expira:
+        return False
     return codigo.strip() == otp_db
+
+
+def regenerar_otp(db: Session, id_domicilio: int) -> dict:
+    """Genera un OTP nuevo para un domicilio cuyo código anterior expiró o se perdió."""
+    from src.shared.services.models import Domicilio as _Dom
+    dom = db.query(_Dom).filter(_Dom.ID_Domicilio == id_domicilio).first()
+    if not dom:
+        raise HTTPException(status_code=404, detail="Domicilio no encontrado")
+
+    estados_entregados = {8}  # Entregado — el OTP ya no tiene sentido
+    if getattr(dom, "Estado", None) in estados_entregados:
+        raise HTTPException(
+            status_code=400,
+            detail="El domicilio ya fue entregado. No es posible regenerar el OTP.",
+        )
+
+    nuevo_otp = _otp_nuevo()
+    dom.OTP        = nuevo_otp
+    dom.OTP_Expira = _now() + timedelta(hours=48)
+    db.commit()
+
+    return {"otp": nuevo_otp, "expira_en": dom.OTP_Expira.isoformat()}
 
 
 def obtener_mensajes(db: Session, id_domicilio: int) -> list:
@@ -596,10 +622,12 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
 
     # Propagar a la Venta. "Asignado" no la mueve: el pedido sigue Listo.
     if nuevo_estado in ESTADO_DOM_A_VENTA and dom.ID_Venta:
-        venta = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).first()
+        venta = db.query(Venta).filter(Venta.ID_Venta == dom.ID_Venta).with_for_update().first()
         if venta:
             nuevo_estado_venta = ESTADO_DOM_A_VENTA[nuevo_estado]
-            # Al entregar: descontar stock si aún no se había entregado
+            # Al entregar: descontar stock si aún no se había entregado.
+            # with_for_update() en venta garantiza que dos requests concurrentes
+            # no descuenten el stock dos veces (el segundo ve Estado==8 y no entra).
             if nuevo_estado_venta == 8 and venta.Estado != 8:
                 items = db.query(VentaXProducto).filter(
                     VentaXProducto.ID_Venta == dom.ID_Venta
@@ -607,7 +635,7 @@ def cambiar_estado(db: Session, id_domicilio: int, nuevo_estado: int, observacio
                 for item in items:
                     producto = db.query(Producto).filter(
                         Producto.ID_Producto == item.ID_Producto
-                    ).first()
+                    ).with_for_update().first()
                     if producto:
                         producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
                         _actualizar_estado_producto(producto)
@@ -671,7 +699,7 @@ def registrar_pago_efectivo(
         )
 
     estado_pago_actual = (getattr(venta, "Estado_Pago", None) or "pendiente").strip()
-    if estado_pago_actual in ("efectivo_recibido", "no_recibido"):
+    if estado_pago_actual in ("efectivo_recibido", "no_recibido", "pagado_completo"):
         raise HTTPException(
             status_code=409,
             detail=f"El cobro ya fue registrado (estado_pago='{estado_pago_actual}')",

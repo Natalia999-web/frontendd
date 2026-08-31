@@ -5,7 +5,9 @@ import uuid
 
 from src.shared.services.models import Usuario, Rol, Venta, Domicilio, VerificacionEmail
 from src.features.auth.services.service import (
-    hashear_contrasena, _enviar_email_verificacion, RESEND_API_KEY,
+    hashear_contrasena, _enviar_email_verificacion,
+    _enviar_email_bienvenida_empleado,
+    RESEND_API_KEY, GMAIL_CLIENT_ID, BREVO_API_KEY,
 )
 from .schemas import EmpleadoCreate, UsuarioCreate, PersonaUpdate, validar_cedula, validar_telefono
 
@@ -92,24 +94,32 @@ def crear_empleado(db: Session, datos: EmpleadoCreate) -> dict:
         raise HTTPException(status_code=400, detail="Cédula ya registrada")
 
     nuevo = Usuario(
-        Cedula         = datos.Cedula,
-        Tipo_Documento = datos.Tipo_Documento,
-        Nombre         = datos.Nombre,
-        Apellidos      = datos.Apellidos,
-        Correo         = datos.Correo,
-        Direccion      = datos.Direccion,
-        Municipio      = datos.Municipio,
-        Departamento   = datos.Departamento,
-        Telefono       = datos.Telefono,
-        Foto_perfil    = datos.Foto,
-        ID_Rol         = datos.ID_Rol,
-        Contrasena     = hashear_contrasena(datos.Contrasena),
-        Fecha_creacion = datetime.now(),
-        Estado         = 1,
+        Cedula            = datos.Cedula,
+        Tipo_Documento    = datos.Tipo_Documento,
+        Nombre            = datos.Nombre,
+        Apellidos         = datos.Apellidos,
+        Correo            = datos.Correo,
+        Direccion         = datos.Direccion,
+        Municipio         = datos.Municipio,
+        Departamento      = datos.Departamento,
+        Telefono          = datos.Telefono,
+        Foto_perfil       = datos.Foto,
+        ID_Rol            = datos.ID_Rol,
+        Contrasena        = hashear_contrasena(datos.Contrasena),
+        Fecha_creacion    = datetime.now(),
+        Estado            = 1,
+        Correo_Verificado = 1,  # admin crea la cuenta directamente — sin verificación por email
     )
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
+
+    if GMAIL_CLIENT_ID or BREVO_API_KEY or RESEND_API_KEY:
+        try:
+            _enviar_email_bienvenida_empleado(datos.Correo, datos.Nombre, datos.Contrasena)
+        except Exception:
+            pass  # el email es informativo; la cuenta ya fue creada
+
     return _formato_persona(nuevo, _rol_nombre(db, nuevo.ID_Rol))
 
 

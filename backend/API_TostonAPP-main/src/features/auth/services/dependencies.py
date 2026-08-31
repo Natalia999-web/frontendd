@@ -93,14 +93,12 @@ def requiere_permiso(nombre_permiso: str):
         registro = actual["registro"]
         id_rol   = registro.ID_Rol
 
-        # Clientes no acceden al panel de gestión
-        if id_rol == 3:
-            return actual
-
         # Bypass total para Admin
         if id_rol == 1:
             return actual
 
+        # Todos los demás roles (empleados, clientes, domiciliarios)
+        # deben tener el permiso explícito en Rol_x_Permiso.
         tiene_permiso = (
             db.query(RolXPermiso)
             .join(Permiso, Permiso.ID_Permiso == RolXPermiso.ID_Permiso)

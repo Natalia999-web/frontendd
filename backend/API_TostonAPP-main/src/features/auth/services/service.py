@@ -10,7 +10,6 @@ import random
 import uuid
 import os
 import time
-from collections import defaultdict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -40,9 +39,7 @@ GMAIL_REFRESH_TOKEN = os.getenv("GMAIL_REFRESH_TOKEN", "").strip()
 BREVO_API_KEY       = os.getenv("BREVO_API_KEY", "").strip()
 RESEND_API_KEY      = os.getenv("RESEND_API_KEY", "").strip()
 
-# Rate limiting de login: { correo_lower: [timestamps de intentos fallidos] }
-_intentos_login: Dict[str, list] = defaultdict(list)
-_VENTANA_LOGIN  = 300   # 5 minutos en segundos
+_VENTANA_LOGIN  = 300   # segundos — ventana de bloqueo tras demasiados intentos
 _MAX_INTENTOS   = 5
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -109,28 +106,48 @@ def obtener_nombre_rol(db: Session, id_rol: int) -> str:
     return rol.Rol if rol else None
 
 
-def _verificar_limite_login(correo: str) -> None:
-    """Bloquea el login si hay demasiados intentos fallidos recientes."""
-    ahora    = time.time()
-    clave    = correo.lower()
-    recientes = [t for t in _intentos_login[clave] if ahora - t < _VENTANA_LOGIN]
-    _intentos_login[clave] = recientes
-    if len(recientes) >= _MAX_INTENTOS:
-        minutos = _VENTANA_LOGIN // 60
+def _verificar_limite_login(db: Session, registro) -> None:
+    """Bloquea el login si Bloqueado_Hasta está en el futuro (persistido en BD)."""
+    if registro is None:
+        return
+    bloqueado = getattr(registro, "Bloqueado_Hasta", None)
+    if bloqueado and datetime.now() < bloqueado:
+        segundos = int((bloqueado - datetime.now()).total_seconds())
+        minutos  = max(1, segundos // 60)
         raise HTTPException(
             status_code=429,
-            detail=f"Demasiados intentos fallidos. Espera {minutos} minutos antes de intentar de nuevo.",
+            detail=f"Demasiados intentos fallidos. Espera {minutos} minuto(s) antes de intentar de nuevo.",
         )
 
 
-def autenticar(db: Session, correo: str, contrasena: str):
-    clave = correo.lower()
-    _verificar_limite_login(clave)
+def _registrar_intento_fallido(db: Session, registro) -> None:
+    """Incrementa el contador en BD y bloquea la cuenta si alcanza el límite."""
+    if registro is None:
+        return
+    intentos = (getattr(registro, "Intentos_Login", None) or 0) + 1
+    registro.Intentos_Login = intentos
+    if intentos >= _MAX_INTENTOS:
+        registro.Bloqueado_Hasta = datetime.now() + timedelta(seconds=_VENTANA_LOGIN)
+    db.commit()
 
+
+def _limpiar_intentos(db: Session, registro) -> None:
+    """Restablece el contador tras un login exitoso."""
+    if registro is None:
+        return
+    registro.Intentos_Login  = 0
+    registro.Bloqueado_Hasta = None
+    db.commit()
+
+
+def autenticar(db: Session, correo: str, contrasena: str):
     registro, tipo = buscar_por_correo(db, correo)
 
+    # Verificar bloqueo antes de cualquier comprobación de contraseña
+    _verificar_limite_login(db, registro)
+
     if not registro or not verificar_contrasena(contrasena, registro.Contrasena):
-        _intentos_login[clave].append(time.time())
+        _registrar_intento_fallido(db, registro)
         return None, None
 
     # Cuenta desactivada por admin (Estado=2) o eliminada por el usuario (Estado=0).
@@ -151,7 +168,7 @@ def autenticar(db: Session, correo: str, contrasena: str):
         )
 
     # Login exitoso: limpia el historial de intentos
-    _intentos_login[clave] = []
+    _limpiar_intentos(db, registro)
     return registro, tipo
 
 
@@ -182,7 +199,9 @@ def registrar_cliente(db: Session, datos):
         Contrasena     = hashear_contrasena(datos.Contrasena),
         Fecha_creacion = datetime.now(),
         Estado            = 1,  # activo de inmediato: el cliente puede usar la cuenta
-        Correo_Verificado = 0,  # debe verificar el correo para recuperar contraseña
+        # Sin servicio de email no puede llegar la verificación → marcar verificado
+        # directamente para que el segundo login no quede bloqueado.
+        Correo_Verificado = 0 if (GMAIL_CLIENT_ID or BREVO_API_KEY or RESEND_API_KEY) else 1,
         ID_Rol         = rol_cliente.ID_Rol,
         Cedula         = None,
         Tipo_Documento = None,
@@ -313,6 +332,29 @@ def _enviar_email_verificacion(correo_destino: str, token: str, nombre: str = ""
     _enviar_smtp(msg, correo_destino)
 
 
+def _enviar_email_bienvenida_empleado(correo_destino: str, nombre: str, contrasena: str) -> None:
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;">
+      <div style="background:linear-gradient(135deg,#2E7D32,#66BB6A);padding:24px;border-radius:14px;text-align:center;margin-bottom:24px;">
+        <h1 style="color:white;margin:0;font-size:22px;">Brom's</h1>
+        <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">Cuenta creada</p>
+      </div>
+      <p style="color:#333;">Hola <strong>{nombre}</strong>,</p>
+      <p style="color:#555;font-size:14px;">El administrador ha creado tu cuenta en el sistema. Tus credenciales de acceso son:</p>
+      <div style="background:#f5f5f5;border-radius:10px;padding:16px;margin:20px 0;">
+        <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Correo:</strong> {correo_destino}</p>
+        <p style="margin:0;font-size:13px;color:#555;"><strong>Contraseña temporal:</strong> {contrasena}</p>
+      </div>
+      <p style="color:#e53935;font-size:13px;">Cambia tu contraseña tras iniciar sesión por primera vez.</p>
+      <p style="color:#999;font-size:12px;">Si no esperabas este correo, contacta al administrador.</p>
+    </div>
+    """
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Tu cuenta en Brom's — Credenciales de acceso"
+    msg.attach(MIMEText(html, "html"))
+    _enviar_smtp(msg, correo_destino)
+
+
 def crear_token_verificacion_empleado(id_usuario: int) -> str:
     """Genera un JWT para verificar el email de un usuario empleado (válido 24 h)."""
     payload = {
@@ -436,19 +478,13 @@ def solicitar_recuperacion(db: Session, correo: str) -> None:
     y lo envía al correo. Silencioso si el correo no existe.
     """
     registro, _ = buscar_por_correo(db, correo)
+    # No revelar si el correo existe o no — siempre responder con éxito silencioso
     if not registro:
-        raise HTTPException(
-            status_code=404,
-            detail="Correo no registrado.",
-        )
+        return
 
     # No permitir recuperar contraseña si el correo no fue verificado.
     if getattr(registro, "Correo_Verificado", 1) != 1:
-        raise HTTPException(
-            status_code=403,
-            detail="Debes verificar tu correo electrónico antes de recuperar la contraseña. "
-                   "Revisa tu bandeja de entrada o solicita un nuevo enlace de verificación.",
-        )
+        return  # Silencioso también — no revelar estado de la cuenta
 
     # Invalidar códigos anteriores del mismo correo
     db.query(CodigoReset).filter(

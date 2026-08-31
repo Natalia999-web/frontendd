@@ -15,7 +15,7 @@ from .schemas import (
 from .service import (
     obtener_domicilios, obtener_domicilio, crear_domicilio,
     editar_domicilio, asignar_repartidor, cambiar_estado,
-    obtener_resumen_dia, verificar_otp, obtener_mensajes, enviar_mensaje,
+    obtener_resumen_dia, verificar_otp, regenerar_otp, obtener_mensajes, enviar_mensaje,
     obtener_repartidores, registrar_pago_efectivo,
 )
 
@@ -146,6 +146,19 @@ def verificar_otp_domicilio(
     if not verificar_otp(db, id_domicilio, datos.codigo):
         raise HTTPException(status_code=400, detail="Código incorrecto")
     return {"valido": True}
+
+
+@router.post("/{id_domicilio}/regenerar-otp")
+def regenerar_otp_domicilio(
+    id_domicilio: int,
+    db:           Session = Depends(get_db),
+    actual:       dict    = Depends(requiere_permiso("editar_domicilios"))
+):
+    """
+    Regenera el OTP de un domicilio cuyo código anterior expiró (>48h) o se perdió.
+    Solo accesible para empleados/admin con permiso 'editar_domicilios'.
+    """
+    return regenerar_otp(db, id_domicilio)
 
 
 def _verificar_acceso_chat(db: Session, id_domicilio: int, actual: dict):

@@ -977,6 +977,11 @@ function ModalFormOrden({ orden, productos, insumos, onClose, onSave }) {
                 <span style={{ color: "#616161" }}>Selecciona un producto para ver la ficha</span>
               )}
             </div>
+            {!productLoading && form.idProducto && !selectedProduct?.ficha_tecnica && (
+              <p className="field-error" style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                ⚠ Este producto no tiene ficha técnica. El cocinero no podrá ver ingredientes ni cantidades en el panel de cocina.
+              </p>
+            )}
           </div>
 
           {/* Cantidad */}

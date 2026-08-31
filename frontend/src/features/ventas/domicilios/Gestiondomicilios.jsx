@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { esEmpleadoRepartidor } from "../../../utils/roles.js";
 import { Navigate } from "react-router-dom";
 import {
-  Search, Bike, Package, CheckCircle2, XCircle,
-  MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
+  Search, Bike, Package, CheckCircle2, XCircle, Clock,
+  MapPin, AlertTriangle, AlertCircle, User, ShoppingBag, CreditCard, Calendar,
   Banknote, Building2, Scale, Eye, Globe, Zap, PenLine, FileText,
   Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
   ChevronDown,
@@ -23,6 +23,7 @@ import {
   transicionesDom,
 } from "./estadosDomicilio";
 import "./Domicilios.css";
+import { montoACobrar } from "./estadosDomicilio";
 
 function SkeletonRows({ cols = 9, rows = 5 }) {
   return Array.from({ length: rows }).map((_, i) => (
@@ -275,7 +276,7 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
       return;
     }
     setError(null);
-    onConfirm(pedido, recibido, recibido ? pedido.total : null, recibido ? null : motivo.trim());
+    onConfirm(pedido, recibido, recibido ? montoACobrar(pedido) : null, recibido ? null : motivo.trim());
   };
 
   const opcion = (valor, icono, titulo, detalle, color) => {
@@ -314,13 +315,13 @@ function ModalRegistrarCobro({ pedido, saving, onClose, onConfirm }) {
           <div className="info-box" style={{ marginBottom: 14 }}>
             <span className="info-box__icon"><Banknote size={14} /></span>
             <span className="info-box__text">
-              Total a cobrar: <strong>{fmt(pedido.total)}</strong>
+              Total a cobrar en mano: <strong>{fmt(montoACobrar(pedido))}</strong>
             </span>
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
             {opcion(true,  <CheckCircle2 size={22} />, "Sí, se recibió completo",
-                    `Se registra el monto exacto: ${fmt(pedido.total)}`, "#2e7d32")}
+                    `Se registra el monto exacto: ${fmt(montoACobrar(pedido))}`, "#2e7d32")}
             {opcion(false, <XCircle size={22} />, "No se recibió",
                     "Requiere explicar el motivo", "#c62828")}
           </div>
@@ -685,10 +686,10 @@ function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onOb
                   <EstadoPagoChip estadoPago={pedido.estado_pago} />
                 </div>
 
-                <p className="section-label">Total a cobrar</p>
+                <p className="section-label">Total a cobrar en mano</p>
                 <div className="info-box">
                   <span className="info-box__icon"><Banknote size={14} /></span>
-                  <span className="info-box__text" style={{ fontWeight: 800 }}>{fmt(pedido.total)}</span>
+                  <span className="info-box__text" style={{ fontWeight: 800 }}>{fmt(montoACobrar(pedido))}</span>
                 </div>
 
                 {/* Mismo criterio que aplica el backend al marcar entregado */}
@@ -1043,10 +1044,11 @@ export default function GestionDomicilios() {
   const [empleados,    setEmpleados]    = useState([]);
   const [repartidores, setRepartidores] = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [errorCarga,   setErrorCarga]   = useState(null);
-  const [actionSaving, setActionSaving] = useState(false);
-  const [tab,          setTab]          = useState("tabla");
-  const [search,       setSearch]       = useState("");
+  const [errorCarga,      setErrorCarga]      = useState(null);
+  const [actionSaving,    setActionSaving]    = useState(false);
+  const [tab,             setTab]             = useState("tabla");
+  const [totalDomicilios, setTotalDomicilios] = useState(0);
+  const [search,          setSearch]          = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterDesde,  setFilterDesde]  = useState("");
   const [filterHasta,  setFilterHasta]  = useState("");
@@ -1065,14 +1067,15 @@ export default function GestionDomicilios() {
     setTimeout(() => setToast(null), 3200);
   };
 
-  const cargarDatos = async () => {
+  const cargarDatos = async ({ busqueda = null, fechaInicio = null, fechaFin = null } = {}) => {
     setLoading(true);
     setErrorCarga(null);
     try {
       const [dData, uData] = await Promise.all([
-        getDomicilios({ porPagina: 100 }),
+        getDomicilios({ porPagina: 100, busqueda, fechaInicio, fechaFin }),
         getUsuarios({ porPagina: 100 }).catch(() => []),
       ]);
+      setTotalDomicilios(dData.total || 0);
       setDomicilios(dData.domicilios);
       // Lista amplia: resuelve el nombre de quien ya está asignado.
       setEmpleados((uData || []).filter(u =>
@@ -1099,6 +1102,22 @@ export default function GestionDomicilios() {
   };
 
   useEffect(() => { cargarDatos(); }, []);
+
+  // Re-buscar en el servidor cuando cambia el texto (debounce 400ms)
+  const domSearchMounted = useRef(false);
+  useEffect(() => {
+    if (!domSearchMounted.current) { domSearchMounted.current = true; return; }
+    const q = search || null;
+    const t = setTimeout(() => cargarDatos({ busqueda: q, fechaInicio: filterDesde || null, fechaFin: filterHasta || null }), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Re-buscar en el servidor cuando cambia el rango de fechas (inmediato)
+  const domDateMounted = useRef(false);
+  useEffect(() => {
+    if (!domDateMounted.current) { domDateMounted.current = true; return; }
+    cargarDatos({ busqueda: search || null, fechaInicio: filterDesde || null, fechaFin: filterHasta || null });
+  }, [filterDesde, filterHasta]);
 
   useEffect(() => {
     const h = e => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false); };
@@ -1208,7 +1227,7 @@ export default function GestionDomicilios() {
       await registrarPagoEfectivo(pedido.id, { recibido, monto, motivo });
       await cargarDatos();
       showToast(recibido
-        ? `Cobro de ${fmt(pedido.total)} registrado para ${pedido.numero}`
+        ? `Cobro de ${fmt(montoACobrar(pedido))} registrado para ${pedido.numero}`
         : `Se registró que ${pedido.numero} no fue cobrado`);
       setModal(null);
     } catch (err) {
@@ -1354,6 +1373,15 @@ export default function GestionDomicilios() {
         {/* ══ TAB: Tabla ══ */}
         {tab === "tabla" && (
           <>
+            {totalDomicilios > 100 && !search && !filterDesde && !filterHasta && (
+              <div className="info-box info-box--warning" style={{ marginBottom: 12 }}>
+                <span className="info-box__icon"><AlertCircle size={14} /></span>
+                <span className="info-box__text">
+                  Mostrando los 100 domicilios más recientes de <strong>{totalDomicilios}</strong> en total.
+                  Usa la búsqueda o el filtro de fechas para encontrar registros anteriores.
+                </span>
+              </div>
+            )}
             <div className="toolbar">
               <div className="search-wrap">
                 <span className="search-icon"><Search size={14} /></span>
@@ -1611,9 +1639,10 @@ export default function GestionDomicilios() {
                               )}
                               <button
                                 className="act-btn act-btn--obs"
-                                data-tooltip="Agregar observación"
+                                data-tooltip={activo ? "Agregar observación" : "Domicilio finalizado"}
+                                disabled={!activo}
                                 onClick={() => abrirObservaciones(ped)}
-                                style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "default" }}
+                                style={{ opacity: activo ? 1 : 0.35, cursor: activo ? "pointer" : "not-allowed" }}
                               ><PenLine size={14} /></button>
                             </div>
                           </td>

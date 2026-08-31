@@ -1,7 +1,10 @@
+﻿import logging
 from sqlalchemy import func, case
 from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 from src.shared.services.models import OrdenProduccion, Producto, Insumo, FichaTecnica, FichaTecnicaInsumo, Estado, Venta, LoteProducto, LoteCompra, UnidadMedida, DetalleCompra
 from src.shared.services.notificaciones_utils import notificar_stock_insumo, notificar_stock_producto
@@ -196,6 +199,14 @@ def _descontar_fefo(db: Session, id_insumo: int, cantidad: float) -> None:
         tomar = min(disponible, restante)
         lote.Cantidad_Actual = round(disponible - tomar, 4)
         restante -= tomar
+
+    if restante > 0.001:  # tolerancia para errores de punto flotante
+        raise HTTPException(
+            status_code=409,
+            detail=f"Stock en lotes insuficiente para insumo {id_insumo}: "
+                   f"faltan {round(restante, 4)} unidades en los lotes activos. "
+                   "Verifica el inventario.",
+        )
 
 
 def _restaurar_fefo(db: Session, id_insumo: int, cantidad: float) -> None:
@@ -647,7 +658,7 @@ def editar_orden(db: Session, id_orden: int, datos: OrdenUpdate) -> dict:
 
 def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
     """datos puede ser int o un objeto con atributos: Estado, Numero_Lote, Fecha_Vencimiento"""
-    import time, traceback as _tb
+    import time
     _t0 = time.time()
     # compat: si pasaron solo un int
     if isinstance(datos, int):
@@ -656,18 +667,31 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
     else:
         nuevo_estado = datos.Estado
         lote_info = { 'Numero_Lote': getattr(datos, 'Numero_Lote', None), 'Fecha_Vencimiento': getattr(datos, 'Fecha_Vencimiento', None) }
-    print(f"[1] cambiar_estado START id={id_orden} nuevo_estado={nuevo_estado}", flush=True)
+    logger.debug(f"[1] cambiar_estado START id={id_orden} nuevo_estado={nuevo_estado}")
     try:
-        print(f"[2] query OrdenProduccion | +{time.time()-_t0:.3f}s", flush=True)
+        logger.debug(f"[2] query OrdenProduccion | +{time.time()-_t0:.3f}s")
         orden = db.query(OrdenProduccion).filter(
             OrdenProduccion.ID_Orden_Produccion == id_orden
-        ).first()
-        print(f"[3] orden found={orden is not None} estado_actual={getattr(orden,'Estado',None)} | +{time.time()-_t0:.3f}s", flush=True)
+        ).with_for_update().first()
+        logger.debug(f"[3] orden found={orden is not None} estado_actual={getattr(orden,'Estado',None)} | +{time.time()-_t0:.3f}s")
         if not orden:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
 
         if orden.Estado == nuevo_estado:
             return _formato_orden(orden, db)
+
+        # Mapa de transiciones válidas — cualquier otra combinación es un error
+        _TRANSICIONES_VALIDAS = {
+            ESTADO_PENDIENTE:  {ESTADO_EN_PROCESO, ESTADO_CANCELADA},
+            ESTADO_EN_PROCESO: {ESTADO_COMPLETADA, ESTADO_CANCELADA},
+            ESTADO_COMPLETADA: set(),
+            ESTADO_CANCELADA:  set(),
+        }
+        if nuevo_estado not in _TRANSICIONES_VALIDAS.get(orden.Estado, set()):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Transición no permitida: estado actual {orden.Estado} → {nuevo_estado}",
+            )
 
         # Al iniciar (13=En proceso): validar ficha, descontar todos los insumos de la receta
         if nuevo_estado == ESTADO_EN_PROCESO and orden.Estado == ESTADO_PENDIENTE:
@@ -687,11 +711,11 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
                     status_code=400,
                     detail="El producto debe tener una ficha técnica asignada antes de iniciar la producción"
                 )
-            print(f"[4] query FichaTecnicaInsumo id_ficha={orden.ID_Ficha} | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[4] query FichaTecnicaInsumo id_ficha={orden.ID_Ficha} | +{time.time()-_t0:.3f}s")
             insumos_ficha = db.query(FichaTecnicaInsumo).filter(
                 FichaTecnicaInsumo.ID_Ficha == orden.ID_Ficha
             ).all()
-            print(f"[5] insumos_ficha count={len(insumos_ficha)} | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[5] insumos_ficha count={len(insumos_ficha)} | +{time.time()-_t0:.3f}s")
             if not insumos_ficha:
                 raise HTTPException(
                     status_code=400,
@@ -699,13 +723,13 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
                 )
             # Batch-load: 2 queries en lugar de 4N (N insumos × 2 loops × 2 tablas)
             ids_insumo = [fi.ID_Insumo for fi in insumos_ficha]
-            print(f"[6] batch query Insumo IN {ids_insumo} | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[6] batch query Insumo IN {ids_insumo} | +{time.time()-_t0:.3f}s")
             insumos_map = {
                 i.ID_Insumo: i
                 for i in db.query(Insumo).filter(Insumo.ID_Insumo.in_(ids_insumo)).all()
             }
             unidad_ids = {i.Unidad_Medida for i in insumos_map.values() if i.Unidad_Medida}
-            print(f"[7] batch query UnidadMedida IN {unidad_ids} | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[7] batch query UnidadMedida IN {unidad_ids} | +{time.time()-_t0:.3f}s")
             unidades_map = (
                 {
                     u.ID_Unidad_Medida: u
@@ -715,7 +739,7 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
                 }
                 if unidad_ids else {}
             )
-            print(f"[8] batch done, validando stock | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[8] batch done, validando stock | +{time.time()-_t0:.3f}s")
 
             # Validar stock (en memoria, sin queries adicionales a BD)
             ficha_plan = []
@@ -737,22 +761,22 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
                     )
                 ficha_plan.append((insumo, necesario))
 
-            print(f"[9] validacion OK {len(ficha_plan)} insumos, iniciando FEFO | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[9] validacion OK {len(ficha_plan)} insumos, iniciando FEFO | +{time.time()-_t0:.3f}s")
             # Descontar FEFO (todos los stocks validados → descuento atómico)
             for _i, (insumo, necesario) in enumerate(ficha_plan):
-                print(f"[10a] _descontar_fefo insumo={insumo.ID_Insumo} necesario={necesario} | +{time.time()-_t0:.3f}s", flush=True)
+                logger.debug(f"[10a] _descontar_fefo insumo={insumo.ID_Insumo} necesario={necesario} | +{time.time()-_t0:.3f}s")
                 _descontar_fefo(db, insumo.ID_Insumo, necesario)
                 insumo.Stock_Actual = round(max(0.0, float(insumo.Stock_Actual or 0) - necesario), 4)
                 _actualizar_estado_insumo(insumo)
-                print(f"[10b] notificar_stock_insumo insumo={insumo.ID_Insumo} | +{time.time()-_t0:.3f}s", flush=True)
+                logger.debug(f"[10b] notificar_stock_insumo insumo={insumo.ID_Insumo} | +{time.time()-_t0:.3f}s")
                 notificar_stock_insumo(db, insumo)
-                print(f"[10c] insumo {_i+1}/{len(ficha_plan)} completo | +{time.time()-_t0:.3f}s", flush=True)
+                logger.debug(f"[10c] insumo {_i+1}/{len(ficha_plan)} completo | +{time.time()-_t0:.3f}s")
 
-            print(f"[11] FEFO done, ID_Venta={orden.ID_Venta} | +{time.time()-_t0:.3f}s", flush=True)
+            logger.debug(f"[11] FEFO done, ID_Venta={orden.ID_Venta} | +{time.time()-_t0:.3f}s")
             if orden.ID_Venta:
-                print(f"[11a] _sync_venta START | +{time.time()-_t0:.3f}s", flush=True)
+                logger.debug(f"[11a] _sync_venta START | +{time.time()-_t0:.3f}s")
                 _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_EN_PROCESO)
-                print(f"[11b] _sync_venta END | +{time.time()-_t0:.3f}s", flush=True)
+                logger.debug(f"[11b] _sync_venta END | +{time.time()-_t0:.3f}s")
 
         # Al completar (11=Completada): incrementar stock del producto y crear lote
         elif nuevo_estado == ESTADO_COMPLETADA and orden.Estado == ESTADO_EN_PROCESO:
@@ -840,19 +864,18 @@ def cambiar_estado(db: Session, id_orden: int, datos) -> dict:
             if orden.ID_Venta:
                 _sync_venta_por_ordenes(db, orden.ID_Venta, orden.ID_Orden_Produccion, ESTADO_CANCELADA)
 
-        print(f"[12] SET estado={nuevo_estado}, COMMIT | +{time.time()-_t0:.3f}s", flush=True)
+        logger.debug(f"[12] SET estado={nuevo_estado}, COMMIT | +{time.time()-_t0:.3f}s")
         orden.Estado = nuevo_estado
         db.commit()
-        print(f"[13] COMMIT done | +{time.time()-_t0:.3f}s", flush=True)
+        logger.debug(f"[13] COMMIT done | +{time.time()-_t0:.3f}s")
         db.refresh(orden)
-        print(f"[14] _formato_orden START | +{time.time()-_t0:.3f}s", flush=True)
+        logger.debug(f"[14] _formato_orden START | +{time.time()-_t0:.3f}s")
         result = _formato_orden(orden, db)
-        print(f"[15] _formato_orden DONE, total={time.time()-_t0:.3f}s", flush=True)
+        logger.debug(f"[15] _formato_orden DONE, total={time.time()-_t0:.3f}s")
         return result
 
     except Exception as e:
-        print(f"=== ERROR EN cambiar_estado | +{time.time()-_t0:.3f}s ===", flush=True)
-        _tb.print_exc()
+        logger.exception("Error en cambiar_estado id=%s nuevo_estado=%s (+%.3fs)", id_orden, nuevo_estado, time.time()-_t0)
         raise
 
 
@@ -863,6 +886,13 @@ def eliminar_orden(db: Session, id_orden: int) -> dict:
     ).first()
     if not orden:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
+
+    if orden.Estado in (ESTADO_EN_PROCESO, ESTADO_COMPLETADA):
+        etiqueta = "en proceso" if orden.Estado == ESTADO_EN_PROCESO else "completada"
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar una orden {etiqueta}. Cancélala primero.",
+        )
 
     db.delete(orden)
     db.commit()

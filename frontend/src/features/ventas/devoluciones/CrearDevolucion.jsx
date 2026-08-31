@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { getPedidos } from "../../../services/pedidosService.js";
+import { subirImagenCloudinary } from "../../../utils/cloudinary.js";
 import SearchableSelect from "../../../shared/components/SearchableSelect.jsx";
-import { Check, X, Search, Paperclip, AlertTriangle, Video, FileText } from "lucide-react";
+import { Check, X, Search, Paperclip, AlertTriangle, Video, FileText, Loader } from "lucide-react";
 import "./Devoluciones.css";
 
 const fmt = (n) =>
@@ -45,14 +46,19 @@ function StepsBar({ current }) {
   );
 }
 
-/* ─── PedidoSelect (inline — evita clipping del modal) ──────── */
-function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
+/* ─── PedidoSelect — búsqueda server-side con debounce ──── */
+function PedidoSelect({ value, pedidos, onChange, onSearch, searching, error, disabled }) {
   const [query, setQuery] = useState("");
+  const debounceRef = useRef(null);
   const selected = pedidos.find(p => String(p.id) === String(value));
 
-  const filtered = pedidos.filter(p =>
-    `${p.numero} ${p.cliente?.nombre || ""}`.toLowerCase().includes(query.toLowerCase())
-  );
+  const handleQueryChange = (q) => {
+    setQuery(q);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onSearch(q), 350);
+  };
+
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   if (selected) {
     return (
@@ -64,7 +70,7 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
         <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#1b5e20" }}>
           {selected.numero} — {selected.cliente?.nombre}
         </span>
-        <button type="button" onClick={() => { onChange(""); setQuery(""); }}
+        <button type="button" onClick={() => { onChange(""); setQuery(""); onSearch(""); }}
           style={{ border: "none", background: "none", cursor: "pointer", color: "#c62828", padding: 0, lineHeight: 1 }}>
           <X size={16}/>
         </button>
@@ -75,49 +81,54 @@ function PedidoSelect({ value, pedidos, onChange, error, disabled }) {
   return (
     <div style={{ border: `1.5px solid ${error ? "#ef5350" : "#e0e0e0"}`, borderRadius: 10, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fafdf9" }}>
-        <Search size={13} style={{color:"#9e9e9e",flexShrink:0}}/>
+        {searching
+          ? <Loader size={13} style={{ color: "#9e9e9e", flexShrink: 0, animation: "spin 1s linear infinite" }}/>
+          : <Search size={13} style={{ color: "#9e9e9e", flexShrink: 0 }}/>
+        }
         <input
           type="text"
-          placeholder={disabled ? "Cargando pedidos…" : "Buscar por número o nombre de cliente…"}
+          placeholder={disabled ? "Cargando…" : "Buscar por número o nombre de cliente…"}
           value={query}
           disabled={disabled}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => handleQueryChange(e.target.value)}
           style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "#333", fontFamily: "inherit" }}
         />
         {query && (
-          <button type="button" onClick={() => setQuery("")}
+          <button type="button" onClick={() => { handleQueryChange(""); }}
             style={{ border: "none", background: "none", cursor: "pointer", color: "#bdbdbd", padding: 0, lineHeight: 1 }}>
             <X size={14}/>
           </button>
         )}
       </div>
-      {!disabled && (
-        <div style={{ maxHeight: 220, overflowY: "auto", borderTop: "1px solid #f0f0f0" }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: "14px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
-              {query ? `Sin resultados para "${query}"` : pedidos.length === 0 ? "Sin pedidos con productos devolvibles" : "Escribe para buscar…"}
-            </div>
-          ) : filtered.map(p => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => { onChange(String(p.id)); setQuery(""); }}
-              style={{
-                width: "100%", textAlign: "left", padding: "9px 14px",
-                border: "none", borderBottom: "1px solid #f5f5f5",
-                background: "transparent", fontSize: 13, cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                fontFamily: "inherit", color: "#222",
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "#f1f8f1"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >
-              <span style={{ fontWeight: 700 }}>{p.numero}</span>
-              <span style={{ fontSize: 12, color: "#757575", marginLeft: 8 }}>{p.cliente?.nombre}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div style={{ maxHeight: 220, overflowY: "auto", borderTop: "1px solid #f0f0f0" }}>
+        {pedidos.length === 0 ? (
+          <div style={{ padding: "14px", fontSize: 12, color: "#9e9e9e", textAlign: "center" }}>
+            {searching
+              ? "Buscando…"
+              : query
+                ? `Sin resultados para "${query}"`
+                : "Escribe para buscar un pedido entregado…"}
+          </div>
+        ) : pedidos.map(p => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => { onChange(String(p.id)); setQuery(""); }}
+            style={{
+              width: "100%", textAlign: "left", padding: "9px 14px",
+              border: "none", borderBottom: "1px solid #f5f5f5",
+              background: "transparent", fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              fontFamily: "inherit", color: "#222",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f1f8f1"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <span style={{ fontWeight: 700 }}>{p.numero}</span>
+            <span style={{ fontSize: 12, color: "#757575", marginLeft: 8 }}>{p.cliente?.nombre}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -155,17 +166,25 @@ function ResumenPedido({ pedido }) {
   );
 }
 
-/* ─── UPLOAD DE EVIDENCIA ────────────────────────────────── */
+/* ─── UPLOAD DE EVIDENCIA — sube a Cloudinary ────────────── */
 function EvidenciaUpload({ evidencia, onEvidencia }) {
   const fileRef = useRef();
-  const [dragging, setDragging] = useState(false);
+  const [dragging,    setDragging]    = useState(false);
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
-  const processFile = (file) => {
+  const processFile = async (file) => {
     if (!file) return;
-    const r = new FileReader();
-    r.onload = (ev) =>
-      onEvidencia({ nombre: file.name, base64: ev.target.result, tipo: file.type });
-    r.readAsDataURL(file);
+    setUploadError("");
+    setUploading(true);
+    try {
+      const url = await subirImagenCloudinary(file);
+      onEvidencia({ nombre: file.name, url, tipo: file.type });
+    } catch (err) {
+      setUploadError(err?.message || "Error al subir el archivo");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDrop = (e) => {
@@ -176,11 +195,20 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
 
   const isImage = evidencia?.tipo?.startsWith("image/");
 
+  if (uploading) {
+    return (
+      <div className="evidencia-dropzone" style={{ pointerEvents: "none", opacity: 0.7 }}>
+        <Loader size={24} style={{ animation: "spin 1s linear infinite", color: "#4caf50" }}/>
+        <span className="evidencia-dropzone__text">Subiendo archivo…</span>
+      </div>
+    );
+  }
+
   if (evidencia) {
     return (
       <div className="evidencia-preview">
         {isImage ? (
-          <img src={evidencia.base64} alt="evidencia" className="evidencia-preview__img" />
+          <img src={evidencia.url} alt="evidencia" className="evidencia-preview__img" />
         ) : (
           <div className="evidencia-preview__file">
             <span className="evidencia-preview__file-icon">
@@ -198,26 +226,33 @@ function EvidenciaUpload({ evidencia, onEvidencia }) {
   }
 
   return (
-    <div
-      className={`evidencia-dropzone${dragging ? " dragging" : ""}`}
-      onClick={() => fileRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-    >
-      <span className="evidencia-dropzone__icon"><Paperclip size={24}/></span>
-      <span className="evidencia-dropzone__text">
-        Arrastra un archivo o <strong>haz clic para seleccionar</strong>
-      </span>
-      <span className="evidencia-dropzone__hint">Imágenes, PDF, video · Opcional</span>
-      <input
-        ref={fileRef}
-        type="file"
-        style={{ display: "none" }}
-        accept="image/*,application/pdf,video/*"
-        onChange={(e) => processFile(e.target.files[0])}
-      />
-    </div>
+    <>
+      <div
+        className={`evidencia-dropzone${dragging ? " dragging" : ""}`}
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        <span className="evidencia-dropzone__icon"><Paperclip size={24}/></span>
+        <span className="evidencia-dropzone__text">
+          Arrastra un archivo o <strong>haz clic para seleccionar</strong>
+        </span>
+        <span className="evidencia-dropzone__hint">Imágenes, PDF, video · Opcional</span>
+        <input
+          ref={fileRef}
+          type="file"
+          style={{ display: "none" }}
+          accept="image/*,application/pdf,video/*"
+          onChange={(e) => processFile(e.target.files[0])}
+        />
+      </div>
+      {uploadError && (
+        <p className="field-error" style={{ marginTop: 4 }}>
+          <AlertTriangle size={12} style={{ marginRight: 4 }}/>{uploadError}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -264,18 +299,16 @@ function ProdItem({ item, idx, onSet }) {
 export default function CrearDevolucion({ onClose, onSave, saving, devoluciones = [] }) {
   const [pedidosEntregados, setPedidosEntregados] = useState([]);
   const [loadError,         setLoadError]         = useState("");
-  const [loadingPedidos,    setLoadingPedidos]    = useState(true);
+  const [searching,         setSearching]         = useState(false);
 
-  const cargarPedidos = () => {
+  const buscarPedidos = useCallback((q = "") => {
     setLoadError("");
-    setLoadingPedidos(true);
-    getPedidos({ porPagina: 100, estado: 8, timeout: 90000 })
+    setSearching(true);
+    getPedidos({ porPagina: 20, estado: 8, busqueda: q || null, timeout: 90000 })
       .then(data => setPedidosEntregados(data.pedidos || []))
       .catch(err => setLoadError(err?.message || "Error al cargar pedidos entregados"))
-      .finally(() => setLoadingPedidos(false));
-  };
-
-  useEffect(() => { cargarPedidos(); }, []);
+      .finally(() => setSearching(false));
+  }, []);
 
   // Calcula la cantidad aún devolvible por producto en un pedido,
   // descontando lo que ya fue aprobado o está pendiente de aprobación.
@@ -317,7 +350,7 @@ export default function CrearDevolucion({ onClose, onSave, saving, devoluciones 
       const restantes = calcRestantes(ped);
       setItems(
         restantes
-          .filter(p => p.cantMax > 0)  // ocultar productos ya totalmente devueltos
+          .filter(p => p.cantMax > 0)
           .map((p) => ({
             idProducto: p.idProducto,
             nombre:     p.nombre,
@@ -385,7 +418,7 @@ export default function CrearDevolucion({ onClose, onSave, saving, devoluciones 
         subtotal:       i.precio * i.cantidad,
       })),
       totalDevuelto: totalDevolucion,
-      evidencia:     evidencia || null,
+      evidencia:     evidencia ? evidencia.url : null,
     });
   };
 
@@ -422,7 +455,7 @@ export default function CrearDevolucion({ onClose, onSave, saving, devoluciones 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: "#ffebee", border: "1px solid #ef9a9a", borderRadius: 10, color: "#c62828", fontSize: 13, fontWeight: 600 }}>
                   <span style={{display:"flex",alignItems:"center",gap:5}}><AlertTriangle size={13}/> El servidor tardó en responder.</span>
                   <button
-                    onClick={cargarPedidos}
+                    onClick={() => buscarPedidos("")}
                     style={{ background: "#c62828", color: "#fff", border: "none", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                   >
                     Reintentar
@@ -438,7 +471,9 @@ export default function CrearDevolucion({ onClose, onSave, saving, devoluciones 
                   value={idPedido}
                   pedidos={pedidosDisponibles}
                   error={errors.idPedido}
-                  disabled={loadingPedidos}
+                  disabled={false}
+                  searching={searching}
+                  onSearch={buscarPedidos}
                   onChange={handleSelectPedido}
                 />
                 {errors.idPedido && <span className="field-error">{errors.idPedido}</span>}

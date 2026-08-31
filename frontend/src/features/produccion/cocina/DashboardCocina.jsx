@@ -482,6 +482,17 @@ export default function DashboardCocina() {
                         {orden.estado}
                       </span>
                     </div>
+                    {!orden.idFicha && !orden.nombreInsumo && (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        background: "#fff3e0", border: "1px solid #ffe0b2",
+                        borderRadius: 8, padding: "6px 10px", marginBottom: 6,
+                        fontSize: 11, color: "#e65100", fontWeight: 600,
+                      }}>
+                        <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                        Sin ficha técnica — consulta al administrador
+                      </div>
+                    )}
                     <p><strong>Producto:</strong> {orden.nombreProducto || "—"} x{orden.cantidad}</p>
                     <p><strong>Insumo:</strong> {orden.nombreInsumo || "—"}</p>
                     <p><strong>Entrega:</strong> {orden.fechaEntrega || "—"}</p>

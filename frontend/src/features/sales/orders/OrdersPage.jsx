@@ -9,7 +9,7 @@ import {
   X, CheckCircle2, ShoppingCart, MapPin
 } from 'lucide-react';
 import { getUser } from '../../../services/authService';
-import { updateUser } from '../../client/profile/services/profileService.js';
+import { updateUser, getProfile } from '../../client/profile/services/profileService.js';
 import CartAside from './components/CartAside';
 import CheckoutModal from './components/CheckoutModal';
 import { crearPedidoCliente, resolverEntrega } from './services/crearPedidoCliente';
@@ -29,9 +29,15 @@ const OrdersPage = () => {
   const [orderDetails,       setOrderDetails]       = useState(null);
   const [toast,              setToast]              = useState(null);
   const [saveAddressPrompt,  setSaveAddressPrompt]  = useState(null);
+  const [userProfile,        setUserProfile]        = useState(null);
+
+  useEffect(() => { getProfile().then(setUserProfile).catch(() => {}); }, []);
+
+  const [catalogoIncompleto, setCatalogoIncompleto] = useState(false);
 
   useEffect(() => {
     getProductos({ porPagina: 100 }).then(data => {
+      if ((data.total || 0) > 100) setCatalogoIncompleto(true);
       const lista = (data.productos || data || []).map(p => ({
         id:                 p.ID_Producto || p.id,
         nombre:             p.Nombre      || p.nombre      || "",
@@ -86,10 +92,20 @@ const OrdersPage = () => {
     showToast(`${product.nombre} agregado al carrito`);
   };
 
-  const COSTO_DOMICILIO = 5000;
+  const COSTO_DOMICILIO = import.meta.env.VITE_COSTO_DOMICILIO
+    ? Number(import.meta.env.VITE_COSTO_DOMICILIO)
+    : 5000;
 
   const handleCheckout = (details) => {
     const user = getUser();
+    if (details.tieneDomicilio && !userProfile?.Telefono) {
+      showToast(
+        'Necesitas registrar tu teléfono en tu perfil antes de hacer un pedido a domicilio.',
+        'warn'
+      );
+      navigate('/cliente/perfil');
+      return;
+    }
     const subtotal = getCart().reduce((a, i) => a + i.precio * i.cantidad, 0);
     setOrderDetails({
       ...details,
@@ -255,6 +271,14 @@ const OrdersPage = () => {
             <SlidersHorizontal size={16} />
           </button>
         </div>
+
+        {/* Aviso catálogo incompleto */}
+        {catalogoIncompleto && (
+          <div style={{ padding: '10px 14px', background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, fontSize: 13, color: '#7c5700', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SlidersHorizontal size={14} />
+            Mostrando los 100 productos más recientes. Usa el buscador para encontrar más.
+          </div>
+        )}
 
         {/* Grid */}
         {activeProducts.length > 0 ? (

@@ -130,6 +130,11 @@ export default function CrearRol({ onClose, onSave }) {
                 </span>
                 <span style={{ color: "#9e9e9e", fontSize: 13 }}>›</span>
               </button>
+              {activosCount === 0 && (
+                <p className="field-error" style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                  ⚠ Sin privilegios asignados: los usuarios con este rol no podrán acceder a ningún módulo.
+                </p>
+              )}
             </div>
 
             {errors._api && (

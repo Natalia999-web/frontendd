@@ -26,21 +26,26 @@ const ReturnsPage = () => {
   const [toast,                  setToast]                  = useState(null);
   const [selectedOrderForReturn, setSelectedOrderForReturn] = useState(null);
   const [loadingOrders,          setLoadingOrders]          = useState(true);
+  const [errorDevoluciones,      setErrorDevoluciones]      = useState("");
+  const [errorPedidos,           setErrorPedidos]           = useState("");
 
   const location     = useLocation();
   const defaultValues = location.state || {};
 
-  const loadReturns = () =>
-    getMisDevoluciones({ porPagina: 100 })
+  const loadReturns = () => {
+    setErrorDevoluciones("");
+    return getMisDevoluciones({ porPagina: 100 })
       .then(data => setReturns(data.devoluciones || []))
-      .catch(() => {});
+      .catch(() => setErrorDevoluciones("No se pudieron cargar tus devoluciones. Intenta de nuevo."));
+  };
 
   useEffect(() => {
     loadReturns();
     setLoadingOrders(true);
+    setErrorPedidos("");
     getMisVentas({ porPagina: 100 })
       .then(data => setPedidos(data.pedidos || []))
-      .catch(() => {})
+      .catch(() => setErrorPedidos("No se pudieron cargar tus pedidos. Intenta de nuevo."))
       .finally(() => setLoadingOrders(false));
   }, []);
 
@@ -340,6 +345,19 @@ const ReturnsPage = () => {
                 {returns.length}
               </span>
             </div>
+            {errorDevoluciones && (
+              <div style={{ padding: '12px 16px', background: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: 10, color: '#c0392b', fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle size={15} />
+                {errorDevoluciones}
+                <button onClick={loadReturns} style={{ marginLeft: 'auto', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>Reintentar</button>
+              </div>
+            )}
+            {errorPedidos && (
+              <div style={{ padding: '12px 16px', background: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: 10, color: '#c0392b', fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle size={15} />
+                {errorPedidos}
+              </div>
+            )}
             <ReturnList returns={returns} onViewDetails={handleViewDetails} />
           </div>
         )}

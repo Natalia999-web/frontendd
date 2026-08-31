@@ -78,6 +78,11 @@ class Usuario(Base):
     Correo_Verificado = Column(Integer, default=0)
     # Token FCM para push notifications. Se persiste en BD para sobrevivir reinicios del servidor.
     FCM_Token      = Column(String(300), nullable=True)
+    # Rate limiting de login persistido en BD para sobrevivir cold starts de Render.
+    # Migración requerida: ALTER TABLE Usuarios ADD COLUMN Intentos_Login INT DEFAULT 0,
+    #                                           ADD COLUMN Bloqueado_Hasta DATETIME NULL;
+    Intentos_Login = Column(Integer, default=0, nullable=True)
+    Bloqueado_Hasta = Column(DateTime, nullable=True)
 
     rol          = relationship("Rol", foreign_keys=[ID_Rol])
     ventas       = relationship("Venta", back_populates="usuario")

@@ -19,7 +19,7 @@ from .service import (
     verificar_codigo_recuperacion, resetear_contrasena,
     cambiar_contrasena, actualizar_foto_perfil, eliminar_foto_perfil,
     obtener_mis_permisos, verificar_email_token, reenviar_verificacion,
-    verificar_token_empleado, buscar_por_correo,
+    verificar_token_empleado, buscar_por_correo, eliminar_mi_cuenta as _svc_eliminar_cuenta,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -251,15 +251,7 @@ def eliminar_mi_cuenta(
     db:     Session = Depends(get_db),
     actual: dict    = Depends(obtener_usuario_actual),
 ):
-    registro = actual["registro"]
-    if registro.ID_Rol != 3:
-        raise HTTPException(
-            status_code=403,
-            detail="Solo los clientes pueden eliminar su propia cuenta desde aquí",
-        )
-    registro.Estado = 2
-    db.commit()
-    return {"mensaje": "Tu cuenta ha sido desactivada correctamente"}
+    return _svc_eliminar_cuenta(db, actual)
 
 
 # ─────────────────────────────────────────

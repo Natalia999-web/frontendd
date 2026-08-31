@@ -41,13 +41,14 @@ const adaptDomicilio = (d) => {
 
 export const getDomicilios = async ({
   pagina = 1, porPagina = 100, estado = "", idEmpleado = null,
-  fechaInicio = null, fechaFin = null,
+  fechaInicio = null, fechaFin = null, busqueda = null,
 } = {}) => {
   const params = new URLSearchParams({ pagina, por_pagina: porPagina });
   if (estado)      params.append("estado",       encodeURIComponent(estado));
   if (idEmpleado)  params.append("id_empleado",  idEmpleado);
   if (fechaInicio) params.append("fecha_inicio",  fechaInicio);
   if (fechaFin)    params.append("fecha_fin",     fechaFin);
+  if (busqueda)    params.append("busqueda",      encodeURIComponent(busqueda));
   const data = await apiFetch(`/domicilios/?${params}`);
   return {
     total:      data.total,

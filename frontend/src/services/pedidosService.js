@@ -75,9 +75,10 @@ const adaptPedido = (p) => {
   };
 };
 
-export const getPedidos = async ({ pagina = 1, porPagina = 100, estado = null, timeout } = {}) => {
+export const getPedidos = async ({ pagina = 1, porPagina = 100, estado = null, busqueda = null, timeout } = {}) => {
   let url = `/pedidos/?pagina=${pagina}&por_pagina=${porPagina}`;
-  if (estado != null) url += `&estado=${estado}`;
+  if (estado   != null) url += `&estado=${estado}`;
+  if (busqueda)         url += `&busqueda=${encodeURIComponent(busqueda)}`;
   const data = await apiFetch(url, timeout ? { timeout } : {});
   return {
     total:     data.total,

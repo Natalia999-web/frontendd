@@ -136,13 +136,13 @@ def _recargar_credito(db: Session, id_usuario: int, monto: Decimal, id_devolucio
         credito = CreditoCliente(
             ID_Usuario   = id_usuario,
             Saldo        = Decimal("0"),
-            Fecha_Update = datetime.now(),
+            Fecha_Update = _now(),
         )
         db.add(credito)
         db.flush()
 
     credito.Saldo        += monto
-    credito.Fecha_Update  = datetime.now()
+    credito.Fecha_Update  = _now()
 
     db.add(MovimientoCredito(
         ID_Credito    = credito.ID_Credito,
@@ -150,7 +150,7 @@ def _recargar_credito(db: Session, id_usuario: int, monto: Decimal, id_devolucio
         ID_Venta      = None,
         Tipo          = "recarga",
         Monto         = monto,
-        Fecha         = datetime.now(),
+        Fecha         = _now(),
     ))
 
 
@@ -270,15 +270,16 @@ def crear_devolucion(db: Session, datos: DevolucionCreate) -> dict:
                 )
             )
 
-    # 2. Un pedido solo puede tener UNA solicitud de devolución, sin importar su
-    #    estado (Pendiente, Aprobada o Rechazada). No se permite crear otra.
+    # 2. Solo bloquear si ya hay una devolución activa (Pendiente o Aprobada).
+    #    Una rechazada no cuenta: el cliente puede volver a intentarlo dentro del plazo.
     existente = db.query(Devolucion).filter(
-        Devolucion.ID_Venta == datos.ID_Venta
+        Devolucion.ID_Venta == datos.ID_Venta,
+        Devolucion.Estado.in_([ESTADO_PENDIENTE, ESTADO_APROBADA])
     ).first()
     if existente:
         raise HTTPException(
             status_code=400,
-            detail="Ya existe una solicitud de devolución para este pedido"
+            detail="Ya existe una solicitud de devolución activa para este pedido"
         )
 
     # 3. Cliente existe
@@ -328,7 +329,7 @@ def crear_devolucion(db: Session, datos: DevolucionCreate) -> dict:
         Comprobante_Imagen = datos.Comprobante_Imagen,
         Estado             = ESTADO_PENDIENTE,
         TotalDevuelto      = total,
-        FechaDevolucion    = datetime.now(),
+        FechaDevolucion    = _now(),
     )
     db.add(nueva)
     db.flush()
@@ -410,7 +411,7 @@ def resolver_devolucion(db: Session, id_devolucion: int, datos: DevolucionResolu
     dev.Estado          = datos.Estado
     dev.Comentario      = datos.Comentario
     dev.UsuarioAprueba  = datos.UsuarioAprueba
-    dev.FechaAprobacion = datetime.now()
+    dev.FechaAprobacion = _now()
 
     if datos.Estado == ESTADO_APROBADA:
         _recargar_credito(
@@ -419,7 +420,7 @@ def resolver_devolucion(db: Session, id_devolucion: int, datos: DevolucionResolu
             monto         = Decimal(str(dev.TotalDevuelto)),
             id_devolucion = dev.ID_Devolucion,
         )
-        dev.FechaReembolso = datetime.now()
+        dev.FechaReembolso = _now()
 
     descartar_notificacion(db, "devolucion_pendiente", id_devolucion)
     db.commit()

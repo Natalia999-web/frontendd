@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, selectinload
 from fastapi import HTTPException
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_CEILING
 from zoneinfo import ZoneInfo
 
@@ -15,6 +15,7 @@ from src.shared.services.models import (
     Venta, VentaXProducto, DetalleVenta, Producto, ProductoImagen, Usuario,
     Estado, Domicilio, CreditoCliente, MovimientoCredito,
     Descuento, DescuentoXUsuario, DescuentoXVenta, OrdenProduccion, FichaTecnica,
+    LoteProducto,
 )
 
 
@@ -169,6 +170,32 @@ def _label_estado(db: Session, id_estado: int) -> str:
     return estado.Estado if estado else None
 
 
+def _descontar_fefo_producto(db: Session, id_producto: int, cantidad: int) -> None:
+    """Descuenta `cantidad` de los lotes del producto en orden FEFO (vence primero = sale primero)."""
+    from sqlalchemy import case as _case
+    lotes = (
+        db.query(LoteProducto)
+        .filter(
+            LoteProducto.ID_Producto == id_producto,
+            LoteProducto.Cantidad    >  0,
+        )
+        .order_by(
+            _case((LoteProducto.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteProducto.Fecha_Vencimiento.asc(),
+        )
+        .with_for_update()
+        .all()
+    )
+    restante = int(cantidad)
+    for lote in lotes:
+        if restante <= 0:
+            break
+        disponible = int(lote.Cantidad or 0)
+        tomar      = min(disponible, restante)
+        lote.Cantidad = disponible - tomar
+        restante -= tomar
+
+
 def _descontar_stock_venta(db: Session, id_venta: int) -> None:
     """Descuenta del stock lo vendido en la venta, bloqueando cada producto.
 
@@ -187,9 +214,12 @@ def _descontar_stock_venta(db: Session, id_venta: int) -> None:
         )
         if not producto:
             continue
-        producto.Stock = max(0, (producto.Stock or 0) - (item.Cantidad or 0))
+        cantidad = item.Cantidad or 0
+        producto.Stock = max(0, (producto.Stock or 0) - cantidad)
         _actualizar_estado_producto(producto)
         notificar_stock_producto(db, producto)
+        # Descontar también de los lotes FEFO para mantener el inventario por lote correcto
+        _descontar_fefo_producto(db, item.ID_Producto, cantidad)
 
 
 def _actualizar_estado_producto(producto: Producto) -> None:
@@ -1002,6 +1032,7 @@ def crear_venta(db: Session, datos: VentaCreate) -> dict:
             Municipio_entrega    = datos.domicilio.Municipio_entrega,
             Departamento_entrega = datos.domicilio.Departamento_entrega,
             OTP                  = str(100000 + _secrets.randbelow(900000)),
+            OTP_Expira           = _now() + timedelta(hours=48),
         ))
         if not datos.domicilio.ID_Empleado:
             notificar(

@@ -31,7 +31,7 @@ const CUENTA_TRANSFERENCIA = {
   banco:   "Bancolombia",
   titular: "TostonApp S.A.S",
   tipo:    "Ahorros",
-  numero:  "54213570938",
+  numero:  import.meta.env.VITE_CUENTA_TRANSFERENCIA ?? "54213570938",
 };
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -1418,10 +1418,11 @@ export default function GestionPedidos() {
   // como opción al elegir repartidor.
   const repartidores = (usuarios || []).filter(esEmpleadoRepartidor);
 
-  const [pedidos,      setPedidos]      = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [actionSaving, setActionSaving] = useState(false);
-  const [search,       setSearch]       = useState("");
+  const [pedidos,       setPedidos]       = useState([]);
+  const [totalPedidos,  setTotalPedidos]  = useState(0);
+  const [loading,       setLoading]       = useState(true);
+  const [actionSaving,  setActionSaving]  = useState(false);
+  const [search,        setSearch]        = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterTipo,   setFilterTipo]   = useState("todos");
   const [filterDesde,  setFilterDesde]  = useState("");
@@ -1475,13 +1476,15 @@ export default function GestionPedidos() {
     if (v === "historial") cargarHistorial();
   };
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (busqueda = null) => {
     setLoading(true);
     try {
       const [data, prodData] = await Promise.all([
-        getPedidos({ porPagina: 100 }),
+        getPedidos({ porPagina: 100, busqueda }),
         getProductos({ porPagina: 100 }).catch(() => ({ productos: [] })),
       ]);
+
+      setTotalPedidos(data.total || 0);
 
       const productosCatalogo = Array.isArray(prodData?.productos)
         ? prodData.productos
@@ -1496,22 +1499,24 @@ export default function GestionPedidos() {
           .filter(Boolean)
       );
 
-      setPedidos(prev => {
-        const newIds = new Set(data.pedidos.map(p => p.id));
-        const preserved = prev.filter(p =>
-          ["Entregado", "Cancelado"].includes(p.estado) && !newIds.has(p.id)
-        );
-        const enhanced = data.pedidos.map(p => {
-          const requiereProduccion = Boolean(p.requiereProduccion) ||
-            (p.productosItems || []).some(i => produccionIds.has(normalizeProductoId(i.idProducto)));
+      const enhanced = data.pedidos.map(p => ({
+        ...p,
+        requiereProduccion: Boolean(p.requiereProduccion) ||
+          (p.productosItems || []).some(i => produccionIds.has(normalizeProductoId(i.idProducto))),
+      }));
 
-          return {
-            ...p,
-            requiereProduccion,
-          };
+      if (busqueda) {
+        // Con búsqueda activa mostramos solo los resultados del servidor, sin merge
+        setPedidos(enhanced.sort((a, b) => b.id - a.id));
+      } else {
+        setPedidos(prev => {
+          const newIds = new Set(data.pedidos.map(p => p.id));
+          const preserved = prev.filter(p =>
+            ["Entregado", "Cancelado"].includes(p.estado) && !newIds.has(p.id)
+          );
+          return [...enhanced, ...preserved].sort((a, b) => b.id - a.id);
         });
-        return [...enhanced, ...preserved].sort((a, b) => b.id - a.id);
-      });
+      }
     } catch (err) {
       showToast(err.message || "Error al cargar pedidos", "error");
     } finally {
@@ -1523,6 +1528,17 @@ export default function GestionPedidos() {
     cargarDatos();
     getUsuarios({ porPagina: 100 }).then(setUsuarios).catch(() => {});
   }, []);
+
+  // Re-buscar en el servidor cuando el texto de búsqueda cambia (debounce 400ms).
+  // Se omite el primer render para no duplicar la carga inicial.
+  const searchMounted = useRef(false);
+  useEffect(() => {
+    if (!searchMounted.current) { searchMounted.current = true; return; }
+    if (vista !== "activos") return;
+    const q = search || null;
+    const t = setTimeout(() => cargarDatos(q), 400);
+    return () => clearTimeout(t);
+  }, [search, vista]);
 
   useEffect(() => {
     const h = e => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false); };
@@ -1907,6 +1923,15 @@ export default function GestionPedidos() {
       </div>
 
       <div className="page-inner">
+        {vista === "activos" && totalPedidos > 100 && !search && (
+          <div className="info-box info-box--warning" style={{ marginBottom: 12 }}>
+            <span className="info-box__icon"><AlertCircle size={14} /></span>
+            <span className="info-box__text">
+              Mostrando los 100 pedidos más recientes de <strong>{totalPedidos}</strong> en total.
+              Usa la búsqueda para encontrar pedidos anteriores.
+            </span>
+          </div>
+        )}
         <div className="toolbar">
           <div className="search-wrap">
             <Search className="search-icon" size={16} />

@@ -75,16 +75,10 @@ def obtener_pedidos(
 
 
 def obtener_pedido(db: Session, id_venta: int) -> dict:
-    """Retorna un pedido por ID. Solo si está en estado activo."""
-    pedido = db.query(Venta).filter(
-        Venta.ID_Venta == id_venta,
-        Venta.Estado.in_(ESTADOS_ACTIVOS),
-    ).first()
+    """Retorna un pedido por ID — sin filtro de estado para que admins puedan ver históricos."""
+    pedido = db.query(Venta).filter(Venta.ID_Venta == id_venta).first()
     if not pedido:
-        raise HTTPException(
-            status_code=404,
-            detail="Pedido no encontrado o ya fue procesado"
-        )
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return _formato_venta(pedido, db)
 
 

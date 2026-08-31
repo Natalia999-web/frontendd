@@ -18,14 +18,18 @@ export const login = async (correo, contrasena) => {
 
   const data = await res.json();
 
-  localStorage.setItem("token", data.access_token);
-  localStorage.setItem("usuario", JSON.stringify({
-    id:        data.cedula,
-    nombre:    data.nombre,
-    apellidos: data.apellidos,
-    tipo:      data.tipo,
-    rol:       data.rol,
-  }));
+  try {
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("usuario", JSON.stringify({
+      id:        data.cedula,
+      nombre:    data.nombre,
+      apellidos: data.apellidos,
+      tipo:      data.tipo,
+      rol:       data.rol,
+    }));
+  } catch {
+    throw new Error("No se pudo guardar la sesión. Intenta en modo de navegación normal.");
+  }
 
   // Avisar a todos los componentes que la sesión cambió
   window.dispatchEvent(new CustomEvent("session-changed"));
@@ -49,7 +53,14 @@ export const getUser = () => {
 };
 
 export const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
 };
 
 export const hasRole = (rol) => {

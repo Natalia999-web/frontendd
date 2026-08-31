@@ -9,6 +9,10 @@ export const getCurrentUser = () => {
   }
 };
 
+export const getProfile = async () => {
+  return apiFetch('/auth/perfil');
+};
+
 export const updateUser = async (updatedData) => {
   const data = await apiFetch('/auth/perfil', {
     method: 'PUT',
