@@ -93,6 +93,108 @@ def _formato_salida(salida: Salida, db: Session) -> dict:
 
 
 # ─────────────────────────────────────────
+# HELPERS FEFO DE LOTES
+# ─────────────────────────────────────────
+
+def _descontar_fefo_insumo(db: Session, id_insumo: int, cantidad: int) -> None:
+    from sqlalchemy import case as _case
+    restante = cantidad
+    lotes = (
+        db.query(LoteCompra)
+        .filter(
+            LoteCompra.ID_Insumo      == id_insumo,
+            LoteCompra.Cantidad_Actual > 0,
+            LoteCompra.Estado          == ESTADO_ACTIVO,
+        )
+        .order_by(
+            _case((LoteCompra.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteCompra.Fecha_Vencimiento.asc(),
+        )
+        .all()
+    )
+    for lote in lotes:
+        if restante <= 0:
+            break
+        disponible = float(lote.Cantidad_Actual or 0)
+        descontar  = min(restante, disponible)
+        lote.Cantidad_Actual = disponible - descontar
+        restante -= descontar
+
+
+def _descontar_fefo_producto(db: Session, id_producto: int, cantidad: int) -> None:
+    from sqlalchemy import case as _case
+    restante = cantidad
+    lotes = (
+        db.query(LoteProducto)
+        .filter(
+            LoteProducto.ID_Producto == id_producto,
+            LoteProducto.Cantidad    >  0,
+            LoteProducto.Estado      == ESTADO_ACTIVO,
+        )
+        .order_by(
+            _case((LoteProducto.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteProducto.Fecha_Vencimiento.asc(),
+        )
+        .all()
+    )
+    for lote in lotes:
+        if restante <= 0:
+            break
+        disponible = lote.Cantidad or 0
+        descontar  = min(restante, disponible)
+        lote.Cantidad = disponible - descontar
+        restante -= descontar
+
+
+def _restaurar_fefo_insumo(db: Session, id_insumo: int, cantidad: int) -> None:
+    from sqlalchemy import case as _case
+    restante = cantidad
+    lotes = (
+        db.query(LoteCompra)
+        .filter(
+            LoteCompra.ID_Insumo == id_insumo,
+            LoteCompra.Estado    == ESTADO_ACTIVO,
+        )
+        .order_by(
+            _case((LoteCompra.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteCompra.Fecha_Vencimiento.desc(),
+        )
+        .all()
+    )
+    for lote in lotes:
+        if restante <= 0:
+            break
+        espacio = float(lote.Cantidad_Inicial or 0) - float(lote.Cantidad_Actual or 0)
+        if espacio <= 0:
+            continue
+        reponer = min(restante, espacio)
+        lote.Cantidad_Actual = float(lote.Cantidad_Actual or 0) + reponer
+        restante -= reponer
+
+
+def _restaurar_fefo_producto(db: Session, id_producto: int, cantidad: int) -> None:
+    from sqlalchemy import case as _case
+    restante = cantidad
+    lotes = (
+        db.query(LoteProducto)
+        .filter(
+            LoteProducto.ID_Producto == id_producto,
+            LoteProducto.Estado      == ESTADO_ACTIVO,
+        )
+        .order_by(
+            _case((LoteProducto.Fecha_Vencimiento.is_(None), 1), else_=0),
+            LoteProducto.Fecha_Vencimiento.desc(),
+        )
+        .all()
+    )
+    for lote in lotes:
+        if restante <= 0:
+            break
+        lote.Cantidad = (lote.Cantidad or 0) + restante
+        restante = 0
+
+
+# ─────────────────────────────────────────
 # CRUD
 # ─────────────────────────────────────────
 
@@ -226,6 +328,7 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
             )
         insumo.Stock_Actual -= datos.Cantidad
         _actualizar_estado_insumo(insumo)
+        _descontar_fefo_insumo(db, datos.ID_Insumo, datos.Cantidad)
 
     else:
         producto = db.query(Producto).filter(Producto.ID_Producto == datos.ID_Producto).first()
@@ -244,6 +347,7 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
             )
         producto.Stock -= datos.Cantidad
         _actualizar_estado_producto(producto)
+        _descontar_fefo_producto(db, datos.ID_Producto, datos.Cantidad)
 
     nueva = Salida(
         Tipo        = datos.Tipo,
@@ -288,11 +392,13 @@ def anular_salida(db: Session, id_salida: int, id_anulado_por: int = None) -> di
         if insumo:
             insumo.Stock_Actual = (insumo.Stock_Actual or 0) + salida.Cantidad
             _actualizar_estado_insumo(insumo)
+            _restaurar_fefo_insumo(db, salida.ID_Insumo, salida.Cantidad)
     else:
         producto = db.query(Producto).filter(Producto.ID_Producto == salida.ID_Producto).first()
         if producto:
             producto.Stock = (producto.Stock or 0) + salida.Cantidad
             _actualizar_estado_producto(producto)
+            _restaurar_fefo_producto(db, salida.ID_Producto, salida.Cantidad)
 
     salida.Estado = ESTADO_ANULADA
     if id_anulado_por:
