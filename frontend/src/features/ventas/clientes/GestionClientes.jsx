@@ -146,7 +146,7 @@ export default function GestionClientes() {
     try {
       await eliminarUsuario("cliente", modal.cliente.id);
       await cargarDatos();
-      showToast("Cliente eliminado", "error");
+      showToast("Cliente eliminado");
       setModal(null);
     } catch (err) {
       showToast(err.message || "Error al eliminar cliente", "error");

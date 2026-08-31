@@ -63,18 +63,20 @@ def crear_cliente(db: Session, datos: ClienteCreate) -> dict:
         raise HTTPException(status_code=400, detail="Correo ya registrado")
 
     nuevo = Usuario(
-        Cedula          = datos.Cedula,
-        Tipo_Documento  = datos.Tipo_Documento,
-        Nombre          = datos.Nombre,
-        Apellidos       = datos.Apellidos,
-        Correo          = datos.Correo,
-        Contrasena      = hashear_contrasena(datos.Contrasena),
-        Telefono        = datos.Telefono,
-        Fecha_creacion  = datos.Fecha_creacion or datetime.now(),
-        Estado          = datos.Estado,
-        Direccion       = datos.Direccion,
-        Departamento    = datos.Departamento,
-        Municipio       = datos.Municipio,
+        Cedula             = datos.Cedula,
+        Tipo_Documento     = datos.Tipo_Documento,
+        Nombre             = datos.Nombre,
+        Apellidos          = datos.Apellidos,
+        Correo             = datos.Correo,
+        Contrasena         = hashear_contrasena(datos.Contrasena),
+        Telefono           = datos.Telefono,
+        Fecha_creacion     = datos.Fecha_creacion or datetime.now(),
+        Estado             = datos.Estado,
+        Direccion          = datos.Direccion,
+        Departamento       = datos.Departamento,
+        Municipio          = datos.Municipio,
+        ID_Rol             = 3,
+        Correo_Verificado  = 1,
     )
     db.add(nuevo)
     db.commit()
