@@ -99,8 +99,16 @@ def obtener_compras(
         query = query.filter(Compra.ID_Proveedor == id_proveedor)
 
     if busqueda:
-        termino = f"%{busqueda}%"
-        query = query.filter(Compra.Metodo_Pago.ilike(termino))
+        termino        = f"%{busqueda}%"
+        proveedor_ids  = (
+            db.query(Proveedor.ID_Proveedor)
+            .filter(Proveedor.Nombre.ilike(termino))
+            .subquery()
+        )
+        query = query.filter(
+            Compra.Metodo_Pago.ilike(termino) |
+            Compra.ID_Proveedor.in_(proveedor_ids)
+        )
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina

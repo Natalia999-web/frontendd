@@ -1366,7 +1366,7 @@ export default function GestionOrdenesProduccion() {
                         <button className="act-btn act-btn--view"   data-tooltip="Ver detalles"   onClick={() => setModal({ type: "detalles", orden })}><Eye size={15} /></button>
                         <button className="act-btn act-btn--edit"   data-tooltip="Editar"         onClick={() => setModal({ type: "form",     orden })}><PenLine size={15} /></button>
                         <button className="act-btn act-btn--status" data-tooltip="Cambiar estado" onClick={() => setModal({ type: "estado",   orden })} disabled={actionSaving}><RefreshCw size={15} /></button>
-                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })}><Trash2 size={15} /></button>
+                        <button className="act-btn act-btn--delete" data-tooltip="Eliminar"       onClick={() => setModal({ type: "eliminar", orden })} disabled={["En proceso", "Completada"].includes(orden.estado)} style={{ opacity: ["En proceso", "Completada"].includes(orden.estado) ? 0.35 : 1, cursor: ["En proceso", "Completada"].includes(orden.estado) ? "default" : "pointer" }}><Trash2 size={15} /></button>
                       </div>
                     </td>
                   </tr>

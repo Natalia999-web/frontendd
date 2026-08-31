@@ -102,8 +102,8 @@ export default function Reportes() {
 
     const [dashResult, ventasResult, devsResult] = await Promise.allSettled([
       getDashboard(p),
-      getHistorialPedidos({ porPagina: 200 }),
-      getDevoluciones({ porPagina: 200 }),
+      getHistorialPedidos({ porPagina: 100 }),
+      getDevoluciones({ porPagina: 100 }),
     ]);
 
     if (dashResult.status === "fulfilled") {
