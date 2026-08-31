@@ -15,7 +15,7 @@ const CUENTA_TRANSFERENCIA = {
   banco:   "Bancolombia",
   titular: "TostonApp S.A.S",
   tipo:    "Ahorros",
-  numero:  "54213570938",
+  numero:  import.meta.env.VITE_CUENTA_TRANSFERENCIA ?? "54213570938",
 };
 
 /* ─── Helpers ────────────────────────────────────────────── */
