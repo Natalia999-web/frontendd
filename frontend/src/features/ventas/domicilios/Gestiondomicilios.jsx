@@ -2,14 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { esEmpleadoRepartidor } from "../../../utils/roles.js";
 import { Navigate } from "react-router-dom";
 import {
-  Search, Bike, Package, CheckCircle2, XCircle, Clock,
+  Search, Bike, Package, CheckCircle2, XCircle,
   MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
   Banknote, Building2, Scale, Eye, Globe, Zap, PenLine, FileText,
   Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
   Utensils,
 } from "lucide-react";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
-import { ESTADO_PEDIDO_MAP } from "../../../services/pedidosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
 import { esRolRepartidor, INICIO_REPARTIDOR } from "../../../utils/roles.js";
@@ -1121,13 +1120,13 @@ export default function GestionDomicilios() {
 
   const gestionables = domicilios.filter(listoParaSalir);
 
-  /* Los que faltan por aparecer. No es la resta de los dos totales: un
-     domicilio ya cancelado o entregado no está esperando a la cocina, y
-     sumarlo hacía que el aviso anunciara más entregas de las que iban a
-     llegar. Se listan por cliente para poder contrastarlas con Gestión de
-     pedidos sin tener que adivinar cuáles son. */
-  const enEspera = domicilios.filter(
-    d => !listoParaSalir(d) && esDomicilioActivo(d.estadoId)
+  /* Lo que de verdad hay que atender: el pedido ya salió de cocina y todavía
+     no tiene quién lo lleve. Es el mismo criterio que usa la app móvil para
+     su lista de "Solicitudes sin asignar" y el mismo del filtro de la tabla.
+     Antes acá se avisaba de los pedidos que seguían en cocina, que no son
+     algo sobre lo que este panel pueda hacer nada. */
+  const sinAsignarLista = gestionables.filter(
+    d => !d.idEmpleado && esDomicilioActivo(d.estadoId)
   );
 
   /* ── Filtrado ── */
@@ -1284,7 +1283,7 @@ export default function GestionDomicilios() {
   const enCamino   = gestionables.filter(p => p.estado === "En camino").length;
   const entregados = gestionables.filter(p => p.estado === "Entregado").length;
   const conAsignar = gestionables.filter(p => p.idEmpleado).length;
-  const sinAsignar = gestionables.filter(p => !p.idEmpleado && !["Entregado", "Cancelado"].includes(p.estado)).length;
+  const sinAsignar = sinAsignarLista.length;
 
   // Domiciliarios solo pueden ver su propio panel
   if (esRolRepartidor(getUser()?.rol)) {
@@ -1423,24 +1422,30 @@ export default function GestionDomicilios() {
               </div>
             </div>
 
-            {enEspera.length > 0 && (
-              <div className="info-box info-box--warn" style={{ marginBottom: 12 }}>
-                <span className="info-box__icon"><Clock size={14} /></span>
+            {sinAsignarLista.length > 0 && (
+              <div className="info-box info-box--alerta" style={{ marginBottom: 12 }}>
+                <span className="info-box__icon"><AlertTriangle size={14} /></span>
                 <div className="info-box__text">
                   <strong>
-                    {enEspera.length === 1
-                      ? "1 domicilio en espera"
-                      : `${enEspera.length} domicilios en espera`}
+                    {sinAsignarLista.length === 1
+                      ? "1 domicilio sin domiciliario"
+                      : `${sinAsignarLista.length} domicilios sin domiciliario`}
                   </strong>{" "}
-                  de que el pedido esté listo. Aparecerá{enEspera.length === 1 ? "" : "n"}
-                  {" "}aquí en cuanto se marque{enEspera.length === 1 ? "" : "n"} como
-                  {" "}Listo{enEspera.length === 1 ? "" : "s"} en Gestión de pedidos.
-                  <div className="espera-chips">
-                    {enEspera.map(d => (
-                      <span key={d.id} className="espera-chip">
+                  El pedido ya está listo para salir. Haz clic en uno para
+                  asignarlo.
+                  <div className="aviso-chips">
+                    {sinAsignarLista.map(d => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        className="aviso-chip"
+                        title={`Asignar domiciliario a ${d.numero}`}
+                        onClick={() => abrirReasignar(d)}
+                      >
+                        <Bike size={11} />
                         {d.cliente?.nombre || d.numero}
-                        <em>{ESTADO_PEDIDO_MAP[d.venta_estado_id] || "Pendiente"}</em>
-                      </span>
+                        {d.direccion_entrega && <em>{d.direccion_entrega}</em>}
+                      </button>
                     ))}
                   </div>
                 </div>

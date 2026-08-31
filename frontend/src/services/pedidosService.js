@@ -3,7 +3,7 @@ import { apiFetch } from "../utils/api";
 // Estados de VENTA (tabla global Estados). Son los que usa
 // pedidos/services/estados.py: EstadoPedido. Los IDs 2 y 3 no se usan para
 // ventas, por eso no aparecen aquí.
-export const ESTADO_PEDIDO_MAP = {
+const ESTADO_PEDIDO_MAP = {
   1:  "Pendiente",
   4:  "Confirmado",
   5:  "Cancelado",

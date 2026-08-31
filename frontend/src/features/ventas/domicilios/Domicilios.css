@@ -313,20 +313,30 @@
 .mod-domicilios .info-box--warn { background: #fff8e1; border-color: #ffe9a8; }
 .mod-domicilios .info-box--warn .info-box__text { color: #7a5d00; }
 
-/* Chips del aviso "en espera": nombran cada pedido y en qué va, para poder
-   contrastarlos con Gestión de pedidos. */
-.mod-domicilios .espera-chips {
+.mod-domicilios .info-box--alerta { background: #ffebee; border-color: #ef9a9a; }
+.mod-domicilios .info-box--alerta .info-box__text,
+.mod-domicilios .info-box--alerta .info-box__icon { color: #8c1d18; }
+
+/* Chips del aviso de domicilios sin asignar: cada uno abre el modal para
+   asignarle domiciliario, así el aviso no obliga a buscar la fila en la
+   tabla. */
+.mod-domicilios .aviso-chips {
   display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
 }
-.mod-domicilios .espera-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #fff; border: 1px solid #ffe082; border-radius: 999px;
-  padding: 3px 10px; font-size: 11.5px; font-weight: 700; color: #7a5d00;
+.mod-domicilios .aviso-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: #fff; border: 1px solid #ef9a9a; border-radius: 999px;
+  padding: 4px 11px; font-family: inherit; font-size: 11.5px;
+  font-weight: 700; color: #8c1d18; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
-.mod-domicilios .espera-chip em {
-  font-style: normal; font-weight: 600; color: #a1834a;
+.mod-domicilios .aviso-chip:hover { background: #ffe2e2; border-color: #e57373; }
+.mod-domicilios .aviso-chip em {
+  font-style: normal; font-weight: 600; color: #b06a66;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 190px;
 }
-.mod-domicilios .espera-chip em::before { content: "· "; }
+.mod-domicilios .aviso-chip em::before { content: "· "; }
 
 /* En pantallas medianas se ocultan las columnas de menor prioridad */
 @media (max-width: 1100px) {
