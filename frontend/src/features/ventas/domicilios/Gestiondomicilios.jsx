@@ -6,6 +6,7 @@ import {
   MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
   Banknote, Building2, Scale, Eye, Globe, Zap, PenLine, FileText,
   Check, X, Ban, Navigation, ClipboardList, BarChart2, Truck, ChevronRight,
+  ChevronDown,
   Utensils,
 } from "lucide-react";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
@@ -1050,6 +1051,10 @@ export default function GestionDomicilios() {
   const [filterDesde,  setFilterDesde]  = useState("");
   const [filterHasta,  setFilterHasta]  = useState("");
   const [showFilter,   setShowFilter]   = useState(false);
+  // El aviso de "sin domiciliario" arranca abierto, como la lista de
+  // solicitudes de la app móvil, pero se puede plegar: con muchos pendientes
+  // la lista de chips empujaba la tabla fuera de la pantalla.
+  const [avisoAbierto, setAvisoAbierto] = useState(true);
   const [page,         setPage]         = useState(1);
   const [modal,        setModal]        = useState(null);
   const [toast,        setToast]        = useState(null);
@@ -1423,32 +1428,46 @@ export default function GestionDomicilios() {
             </div>
 
             {sinAsignarLista.length > 0 && (
-              <div className="info-box info-box--alerta" style={{ marginBottom: 12 }}>
-                <span className="info-box__icon"><AlertTriangle size={14} /></span>
-                <div className="info-box__text">
-                  <strong>
+              <div className="aviso-sin-asignar">
+                <button
+                  type="button"
+                  className="aviso-head"
+                  aria-expanded={avisoAbierto}
+                  onClick={() => setAvisoAbierto(v => !v)}
+                >
+                  <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                  <span className="aviso-head__txt">
                     {sinAsignarLista.length === 1
-                      ? "1 domicilio sin domiciliario"
-                      : `${sinAsignarLista.length} domicilios sin domiciliario`}
-                  </strong>{" "}
-                  El pedido ya está listo para salir. Haz clic en uno para
-                  asignarlo.
-                  <div className="aviso-chips">
-                    {sinAsignarLista.map(d => (
-                      <button
-                        key={d.id}
-                        type="button"
-                        className="aviso-chip"
-                        title={`Asignar domiciliario a ${d.numero}`}
-                        onClick={() => abrirReasignar(d)}
-                      >
-                        <Bike size={11} />
-                        {d.cliente?.nombre || d.numero}
-                        {d.direccion_entrega && <em>{d.direccion_entrega}</em>}
-                      </button>
-                    ))}
+                      ? "Hay 1 domicilio sin domiciliario"
+                      : `Hay ${sinAsignarLista.length} domicilios sin domiciliario`}
+                  </span>
+                  <span className="aviso-badge">{sinAsignarLista.length}</span>
+                  <ChevronDown size={17} className="aviso-chevron" />
+                </button>
+
+                {avisoAbierto && (
+                  <div className="aviso-body">
+                    El pedido ya está listo para salir. Haz clic en uno para
+                    asignarle domiciliario.
+                    <div className="aviso-chips">
+                      {sinAsignarLista.map(d => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          className="aviso-chip"
+                          title={`Asignar domiciliario a ${d.numero}`}
+                          onClick={() => abrirReasignar(d)}
+                        >
+                          <Bike size={11} style={{ flexShrink: 0 }} />
+                          <span className="aviso-chip__nom">
+                            {d.cliente?.nombre || d.numero}
+                          </span>
+                          {d.direccion_entrega && <em>{d.direccion_entrega}</em>}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

@@ -313,15 +313,38 @@
 .mod-domicilios .info-box--warn { background: #fff8e1; border-color: #ffe9a8; }
 .mod-domicilios .info-box--warn .info-box__text { color: #7a5d00; }
 
-.mod-domicilios .info-box--alerta { background: #ffebee; border-color: #ef9a9a; }
-.mod-domicilios .info-box--alerta .info-box__text,
-.mod-domicilios .info-box--alerta .info-box__icon { color: #8c1d18; }
-
-/* Chips del aviso de domicilios sin asignar: cada uno abre el modal para
-   asignarle domiciliario, así el aviso no obliga a buscar la fila en la
-   tabla. */
+/* ─── Aviso de domicilios sin domiciliario ───────────────────────────────
+   Se pliega desde la cabecera: con muchos pendientes la lista de chips
+   empujaba la tabla fuera de la pantalla. Cada chip abre el modal para
+   asignar, así el aviso no obliga a buscar la fila en la tabla. */
+.mod-domicilios .aviso-sin-asignar {
+  margin-bottom: 12px; border: 1px solid #ef9a9a; border-radius: 10px;
+  background: #ffebee; overflow: hidden;
+}
+.mod-domicilios .aviso-head {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 10px 13px; background: none; border: 0; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: #8c1d18; text-align: left;
+  transition: background 0.15s;
+}
+.mod-domicilios .aviso-head:hover { background: #ffe2e2; }
+.mod-domicilios .aviso-head__txt { flex: 1; font-weight: 700; line-height: 1.4; }
+.mod-domicilios .aviso-badge {
+  flex-shrink: 0; padding: 2px 8px; border-radius: 999px;
+  background: #c62828; color: #fff; font-size: 11.5px; font-weight: 800;
+}
+.mod-domicilios .aviso-chevron { flex-shrink: 0; transition: transform 0.2s; }
+.mod-domicilios .aviso-head[aria-expanded="false"] .aviso-chevron {
+  transform: rotate(-90deg);
+}
+.mod-domicilios .aviso-body {
+  padding: 0 13px 11px; font-size: 12.5px; color: #8c1d18; line-height: 1.45;
+}
 .mod-domicilios .aviso-chips {
   display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  /* Tope de unas cuatro filas: a partir de ahí el aviso hace su propio
+     scroll en vez de crecer sin fin. */
+  max-height: 132px; overflow-y: auto;
 }
 .mod-domicilios .aviso-chip {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
@@ -331,10 +354,13 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .mod-domicilios .aviso-chip:hover { background: #ffe2e2; border-color: #e57373; }
+.mod-domicilios .aviso-chip__nom,
 .mod-domicilios .aviso-chip em {
-  font-style: normal; font-weight: 600; color: #b06a66;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  max-width: 190px;
+}
+.mod-domicilios .aviso-chip__nom { max-width: 160px; }
+.mod-domicilios .aviso-chip em {
+  font-style: normal; font-weight: 600; color: #b06a66; max-width: 190px;
 }
 .mod-domicilios .aviso-chip em::before { content: "· "; }
 
