@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { esEmpleadoRepartidor } from "../../../utils/roles.js";
-import { useNavigate, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import {
   Search, Bike, Package, CheckCircle2, XCircle, Clock,
   MapPin, AlertTriangle, User, ShoppingBag, CreditCard, Calendar,
@@ -9,6 +9,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { getDomicilios, asignarRepartidor, actualizarDomicilio, cambiarEstadoDomicilio, registrarPagoEfectivo } from "../../../services/domiciliosService.js";
+import { ESTADO_PEDIDO_MAP } from "../../../services/pedidosService.js";
 import { getUsuarios, toggleEstadoUsuario } from "../../../services/usuariosService.js";
 import { getUser } from "../../../services/authService.js";
 import { esRolRepartidor, INICIO_REPARTIDOR } from "../../../utils/roles.js";
@@ -133,32 +134,68 @@ const mapToGoogleMaps = (address, municipio = "", departamento = "") => {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 };
 
-const exportToCsv = (rows) => {
-  if (!rows || rows.length === 0) return;
-  const headers = ["Pedido", "Cliente", "Domiciliario", "Dirección", "Estado", "Total", "Fecha pedido", "Fecha entrega", "Observaciones"];
-  const csvRows = [headers.join(",")];
-  rows.forEach(row => {
-    const values = [
-      row.numero,
-      row.cliente?.nombre || "",
-      row.domiciliario || "Sin asignar",
-      row.direccion_entrega || "",
-      row.estado || "",
-      row.total != null ? row.total : "",
-      row.fecha_pedido || "",
-      row.fecha_entrega_real || "",
-      row.obs_domicilio ? row.obs_domicilio.replace(/\r?\n/g, " ") : "",
-    ];
-    csvRows.push(values.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","));
+/* ── Exportar CSV ──────────────────────────────────────────────────────
+   Tres cosas que el archivo anterior hacía mal:
+
+   1. La columna "Domiciliario" leía `row.domiciliario`, un campo que el
+      adaptador no arma nunca, así que TODAS las filas salían "Sin asignar".
+      El nombre se resuelve igual que en la tabla, contra los empleados.
+   2. Excel en español separa por ";" (el separador de lista del sistema).
+      Con comas metía la fila entera en una sola celda. La marca "sep=" se
+      lo dice explícitamente y el BOM evita leer "Dirección" como
+      "DirecciÃ³n".
+   3. Fechas y montos salían crudos ("2026-08-30T14:02:11", "22500.0").
+
+   Las columnas siguen el mismo orden en que se leen en la tabla. */
+const CSV_COLUMNAS = [
+  { titulo: "Domicilio",            valor: (d) => d.numero },
+  { titulo: "Pedido",               valor: (d) => (d.idVenta ? `V-${d.idVenta}` : "") },
+  { titulo: "Cliente",              valor: (d) => d.cliente?.nombre },
+  { titulo: "Teléfono",             valor: (d) => d.cliente?.telefono },
+  { titulo: "Dirección",            valor: (d) => d.direccion_entrega },
+  { titulo: "Municipio",            valor: (d) => d.municipio_entrega },
+  { titulo: "Domiciliario",         valor: (d, nombre) => nombre(d) || "Sin asignar" },
+  { titulo: "Estado de la entrega", valor: (d) => d.estado },
+  { titulo: "Método de pago",       valor: (d) => d.metodo_pago },
+  { titulo: "Estado del pago",      valor: (d) => ESTADO_PAGO_LABEL[d.estado_pago]?.label },
+  { titulo: "Total",                valor: (d) => (d.total != null ? Math.round(d.total) : "") },
+  { titulo: "Fecha del pedido",     valor: (d) => csvFecha(d.fecha_pedido) },
+  { titulo: "Fecha de entrega",     valor: (d) => csvFecha(d.fecha_entrega_real) },
+  { titulo: "Observaciones",        valor: (d) => d.obs_domicilio },
+  { titulo: "Indicaciones del cliente", valor: (d) => d.indicaciones_cliente },
+];
+
+// fmtFecha devuelve "—" cuando no hay fecha; en una celda queda mejor vacía.
+const csvFecha = (iso) => (iso ? fmtFecha(iso) : "");
+
+const celdaCsv = (val) => {
+  const txt = String(val ?? "").replace(/\r?\n/g, " ").trim();
+  return `"${txt.replace(/"/g, '""')}"`;
+};
+
+const exportToCsv = (rows, nombreRepartidor) => {
+  if (!rows || rows.length === 0) return false;
+  const lineas = [
+    "sep=;",
+    CSV_COLUMNAS.map(c => celdaCsv(c.titulo)).join(";"),
+    ...rows.map(d =>
+      CSV_COLUMNAS.map(c => celdaCsv(c.valor(d, nombreRepartidor))).join(";")
+    ),
+  ];
+  // El BOM es lo que hace que Excel lo abra como UTF-8.
+  const blob = new Blob(["\uFEFF" + lineas.join("\r\n")], {
+    type: "text/csv;charset=utf-8;",
   });
-  const csv = csvRows.join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `domicilios_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.href = url;
+  link.download = `domicilios-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  // Revocar en el mismo tick corta la descarga en algunos navegadores.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  return true;
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -412,7 +449,6 @@ const NAV_VER = [
 
 function ModalVerDomicilio({ pedido, emp, domicilios, onClose, onReasignar, onObservaciones }) {
   const [activeSection, setActiveSection] = useState("cliente");
-  const navigate = useNavigate();
   const activo = !["Entregado", "Cancelado"].includes(pedido.estado);
   const cfg = ESTADO_CONFIG[pedido.estadoId] || { dot: "#bdbdbd", label: pedido.estado, desc: "" };
   const pedidosAsignados = domicilios.filter(d => d.idEmpleado === emp?.id);
@@ -1066,6 +1102,13 @@ export default function GestionDomicilios() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  /* El nombre del repartidor no viene en el domicilio adaptado: la tabla lo
+     resuelve contra los empleados y el CSV hace lo mismo. */
+  const nombreRepartidor = (d) => {
+    const emp = empleados.find(e => e.id === d.idEmpleado);
+    return emp ? `${emp.nombre} ${emp.apellidos}`.trim() : "";
+  };
+
   /* ── Solo pedidos listos para salir ────────────────────────────────────
      El domicilio se crea junto con la venta, así que el panel lo mostraba
      desde que se hacía el pedido. No hay nada que gestionar hasta que el
@@ -1073,10 +1116,19 @@ export default function GestionDomicilios() {
      Se incluyen los posteriores —En camino (9) y Entregado (8)— y los
      cancelados (5), para poder cerrarlos. Mismo criterio que la app móvil.
      Si el backend no envía el estado de la venta, no se oculta nada. */
-  const gestionables = domicilios.filter(
-    d => d.venta_estado_id == null || [11, 9, 8, 5].includes(d.venta_estado_id)
+  const listoParaSalir = (d) =>
+    d.venta_estado_id == null || [11, 9, 8, 5].includes(d.venta_estado_id);
+
+  const gestionables = domicilios.filter(listoParaSalir);
+
+  /* Los que faltan por aparecer. No es la resta de los dos totales: un
+     domicilio ya cancelado o entregado no está esperando a la cocina, y
+     sumarlo hacía que el aviso anunciara más entregas de las que iban a
+     llegar. Se listan por cliente para poder contrastarlas con Gestión de
+     pedidos sin tener que adivinar cuáles son. */
+  const enEspera = domicilios.filter(
+    d => !listoParaSalir(d) && esDomicilioActivo(d.estadoId)
   );
-  const ocultosNoListos = domicilios.length - gestionables.length;
 
   /* ── Filtrado ── */
   const filtered = gestionables.filter(p => {
@@ -1310,7 +1362,26 @@ export default function GestionDomicilios() {
                 />
               </div>
 
-              <button className="btn-action" onClick={() => exportToCsv(filtered)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                className="btn-action"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+                disabled={filtered.length === 0}
+                data-tooltip={
+                  filtered.length === 0
+                    ? "No hay domicilios que exportar"
+                    : `Exportar ${filtered.length} domicilio${filtered.length === 1 ? "" : "s"}`
+                }
+                onClick={() => {
+                  // Se exporta lo que se está viendo (búsqueda y filtros
+                  // incluidos), no solo la página actual.
+                  if (exportToCsv(filtered, nombreRepartidor)) {
+                    showToast(
+                      `${filtered.length} domicilio${filtered.length === 1 ? "" : "s"} exportado${filtered.length === 1 ? "" : "s"}`,
+                      "success"
+                    );
+                  }
+                }}
+              >
                 <FileText size={14} /> Exportar CSV
               </button>
 
@@ -1352,18 +1423,27 @@ export default function GestionDomicilios() {
               </div>
             </div>
 
-            {ocultosNoListos > 0 && (
-              <div
-                className="info-box"
-                style={{ marginBottom: 12, background: "#fff8e1", borderColor: "#ffe9a8" }}
-              >
+            {enEspera.length > 0 && (
+              <div className="info-box info-box--warn" style={{ marginBottom: 12 }}>
                 <span className="info-box__icon"><Clock size={14} /></span>
-                <span className="info-box__text">
-                  {ocultosNoListos === 1
-                    ? "Hay 1 domicilio en espera: su pedido todavía no está listo."
-                    : `Hay ${ocultosNoListos} domicilios en espera: sus pedidos todavía no están listos.`}
-                  {" "}Aparecerán aquí en cuanto se marquen como Listos en Gestión de pedidos.
-                </span>
+                <div className="info-box__text">
+                  <strong>
+                    {enEspera.length === 1
+                      ? "1 domicilio en espera"
+                      : `${enEspera.length} domicilios en espera`}
+                  </strong>{" "}
+                  de que el pedido esté listo. Aparecerá{enEspera.length === 1 ? "" : "n"}
+                  {" "}aquí en cuanto se marque{enEspera.length === 1 ? "" : "n"} como
+                  {" "}Listo{enEspera.length === 1 ? "" : "s"} en Gestión de pedidos.
+                  <div className="espera-chips">
+                    {enEspera.map(d => (
+                      <span key={d.id} className="espera-chip">
+                        {d.cliente?.nombre || d.numero}
+                        <em>{ESTADO_PEDIDO_MAP[d.venta_estado_id] || "Pendiente"}</em>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
