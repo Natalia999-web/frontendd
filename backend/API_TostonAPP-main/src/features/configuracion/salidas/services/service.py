@@ -310,44 +310,51 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
     """
     Registra la salida y descuenta el stock en una sola transacción.
     Las notificaciones se envían después del commit para no romper atomicidad.
+    Excepción: tipo 'devolución' solo crea el registro (el stock ya fue descontado
+    en la venta original; el producto devuelto no puede reintegrarse al inventario
+    por ser comida).
     """
+    es_devolucion = (datos.Tipo or "").lower() == "devolución"
+
     if datos.ID_Insumo:
         insumo = db.query(Insumo).filter(Insumo.ID_Insumo == datos.ID_Insumo).first()
         if not insumo:
             raise HTTPException(status_code=404, detail="Insumo no encontrado")
-        stock_disponible = insumo.Stock_Actual or 0
-        if stock_disponible == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="No se puede registrar la salida. El producto no tiene stock disponible."
-            )
-        if stock_disponible < datos.Cantidad:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
-            )
-        insumo.Stock_Actual -= datos.Cantidad
-        _actualizar_estado_insumo(insumo)
-        _descontar_fefo_insumo(db, datos.ID_Insumo, datos.Cantidad)
+        if not es_devolucion:
+            stock_disponible = insumo.Stock_Actual or 0
+            if stock_disponible == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se puede registrar la salida. El producto no tiene stock disponible."
+                )
+            if stock_disponible < datos.Cantidad:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
+                )
+            insumo.Stock_Actual -= datos.Cantidad
+            _actualizar_estado_insumo(insumo)
+            _descontar_fefo_insumo(db, datos.ID_Insumo, datos.Cantidad)
 
     else:
         producto = db.query(Producto).filter(Producto.ID_Producto == datos.ID_Producto).first()
         if not producto:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
-        stock_disponible = producto.Stock or 0
-        if stock_disponible == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="No se puede registrar la salida. El producto no tiene stock disponible."
-            )
-        if stock_disponible < datos.Cantidad:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
-            )
-        producto.Stock -= datos.Cantidad
-        _actualizar_estado_producto(producto)
-        _descontar_fefo_producto(db, datos.ID_Producto, datos.Cantidad)
+        if not es_devolucion:
+            stock_disponible = producto.Stock or 0
+            if stock_disponible == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se puede registrar la salida. El producto no tiene stock disponible."
+                )
+            if stock_disponible < datos.Cantidad:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Stock insuficiente. Solo hay {stock_disponible} unidades disponibles."
+                )
+            producto.Stock -= datos.Cantidad
+            _actualizar_estado_producto(producto)
+            _descontar_fefo_producto(db, datos.ID_Producto, datos.Cantidad)
 
     nueva = Salida(
         Tipo        = datos.Tipo,
@@ -363,15 +370,16 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
     db.commit()
     db.refresh(nueva)
 
-    # Notificaciones fuera de la transacción principal
-    if nueva.ID_Insumo:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == nueva.ID_Insumo).first()
-        if insumo:
-            notificar_stock_insumo(db, insumo)
-    else:
-        producto = db.query(Producto).filter(Producto.ID_Producto == nueva.ID_Producto).first()
-        if producto:
-            notificar_stock_producto(db, producto)
+    # Notificaciones fuera de la transacción principal (solo si hubo cambio de stock)
+    if not es_devolucion:
+        if nueva.ID_Insumo:
+            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == nueva.ID_Insumo).first()
+            if insumo:
+                notificar_stock_insumo(db, insumo)
+        else:
+            producto = db.query(Producto).filter(Producto.ID_Producto == nueva.ID_Producto).first()
+            if producto:
+                notificar_stock_producto(db, producto)
 
     return _formato_salida(nueva, db)
 
@@ -379,7 +387,7 @@ def crear_salida(db: Session, datos: SalidaCreate) -> dict:
 def anular_salida(db: Session, id_salida: int, id_anulado_por: int = None) -> dict:
     """
     Anula la salida (Estado=12) y restaura el stock descontado.
-    Recalcula el estado de stock del ítem afectado.
+    Excepción: tipo 'devolución' nunca modificó el stock, así que tampoco lo restaura.
     """
     salida = db.query(Salida).filter(Salida.ID_Salida == id_salida).first()
     if not salida:
@@ -387,18 +395,21 @@ def anular_salida(db: Session, id_salida: int, id_anulado_por: int = None) -> di
     if salida.Estado == ESTADO_ANULADA:
         raise HTTPException(status_code=400, detail="Esta salida ya fue anulada")
 
-    if salida.ID_Insumo:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == salida.ID_Insumo).first()
-        if insumo:
-            insumo.Stock_Actual = (insumo.Stock_Actual or 0) + salida.Cantidad
-            _actualizar_estado_insumo(insumo)
-            _restaurar_fefo_insumo(db, salida.ID_Insumo, salida.Cantidad)
-    else:
-        producto = db.query(Producto).filter(Producto.ID_Producto == salida.ID_Producto).first()
-        if producto:
-            producto.Stock = (producto.Stock or 0) + salida.Cantidad
-            _actualizar_estado_producto(producto)
-            _restaurar_fefo_producto(db, salida.ID_Producto, salida.Cantidad)
+    es_devolucion = (salida.Tipo or "").lower() == "devolución"
+
+    if not es_devolucion:
+        if salida.ID_Insumo:
+            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == salida.ID_Insumo).first()
+            if insumo:
+                insumo.Stock_Actual = (insumo.Stock_Actual or 0) + salida.Cantidad
+                _actualizar_estado_insumo(insumo)
+                _restaurar_fefo_insumo(db, salida.ID_Insumo, salida.Cantidad)
+        else:
+            producto = db.query(Producto).filter(Producto.ID_Producto == salida.ID_Producto).first()
+            if producto:
+                producto.Stock = (producto.Stock or 0) + salida.Cantidad
+                _actualizar_estado_producto(producto)
+                _restaurar_fefo_producto(db, salida.ID_Producto, salida.Cantidad)
 
     salida.Estado = ESTADO_ANULADA
     if id_anulado_por:
@@ -407,15 +418,16 @@ def anular_salida(db: Session, id_salida: int, id_anulado_por: int = None) -> di
     db.commit()
     db.refresh(salida)
 
-    # Notificaciones fuera de la transacción principal
-    if salida.ID_Insumo:
-        insumo = db.query(Insumo).filter(Insumo.ID_Insumo == salida.ID_Insumo).first()
-        if insumo:
-            notificar_stock_insumo(db, insumo)
-    else:
-        producto = db.query(Producto).filter(Producto.ID_Producto == salida.ID_Producto).first()
-        if producto:
-            notificar_stock_producto(db, producto)
+    # Notificaciones fuera de la transacción principal (solo si hubo cambio de stock)
+    if not es_devolucion:
+        if salida.ID_Insumo:
+            insumo = db.query(Insumo).filter(Insumo.ID_Insumo == salida.ID_Insumo).first()
+            if insumo:
+                notificar_stock_insumo(db, insumo)
+        else:
+            producto = db.query(Producto).filter(Producto.ID_Producto == salida.ID_Producto).first()
+            if producto:
+                notificar_stock_producto(db, producto)
 
     return _formato_salida(salida, db)
 
