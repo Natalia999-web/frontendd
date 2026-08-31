@@ -53,16 +53,18 @@ export default function GananciasDomiciliario() {
   const [periodo,    setPeriodo]    = useState("hoy");
   const [todos,      setTodos]      = useState([]);
   const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
     const cargar = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getDomicilios({ porPagina: 100, idEmpleado: user.id });
         setTodos(data.domicilios || []);
-      } catch {
-        // silent
+      } catch (err) {
+        setError(err?.message || "No se pudieron cargar tus entregas. Intenta de nuevo.");
       } finally {
         setLoading(false);
       }
@@ -95,6 +97,12 @@ export default function GananciasDomiciliario() {
       </div>
 
       <div className="page-inner">
+
+        {error && (
+          <div style={{ background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10, padding: "12px 16px", marginBottom: 18, fontSize: 13, color: "#c62828", fontWeight: 600 }}>
+            {error}
+          </div>
+        )}
 
         {/* ── Resumen rápido de los 3 periodos ── */}
         {!loading && (
