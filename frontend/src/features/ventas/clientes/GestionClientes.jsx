@@ -53,7 +53,9 @@ export default function GestionClientes() {
     try {
       const lista = await getUsuarios({ porPagina: 100 });
       setClientes(lista.filter(u => u.tipo === "cliente"));
-    } catch { /* silently fail */ }
+    } catch (err) {
+      showToast(err.message || "Error al cargar clientes", "error");
+    }
   };
 
   useEffect(() => { cargarDatos(); }, []);
@@ -155,7 +157,9 @@ export default function GestionClientes() {
     try {
       await toggleEstadoUsuario("cliente", c.id, c.estado);
       await cargarDatos();
-    } catch { /* silently fail */ }
+    } catch (err) {
+      showToast(err.message || "Error al cambiar estado del cliente", "error");
+    }
   };
 
   return (
