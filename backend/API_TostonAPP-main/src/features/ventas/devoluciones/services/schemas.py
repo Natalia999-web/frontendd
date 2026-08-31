@@ -78,7 +78,8 @@ class DevolucionResponse(BaseModel):
 
 # ── Respuesta paginada ──
 class DevolucionListResponse(BaseModel):
-    total:       int
-    pagina:      int
-    por_pagina:  int
-    devoluciones: list[DevolucionResponse]
+    total:               int
+    pagina:              int
+    por_pagina:          int
+    devoluciones:        list[DevolucionResponse]
+    totales_por_estado:  dict[str, int] = {}

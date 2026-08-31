@@ -19,7 +19,8 @@ function SkeletonRows({ cols = 8, rows = 5 }) {
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
 
-const PER_PAGE = 5;
+const PER_PAGE  = 20;
+const ESTADO_IDS = { Pendiente: 3, Reembolsada: 6, Rechazada: 7 };
 
 function EstadoBadge({ estado }) {
   return (
@@ -334,18 +335,22 @@ function ModalRechazar({ dev, onClose, onConfirm }) {
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default function GestionDevoluciones() {
-  const [devoluciones, setDevoluciones] = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [actionSaving, setActionSaving] = useState(false);
-  const [search,       setSearch]       = useState("");
-  const [filterEstado, setFilterEstado] = useState("todos");
-  const [filterDesde,  setFilterDesde]  = useState("");
-  const [filterHasta,  setFilterHasta]  = useState("");
-  const [showFilter,   setShowFilter]   = useState(false);
-  const [page,         setPage]         = useState(1);
-  const [modal,        setModal]        = useState(null);
-  const [creditoVer,   setCreditoVer]   = useState(0);
-  const [toast,        setToast]        = useState(null);
+  const [devoluciones,     setDevoluciones]     = useState([]);
+  const [total,            setTotal]            = useState(0);
+  const [totalesPorEstado, setTotalesPorEstado] = useState({});
+  const [loading,          setLoading]          = useState(true);
+  const [actionSaving,     setActionSaving]     = useState(false);
+  const [search,           setSearch]           = useState("");
+  const [searchQuery,      setSearchQuery]      = useState("");
+  const [filterEstado,     setFilterEstado]     = useState("todos");
+  const [filterDesde,      setFilterDesde]      = useState("");
+  const [filterHasta,      setFilterHasta]      = useState("");
+  const [showFilter,       setShowFilter]       = useState(false);
+  const [page,             setPage]             = useState(1);
+  const [reloadTrigger,    setReloadTrigger]    = useState(0);
+  const [modal,            setModal]            = useState(null);
+  const [creditoVer,       setCreditoVer]       = useState(0);
+  const [toast,            setToast]            = useState(null);
   const filterRef = useRef();
 
   const showToast = (msg, type = "success") => {
@@ -353,19 +358,28 @@ export default function GestionDevoluciones() {
     setTimeout(() => setToast(null), 3200);
   };
 
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const data = await getDevoluciones({ porPagina: 100 });
-      setDevoluciones([...(data.devoluciones || [])].sort((a, b) => b.id - a.id));
-    } catch (err) {
-      showToast(err.message || "Error al cargar devoluciones", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const recargar = () => setReloadTrigger((n) => n + 1);
 
-  useEffect(() => { cargarDatos(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => { setSearchQuery(search); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    const estadoId = ESTADO_IDS[filterEstado] ?? null;
+    getDevoluciones({ pagina: page, porPagina: PER_PAGE, busqueda: searchQuery, estadoId, fechaDesde: filterDesde, fechaHasta: filterHasta })
+      .then(data => {
+        if (!active) return;
+        setDevoluciones(data.devoluciones || []);
+        setTotal(data.total || 0);
+        setTotalesPorEstado(data.totalesPorEstado || {});
+      })
+      .catch(err => { if (active) showToast(err.message || "Error al cargar devoluciones", "error"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, searchQuery, filterEstado, filterDesde, filterHasta, reloadTrigger]); // eslint-disable-line
 
   useEffect(() => {
     const h = (e) => { if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false); };
@@ -373,28 +387,8 @@ export default function GestionDevoluciones() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const filtered = devoluciones.filter((d) => {
-    const q = search.toLowerCase();
-    const matchQ = [d.numero, d.numeroPedido, d.cliente?.nombre, d.motivo]
-      .filter(Boolean).some((v) => v.toLowerCase().includes(q));
-    const matchE = filterEstado === "todos" || d.estado === filterEstado;
-
-    let matchFecha = true;
-    if (filterDesde || filterHasta) {
-      const fechaRaw = String(d.fechaSolicitud || "").slice(0, 10);
-      const fecha = fechaRaw ? new Date(`${fechaRaw}T00:00:00`) : null;
-      if (!fecha) matchFecha = false;
-      if (filterDesde && fecha && new Date(`${filterDesde}T00:00:00`) > fecha) matchFecha = false;
-      if (filterHasta && fecha && new Date(`${filterHasta}T00:00:00`) < fecha) matchFecha = false;
-    }
-
-    return matchQ && matchE && matchFecha;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const safePage   = Math.min(page, totalPages);
-  const paged      = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
-  useEffect(() => setPage(1), [search, filterEstado, filterDesde, filterHasta]);
 
   const hasFilter = filterEstado !== "todos" || filterDesde || filterHasta;
 
@@ -402,7 +396,8 @@ export default function GestionDevoluciones() {
     setActionSaving(true);
     try {
       const dev = await crearDevolucion(payload);
-      await cargarDatos();
+      setPage(1);
+      recargar();
       showToast(`Devolución ${dev.numero} registrada`);
       setModal(null);
     } catch (err) {
@@ -434,7 +429,7 @@ export default function GestionDevoluciones() {
       }
 
       window.dispatchEvent(new Event('credito-updated'));
-      await cargarDatos();
+      recargar();
       if (salidasOk) {
         showToast("Devolución aprobada y reembolso procesado");
       } else {
@@ -452,7 +447,7 @@ export default function GestionDevoluciones() {
     setActionSaving(true);
     try {
       const dev = await resolverDevolucion(id, "rechazar", motivo);
-      await cargarDatos();
+      recargar();
       showToast("Devolución rechazada", "warn");
       setModal(null);
     } catch (err) {
@@ -463,10 +458,10 @@ export default function GestionDevoluciones() {
   };
 
   const counts = {
-    todos:       devoluciones.length,
-    Pendiente:   devoluciones.filter((d) => d.estado === "Pendiente").length,
-    Reembolsada: devoluciones.filter((d) => d.estado === "Reembolsada").length,
-    Rechazada:   devoluciones.filter((d) => d.estado === "Rechazada").length,
+    todos:       totalesPorEstado.todos       ?? 0,
+    Pendiente:   totalesPorEstado.Pendiente   ?? 0,
+    Reembolsada: totalesPorEstado.Reembolsada ?? 0,
+    Rechazada:   totalesPorEstado.Rechazada   ?? 0,
   };
 
   const toggleFilter = (est) => {
@@ -523,7 +518,7 @@ export default function GestionDevoluciones() {
             <input
               type="text" className="search-input"
               placeholder="Buscar por número, cliente, pedido o motivo…"
-              value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={search} onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
@@ -558,6 +553,7 @@ export default function GestionDevoluciones() {
                   onApply={({ desde, hasta }) => {
                     setFilterDesde(desde || "");
                     setFilterHasta(hasta || "");
+                    setPage(1);
                   }}
                   onClear={() => {
                     setFilterDesde("");
@@ -569,7 +565,7 @@ export default function GestionDevoluciones() {
           </div>
 
           {(hasFilter || search) && (
-            <button className="btn-limpiar" onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); }}>
+            <button className="btn-limpiar" onClick={() => { setSearch(""); setSearchQuery(""); setFilterEstado("todos"); setFilterDesde(""); setFilterHasta(""); setPage(1); }}>
               <X size={13} /> Limpiar
             </button>
           )}
@@ -598,7 +594,7 @@ export default function GestionDevoluciones() {
               <tbody>
                 {loading ? (
                   <SkeletonRows cols={8} rows={5} />
-                ) : paged.length === 0 ? (
+                ) : devoluciones.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state">
                       <div className="empty-state__icon"><CornerUpLeft size={40} /></div>
@@ -607,7 +603,7 @@ export default function GestionDevoluciones() {
                       </p>
                     </div>
                   </td></tr>
-                ) : paged.map((dev, idx) => (
+                ) : devoluciones.map((dev, idx) => (
                   <tr key={dev.id} className="tbl-row">
                     <td>
                       <span className="row-num">
@@ -668,7 +664,7 @@ export default function GestionDevoluciones() {
 
           <div className="pagination-bar">
             <span className="pagination-count">
-              {filtered.length} {filtered.length === 1 ? "devolución" : "devoluciones"} en total
+              {total} {total === 1 ? "devolución" : "devoluciones"} en total
             </span>
             <div className="pagination-btns">
               <button className="pg-btn-arrow" onClick={() => setPage(1)} disabled={safePage === 1}>«</button>

@@ -183,8 +183,10 @@ def obtener_devoluciones(
     por_pagina: int = 20,
     busqueda: str = None,
     estado: int = None,
+    fecha_desde: str = None,
+    fecha_hasta: str = None,
 ) -> dict:
-    """Lista paginada para admin, más recientes primero. Filtra por nombre o estado."""
+    """Lista paginada para admin, más recientes primero. Filtra por nombre, estado y fechas."""
     query = db.query(Devolucion)
 
     if estado:
@@ -202,16 +204,37 @@ def obtener_devoluciones(
         )
         query = query.filter(Devolucion.ID_Usuario.in_(usuarios_ids))
 
+    if fecha_desde:
+        try:
+            desde = datetime.strptime(fecha_desde, "%Y-%m-%d")
+            query = query.filter(Devolucion.FechaDevolucion >= desde)
+        except ValueError:
+            pass
+
+    if fecha_hasta:
+        try:
+            hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(Devolucion.FechaDevolucion < hasta)
+        except ValueError:
+            pass
+
     query        = query.order_by(Devolucion.FechaDevolucion.desc())
     total        = query.count()
     offset       = (pagina - 1) * por_pagina
     devoluciones = query.offset(offset).limit(por_pagina).all()
 
+    totales_por_estado = {
+        label: db.query(Devolucion).filter(Devolucion.Estado == eid).count()
+        for eid, label in _ESTADO_LABELS.items()
+    }
+    totales_por_estado["todos"] = sum(totales_por_estado.values())
+
     return {
-        "total":        total,
-        "pagina":       pagina,
-        "por_pagina":   por_pagina,
-        "devoluciones": _batch_devoluciones(devoluciones, db),
+        "total":              total,
+        "pagina":             pagina,
+        "por_pagina":         por_pagina,
+        "devoluciones":       _batch_devoluciones(devoluciones, db),
+        "totales_por_estado": totales_por_estado,
     }
 
 

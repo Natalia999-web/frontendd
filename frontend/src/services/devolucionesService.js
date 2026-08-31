@@ -49,16 +49,22 @@ const adaptDevolucion = (d) => {
   };
 };
 
-// Admin: lista todas las devoluciones
-export const getDevoluciones = async ({ pagina = 1, porPagina = 100, estado = "" } = {}) => {
+// Admin: lista todas las devoluciones (paginación server-side)
+export const getDevoluciones = async ({
+  pagina = 1, porPagina = 20, busqueda = "", estadoId = null,
+  fechaDesde = "", fechaHasta = "",
+} = {}) => {
   const params = new URLSearchParams({ pagina, por_pagina: porPagina });
-  if (estado) params.append("estado", String(estado));
+  if (busqueda)   params.set("busqueda",    busqueda);
+  if (estadoId != null) params.set("estado", estadoId);
+  if (fechaDesde) params.set("fecha_desde", fechaDesde);
+  if (fechaHasta) params.set("fecha_hasta", fechaHasta);
   const data = await apiFetch(`/devoluciones/?${params}`);
   return {
-    total:        data.total,
-    pagina:       data.pagina,
-    por_pagina:   data.por_pagina,
-    devoluciones: (data.devoluciones || []).map(adaptDevolucion),
+    total:             data.total,
+    pagina:            data.pagina,
+    devoluciones:      (data.devoluciones || []).map(adaptDevolucion),
+    totalesPorEstado:  data.totales_por_estado || {},
   };
 };
 

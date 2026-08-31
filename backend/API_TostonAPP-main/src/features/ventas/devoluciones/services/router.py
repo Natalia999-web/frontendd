@@ -34,15 +34,17 @@ def mis_devoluciones(
 
 @router.get("/", response_model=DevolucionListResponse)
 def listar_devoluciones(
-    pagina:     int           = Query(1, ge=1),
-    por_pagina: int           = Query(20, ge=1, le=100),
-    busqueda:   Optional[str] = Query(None),
-    estado:     Optional[int] = Query(None),
-    db:         Session       = Depends(get_db),
-    _:          dict          = Depends(requiere_permiso("ver_devoluciones"))
+    pagina:      int           = Query(1, ge=1),
+    por_pagina:  int           = Query(20, ge=1, le=100),
+    busqueda:    Optional[str] = Query(None),
+    estado:      Optional[int] = Query(None),
+    fecha_desde: Optional[str] = Query(None),
+    fecha_hasta: Optional[str] = Query(None),
+    db:          Session       = Depends(get_db),
+    _:           dict          = Depends(requiere_permiso("ver_devoluciones"))
 ):
-    """Lista paginada de devoluciones (admin). Filtra por estado y busca por nombre."""
-    return obtener_devoluciones(db, pagina, por_pagina, busqueda, estado)
+    """Lista paginada de devoluciones (admin). Filtra por estado, fecha y busca por nombre."""
+    return obtener_devoluciones(db, pagina, por_pagina, busqueda, estado, fecha_desde, fecha_hasta)
 
 
 @router.get("/{id_devolucion}", response_model=DevolucionResponse)
