@@ -321,6 +321,23 @@ def migrate_db():
         except Exception:
             pass
 
+    # ── Permisos del rol "Cliente" ───────────────────────────────────────────
+    # El cliente solo necesita crear_ventas (hacer pedidos). Las demás acciones
+    # del cliente (mis-ventas, mis-devoluciones, cancelar pedido propio) usan
+    # obtener_usuario_actual sin requiere_permiso.
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                INSERT IGNORE INTO Rol_x_Permiso (ID_Rol, ID_Permiso)
+                SELECT r.ID_Rol, p.ID_Permiso
+                FROM Roles r
+                JOIN Permisos p ON p.Permiso = 'crear_ventas'
+                WHERE LOWER(TRIM(r.Rol)) = 'cliente'
+            """))
+            conn.commit()
+        except Exception:
+            pass
+
 # ── CORS — origins desde variable de entorno para no hardcodear URLs ──
 _CORS_ORIGINS = [
     o.strip()
