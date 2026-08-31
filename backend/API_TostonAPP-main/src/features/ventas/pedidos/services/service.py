@@ -27,6 +27,7 @@ def obtener_pedidos(
         query = db.query(Venta).filter(Venta.Estado.in_(ESTADOS_ACTIVOS))
 
     if busqueda:
+        from sqlalchemy import cast, String as SAString
         termino      = f"%{busqueda}%"
         usuarios_ids = (
             db.query(Usuario.ID_Usuario)
@@ -36,7 +37,11 @@ def obtener_pedidos(
             )
             .subquery()
         )
-        query = query.filter(Venta.ID_Usuario.in_(usuarios_ids))
+        query = query.filter(
+            Venta.ID_Usuario.in_(usuarios_ids) |
+            Venta.Metodo_Pago.ilike(termino) |
+            cast(Venta.ID_Venta, SAString).ilike(termino)
+        )
 
     total   = query.count()
     offset  = (pagina - 1) * por_pagina
