@@ -35,12 +35,14 @@ export default function DashboardDomiciliario() {
   const [resumen, setResumen]       = useState({ activos: 0, entregados_hoy: 0, total_hoy: 0 });
   const [ordenActiva, setOrdenActiva] = useState(null);
   const [loading, setLoading]       = useState(true);
+  const [errorCarga, setErrorCarga] = useState(null);
   const [efectivoHoy, setEfectivoHoy] = useState(0);
 
   useEffect(() => {
     if (!user?.id) return;
     const cargar = async () => {
       setLoading(true);
+      setErrorCarga(null);
       try {
         const [res, doms] = await Promise.all([
           getResumenDia(),
@@ -65,7 +67,7 @@ export default function DashboardDomiciliario() {
             .reduce((suma, d) => suma + (d.total || 0), 0)
         );
       } catch (e) {
-        console.error(e);
+        setErrorCarga(e?.message || "No se pudo cargar el resumen. Intenta de nuevo.");
       } finally {
         setLoading(false);
       }
@@ -94,6 +96,11 @@ export default function DashboardDomiciliario() {
 
   return (
     <div className="page-wrapper">
+      {errorCarga && (
+        <div style={{ background: "#ffebee", border: "1.5px solid #ef9a9a", borderRadius: 10, padding: "10px 16px", margin: "16px 16px 0", fontSize: 13, color: "#c62828", fontWeight: 600 }}>
+          {errorCarga}
+        </div>
+      )}
       <div className="page-header">
         <h1 className="page-header__title">Mi Dashboard</h1>
         <div className="page-header__line" />
