@@ -179,7 +179,7 @@ export default function GestionUsuarios() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon"><Search size={16} /></span>
+            <Search size={16} className="search-icon" />
             <input
               type="text"
               className="search-input"

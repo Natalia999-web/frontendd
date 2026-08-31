@@ -191,7 +191,7 @@ export default function GestionEmpleados() {
         {/* Toolbar */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon"><Search size={16} /></span>
+            <Search size={16} className="search-icon" />
             <input type="text" className="search-input"
               placeholder="Buscar por nombre, correo, ciudad, documento o rol…"
               value={search} onChange={e => handleSearch(e.target.value)} />

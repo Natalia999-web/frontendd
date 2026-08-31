@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, AlertTriangle, Trash2, Leaf, Eye, Pencil } from "lucide-react";
+import { X, AlertTriangle, Trash2, Leaf, Eye, Pencil, Search } from "lucide-react";
 import { fmtFecha } from "../../../utils/dateUtils.js";
 import { Toast, ModalOverlay } from "./ui.jsx";
 import CrearCategoria from "./CrearCategoria.jsx";
@@ -365,7 +365,7 @@ export default function CategoriaProductos() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon"></span>
+            <Search size={15} className="search-icon" />
             <input
               type="text"
               className="search-input"

@@ -1384,7 +1384,7 @@ export default function GestionDomicilios() {
             )}
             <div className="toolbar">
               <div className="search-wrap">
-                <span className="search-icon"><Search size={14} /></span>
+                <Search size={14} className="search-icon" />
                 <input
                   type="text"
                   className="search-input"

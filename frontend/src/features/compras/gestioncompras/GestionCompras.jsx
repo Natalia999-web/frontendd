@@ -222,7 +222,7 @@ export default function GestionCompras() {
         {/* TOOLBAR */}
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}><Search size={15} /></span>
+            <Search size={15} className="search-icon" />
             <input
               type="text"
               className="search-input"

@@ -163,7 +163,7 @@ export default function FichaTecnica() {
       <div className="page-inner">
         <div className="toolbar">
           <div className="search-wrap">
-            <span className="search-icon"><Search size={16}/></span>
+            <Search size={16} className="search-icon" />
             <input type="text" className="search-input"
               placeholder="Buscar por producto o categoría…"
               value={search} onChange={e => setSearch(e.target.value)} />
