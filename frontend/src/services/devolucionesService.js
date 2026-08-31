@@ -88,7 +88,7 @@ export const crearDevolucion = async (payload) => {
   };
   if (payload.comentario)        body.Comentario = payload.comentario;
   if (payload.idCliente != null) body.ID_Usuario = Number(payload.idCliente);
-  if (payload.evidencia?.base64) body.Comprobante_Imagen = payload.evidencia.base64;
+  if (payload.evidencia) body.Comprobante_Imagen = payload.evidencia;
   const data = await apiFetch("/devoluciones/", { method: "POST", body: JSON.stringify(body) });
   return adaptDevolucion(data);
 };

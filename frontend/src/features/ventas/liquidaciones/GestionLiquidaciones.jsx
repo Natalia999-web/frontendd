@@ -396,11 +396,14 @@ export default function GestionLiquidaciones() {
                       </div>
                     </div>
                     {r.pagado && (
-                      <span style={{
-                        background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7",
-                        borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700,
-                        display: "flex", alignItems: "center", gap: 4,
-                      }}>
+                      <span
+                        title="Registrado en este navegador. Otros dispositivos no verán este estado."
+                        style={{
+                          background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7",
+                          borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700,
+                          display: "flex", alignItems: "center", gap: 4, cursor: "help",
+                        }}
+                      >
                         <CheckCircle2 size={10} /> Pagado
                       </span>
                     )}
@@ -455,6 +458,7 @@ export default function GestionLiquidaciones() {
                   {/* Botón liquidar */}
                   <button
                     onClick={() => setModal({ repartidor: r, entregas: r.entregasPeriodo, claveKey: r.claveKey })}
+                    disabled={r.entregasPeriodo.length === 0}
                     style={{
                       width: "100%", padding: "10px 0", borderRadius: 10, border: "none",
                       background: r.entregasPeriodo.length === 0 ? "#f5f5f5" : r.pagado ? "#e8f5e9" : "#2e7d32",

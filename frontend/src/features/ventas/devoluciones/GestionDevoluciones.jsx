@@ -465,7 +465,6 @@ export default function GestionDevoluciones() {
   const counts = {
     todos:       devoluciones.length,
     Pendiente:   devoluciones.filter((d) => d.estado === "Pendiente").length,
-    Aprobada:    devoluciones.filter((d) => d.estado === "Aprobada").length,
     Reembolsada: devoluciones.filter((d) => d.estado === "Reembolsada").length,
     Rechazada:   devoluciones.filter((d) => d.estado === "Rechazada").length,
   };
@@ -540,9 +539,8 @@ export default function GestionDevoluciones() {
                 {[
                   { val: "todos",       label: "Todos",       dot: "#bdbdbd" },
                   { val: "Pendiente",   label: "Pendiente",   dot: "#f9a825" },
-                  { val: "Aprobada",    label: "Aprobada",    dot: "#43a047" },
-                  { val: "Rechazada",   label: "Rechazada",   dot: "#e53935" },
                   { val: "Reembolsada", label: "Reembolsada", dot: "#43a047" },
+                  { val: "Rechazada",   label: "Rechazada",   dot: "#e53935" },
                 ].map((f) => (
                   <button
                     key={f.val}
