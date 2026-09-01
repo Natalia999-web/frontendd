@@ -167,7 +167,7 @@ export default function GestionUsuarios() {
   };
 
   const hasFilter = filter !== "todos" || filterRol !== "todos" || !!filterDesde || !!filterHasta;
-  const todosLosRoles = [...new Set(usuarios.map(u => u.rol).filter(Boolean))].sort();
+  const todosLosRoles = roles.map(r => r.nombre).filter(Boolean).sort();
 
   return (
     <div className="page-wrapper">
