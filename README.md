@@ -1,16 +1,78 @@
-# React + Vite
+# TostonApp
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Descripción del proyecto
 
-Currently, two official plugins are available:
+TostonApp es una aplicación full stack para gestión de producción y ventas, compuesta por un backend tipo API y un frontend web, dockerizados para poder ejecutarse de forma reproducible en cualquier equipo con Docker instalado.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tecnologías utilizadas
 
-## React Compiler
+- **Backend:** Python + FastAPI, servido con Uvicorn
+- **Base de datos:** MySQL, alojada en Aiven.io (en la nube, no dockerizada)
+- **Frontend:** React + Vite, compilado y servido en producción con Nginx
+- **Orquestación:** Docker Compose
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Arquitectura de la aplicación
 
-## Expanding the ESLint configuration
+```
+React (Docker)  →  FastAPI (Docker)  →  MySQL (Aiven, nube)
+   :5173               :8000
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+El frontend y el backend corren en contenedores separados, expuestos en puertos distintos. La base de datos permanece externa, en Aiven, y el backend se conecta a ella por internet usando variables de entorno.
+
+## Variables de entorno necesarias
+
+El backend requiere un archivo `.env` en `backend/API_TostonAPP-main/.env` (no incluido en el repositorio por seguridad). Usa `.env.example` como plantilla:
+
+```
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
+DB_NAME=
+SECRET_KEY=
+```
+
+Copia la plantilla y completa los valores reales antes de levantar el proyecto:
+
+```
+copy backend\API_TostonAPP-main\.env.example backend\API_TostonAPP-main\.env
+```
+
+**No subir nunca credenciales reales al repositorio.**
+
+## Cómo construir la aplicación
+
+Desde la raíz del proyecto (donde está `docker-compose.yml`):
+
+```
+docker compose build
+```
+
+## Cómo ejecutarla con Docker Compose
+
+```
+docker compose up --build
+```
+
+- Backend disponible en: `http://localhost:8000/docs` (documentación interactiva Swagger)
+- Frontend disponible en: `http://localhost:5173`
+
+## Cómo detener los contenedores
+
+```
+docker compose down
+```
+
+## Cómo consultar los logs
+
+```
+docker compose logs backend
+docker compose logs frontend
+```
+
+O en tiempo real:
+
+```
+docker compose logs -f
+```
