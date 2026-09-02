@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: ./backend/API_TostonAPP-main
+    container_name: tostonapp-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/API_TostonAPP-main/.env
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api
+    container_name: tostonapp-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

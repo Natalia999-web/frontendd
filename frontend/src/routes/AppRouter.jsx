@@ -17,7 +17,7 @@ import GestionOrdenesProduccion from "../features/produccion/orden_produccion/Ge
 import DashboardCocina from "../features/produccion/cocina/DashboardCocina";
 
 /* ─── VENTAS ADMIN ─── */
-import GestionClientes from "../features/ventas/clientes/GestionClientes";
+import GestionClientes from "../features/ventas/Clientes/GestionClientes";
 import GestionPedidos from "../features/ventas/pedidos/GestionPedidos";
 import GestionLiquidaciones from "../features/ventas/liquidaciones/GestionLiquidaciones";
 
